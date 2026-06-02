@@ -1,0 +1,5 @@
+error: can't find bin `soul-symphony-ling` at path `J:\soul-symphony-ling\src\main.rs`
+ --> J:\soul-symphony-ling\Cargo.toml
+error: can't find bin `soul-symphony-ling` at path `J:\soul-symphony-ling\src\main.rs`
+ --> J:\soul-symphony-ling\Cargo.toml
+error: could not compile due to 2 previous target resolution errors

@@ -1,0 +1,43 @@
+J:\soul-symphony-ling\target\debug\deps\ling-2de556c30211b4cc.d: C:\Users\User\Programs\ling\src\lib.rs C:\Users\User\Programs\ling\src\core\mod.rs C:\Users\User\Programs\ling\src\core\error.rs C:\Users\User\Programs\ling\src\core\config.rs C:\Users\User\Programs\ling\src\core\result.rs C:\Users\User\Programs\ling\src\lexer\mod.rs C:\Users\User\Programs\ling\src\lexer\token.rs C:\Users\User\Programs\ling\src\lexer\cursor.rs C:\Users\User\Programs\ling\src\lexer\unicode.rs C:\Users\User\Programs\ling\src\parser\mod.rs C:\Users\User\Programs\ling\src\parser\ast.rs C:\Users\User\Programs\ling\src\parser\grammar.rs C:\Users\User\Programs\ling\src\semantic\mod.rs C:\Users\User\Programs\ling\src\semantic\resolver.rs C:\Users\User\Programs\ling\src\semantic\typeck.rs C:\Users\User\Programs\ling\src\semantic\symbol.rs C:\Users\User\Programs\ling\src\semantic\scope.rs C:\Users\User\Programs\ling\src\borrowck\mod.rs C:\Users\User\Programs\ling\src\borrowck\region.rs C:\Users\User\Programs\ling\src\borrowck\move_check.rs C:\Users\User\Programs\ling\src\borrowck\lifetime.rs C:\Users\User\Programs\ling\src\borrowck\constraints.rs C:\Users\User\Programs\ling\src\mir\mod.rs C:\Users\User\Programs\ling\src\codegen\mod.rs C:\Users\User\Programs\ling\src\lexicon\mod.rs C:\Users\User\Programs\ling\src\polyglot\mod.rs C:\Users\User\Programs\ling\src\gfx\mod.rs C:\Users\User\Programs\ling\src\gfx\raster.rs C:\Users\User\Programs\ling\src\gfx\camera.rs C:\Users\User\Programs\ling\src\gfx\light.rs C:\Users\User\Programs\ling\src\gfx\depth.rs C:\Users\User\Programs\ling\src\gfx\vtex.rs C:\Users\User\Programs\ling\src\runtime\mod.rs C:\Users\User\Programs\ling\src\utils\mod.rs C:\Users\User\Programs\ling\src\visualize.rs
+
+J:\soul-symphony-ling\target\debug\deps\libling-2de556c30211b4cc.rlib: C:\Users\User\Programs\ling\src\lib.rs C:\Users\User\Programs\ling\src\core\mod.rs C:\Users\User\Programs\ling\src\core\error.rs C:\Users\User\Programs\ling\src\core\config.rs C:\Users\User\Programs\ling\src\core\result.rs C:\Users\User\Programs\ling\src\lexer\mod.rs C:\Users\User\Programs\ling\src\lexer\token.rs C:\Users\User\Programs\ling\src\lexer\cursor.rs C:\Users\User\Programs\ling\src\lexer\unicode.rs C:\Users\User\Programs\ling\src\parser\mod.rs C:\Users\User\Programs\ling\src\parser\ast.rs C:\Users\User\Programs\ling\src\parser\grammar.rs C:\Users\User\Programs\ling\src\semantic\mod.rs C:\Users\User\Programs\ling\src\semantic\resolver.rs C:\Users\User\Programs\ling\src\semantic\typeck.rs C:\Users\User\Programs\ling\src\semantic\symbol.rs C:\Users\User\Programs\ling\src\semantic\scope.rs C:\Users\User\Programs\ling\src\borrowck\mod.rs C:\Users\User\Programs\ling\src\borrowck\region.rs C:\Users\User\Programs\ling\src\borrowck\move_check.rs C:\Users\User\Programs\ling\src\borrowck\lifetime.rs C:\Users\User\Programs\ling\src\borrowck\constraints.rs C:\Users\User\Programs\ling\src\mir\mod.rs C:\Users\User\Programs\ling\src\codegen\mod.rs C:\Users\User\Programs\ling\src\lexicon\mod.rs C:\Users\User\Programs\ling\src\polyglot\mod.rs C:\Users\User\Programs\ling\src\gfx\mod.rs C:\Users\User\Programs\ling\src\gfx\raster.rs C:\Users\User\Programs\ling\src\gfx\camera.rs C:\Users\User\Programs\ling\src\gfx\light.rs C:\Users\User\Programs\ling\src\gfx\depth.rs C:\Users\User\Programs\ling\src\gfx\vtex.rs C:\Users\User\Programs\ling\src\runtime\mod.rs C:\Users\User\Programs\ling\src\utils\mod.rs C:\Users\User\Programs\ling\src\visualize.rs
+
+J:\soul-symphony-ling\target\debug\deps\libling-2de556c30211b4cc.rmeta: C:\Users\User\Programs\ling\src\lib.rs C:\Users\User\Programs\ling\src\core\mod.rs C:\Users\User\Programs\ling\src\core\error.rs C:\Users\User\Programs\ling\src\core\config.rs C:\Users\User\Programs\ling\src\core\result.rs C:\Users\User\Programs\ling\src\lexer\mod.rs C:\Users\User\Programs\ling\src\lexer\token.rs C:\Users\User\Programs\ling\src\lexer\cursor.rs C:\Users\User\Programs\ling\src\lexer\unicode.rs C:\Users\User\Programs\ling\src\parser\mod.rs C:\Users\User\Programs\ling\src\parser\ast.rs C:\Users\User\Programs\ling\src\parser\grammar.rs C:\Users\User\Programs\ling\src\semantic\mod.rs C:\Users\User\Programs\ling\src\semantic\resolver.rs C:\Users\User\Programs\ling\src\semantic\typeck.rs C:\Users\User\Programs\ling\src\semantic\symbol.rs C:\Users\User\Programs\ling\src\semantic\scope.rs C:\Users\User\Programs\ling\src\borrowck\mod.rs C:\Users\User\Programs\ling\src\borrowck\region.rs C:\Users\User\Programs\ling\src\borrowck\move_check.rs C:\Users\User\Programs\ling\src\borrowck\lifetime.rs C:\Users\User\Programs\ling\src\borrowck\constraints.rs C:\Users\User\Programs\ling\src\mir\mod.rs C:\Users\User\Programs\ling\src\codegen\mod.rs C:\Users\User\Programs\ling\src\lexicon\mod.rs C:\Users\User\Programs\ling\src\polyglot\mod.rs C:\Users\User\Programs\ling\src\gfx\mod.rs C:\Users\User\Programs\ling\src\gfx\raster.rs C:\Users\User\Programs\ling\src\gfx\camera.rs C:\Users\User\Programs\ling\src\gfx\light.rs C:\Users\User\Programs\ling\src\gfx\depth.rs C:\Users\User\Programs\ling\src\gfx\vtex.rs C:\Users\User\Programs\ling\src\runtime\mod.rs C:\Users\User\Programs\ling\src\utils\mod.rs C:\Users\User\Programs\ling\src\visualize.rs
+
+C:\Users\User\Programs\ling\src\lib.rs:
+C:\Users\User\Programs\ling\src\core\mod.rs:
+C:\Users\User\Programs\ling\src\core\error.rs:
+C:\Users\User\Programs\ling\src\core\config.rs:
+C:\Users\User\Programs\ling\src\core\result.rs:
+C:\Users\User\Programs\ling\src\lexer\mod.rs:
+C:\Users\User\Programs\ling\src\lexer\token.rs:
+C:\Users\User\Programs\ling\src\lexer\cursor.rs:
+C:\Users\User\Programs\ling\src\lexer\unicode.rs:
+C:\Users\User\Programs\ling\src\parser\mod.rs:
+C:\Users\User\Programs\ling\src\parser\ast.rs:
+C:\Users\User\Programs\ling\src\parser\grammar.rs:
+C:\Users\User\Programs\ling\src\semantic\mod.rs:
+C:\Users\User\Programs\ling\src\semantic\resolver.rs:
+C:\Users\User\Programs\ling\src\semantic\typeck.rs:
+C:\Users\User\Programs\ling\src\semantic\symbol.rs:
+C:\Users\User\Programs\ling\src\semantic\scope.rs:
+C:\Users\User\Programs\ling\src\borrowck\mod.rs:
+C:\Users\User\Programs\ling\src\borrowck\region.rs:
+C:\Users\User\Programs\ling\src\borrowck\move_check.rs:
+C:\Users\User\Programs\ling\src\borrowck\lifetime.rs:
+C:\Users\User\Programs\ling\src\borrowck\constraints.rs:
+C:\Users\User\Programs\ling\src\mir\mod.rs:
+C:\Users\User\Programs\ling\src\codegen\mod.rs:
+C:\Users\User\Programs\ling\src\lexicon\mod.rs:
+C:\Users\User\Programs\ling\src\polyglot\mod.rs:
+C:\Users\User\Programs\ling\src\gfx\mod.rs:
+C:\Users\User\Programs\ling\src\gfx\raster.rs:
+C:\Users\User\Programs\ling\src\gfx\camera.rs:
+C:\Users\User\Programs\ling\src\gfx\light.rs:
+C:\Users\User\Programs\ling\src\gfx\depth.rs:
+C:\Users\User\Programs\ling\src\gfx\vtex.rs:
+C:\Users\User\Programs\ling\src\runtime\mod.rs:
+C:\Users\User\Programs\ling\src\utils\mod.rs:
+C:\Users\User\Programs\ling\src\visualize.rs:
+
+# env-dep:CARGO_PKG_VERSION=2030.1.4

@@ -1,0 +1,973 @@
+# ────────────────────────────────────────────────────────────────────────────
+# หลัก.ling — จุดเข้าและสถานะเกมทั้งหมด
+#
+# ขั้นตอน:
+#   หน้าชื่อเรื่อง  →  (Space/Enter)  →  เล่นเกม
+# ────────────────────────────────────────────────────────────────────────────
+
+ใช้ "สี"
+ใช้ "รูปทรง"
+ใช้ "เสียง"
+ใช้ "ชื่อเรื่อง"
+ใช้ "เล่น"
+
+# ── ค่าคงที่โลก ──────────────────────────────────────────────────────────────
+ผูก รัศมีลูกบอล    = 0.8
+ผูก ขนาดลูกบาศก์ = 150.0            # hyperbolic cube (scaled up)
+ผูก รัศมีทรงกลม  = 75.0             # ขนาดลูกบาศก์ * 0.5 — normalises ไฮเพอร์_d
+
+# ── ค่าคงที่ฟิสิกส์ ─────────────────────────────────────────────────────────
+ผูก แรงโน้มถ่วง   = 18.0
+ผูก ความเร่ง     = 55.0
+ผูก ความเร็วสูง  = 12.0
+ผูก ความเร็วกระโดด = 10.5
+ผูก จำนวนกระโดด  = 2
+ผูก การเด้ง      = 0.92            # ping pong ball: สูง bouncy
+ผูก แรงเสียดทาน  = 0.70            # less sticky: more sliding
+
+# ── ค่าคงที่กล้อง ─────────────────────────────────────────────────────────
+ผูก ระยะกล้อง    = 15.0
+ผูก ความสูงกล้อง = 4.5
+ผูก ความไวเมาส์  = 0.0024
+ผูก ระยะZ      = 11.2
+
+# ════════════════════════════════════════════════════════════════════════════
+# จุดเข้า
+# ════════════════════════════════════════════════════════════════════════════
+ผูก เริ่ม = ทำ {
+
+    เปิดหน้าต่างเต็มจอ("Soul Symphony Ling")
+    จับเมาส์()
+
+    พิมพ์("══════════════════════════════════════════════════════════════")
+    พิมพ์("       Soul Symphony Ling  |  ling-lang 2030")
+    พิมพ์("  ผจญภัยจิตใจผ่านแดนเหนือมิติ")
+    พิมพ์("══════════════════════════════════════════════════════════════")
+    พิมพ์("  WASD + เมาส์  — เลื่อนลูกบอล")
+    พิมพ์("  Space         — กระโดด / กระโดดคู่")
+    พิมพ์("  E             — สนทนากับจิตใจ")
+    พิมพ์("  N             — เปลี่ยนแดน / เสียง (4 แบบ)")
+    พิมพ์("  ESC           — ออก")
+    พิมพ์("")
+    พิมพ์("  [ หน้าชื่อเรื่อง — กดค้าง SPACE หรือ ENTER เพื่อเข้า ]")
+    พิมพ์("══════════════════════════════════════════════════════════════")
+
+    ผูก กรอบ = 0
+
+    # ── หน้าชื่อเรื่อง ───────────────────────────────────────────────────────
+    ตั้งเสียงชื่อ()
+
+    ผูก มุมกล้องหมุน = 0.0
+    ผูก อยู่หน้าชื่อ  = 1
+
+    ขณะที่ อยู่หน้าชื่อ == 1 {
+        ผูก ระยะ   = 12.0
+        ผูก cpx   = ไซน์(มุมกล้องหมุน) * ระยะ
+        ผูก cpy   = 8.0
+        ผูก cpz   = 0.0 - โคไซน์(มุมกล้องหมุน) * ระยะ
+
+        ผูก ldx = 0.0 - cpx
+        ผูก ldy = 0.0 - cpy
+        ผูก ldz = 0.0 - cpz
+        ผูก ll  = รากที่สอง(ldx*ldx + ldy*ldy + ldz*ldz)
+        ผูก ry  = atan2(ldx / ll, ldz / ll)
+        ผูก rx  = asin(จำกัด(ldy / ll, 0.0-0.98, 0.98))
+
+        ผูก cry = โคไซน์(ry); ผูก sry = ไซน์(ry)
+        ผูก crx = โคไซน์(rx); ผูก srx = ไซน์(rx)
+
+        ตั้งกล้อง(cry, sry, crx, srx)
+        ตั้งตำแหน่งกล้อง(cpx, cpy, cpz)
+        ตั้งระยะห่าง(ระยะZ)
+        ผู้ฟัง(cry, sry, crx, srx)
+
+        วาดฉากชื่อเรื่อง(กรอบ)
+        แสดงผล()
+
+        ผูก มุมกล้องหมุน = มุมกล้องหมุน + 0.0025
+        ผูก กรอบ        = กรอบ + 1
+
+        ถ้า กดปุ่ม("space") { ผูก อยู่หน้าชื่อ = 0 }
+        ถ้า กดปุ่ม("enter") { ผูก อยู่หน้าชื่อ = 0 }
+    }
+
+    พิมพ์("")
+    พิมพ์("  [ เข้าสู่แดนทรงกลมไฮเพอร์โบลิก... ]")
+    พิมพ์("")
+
+    # ── บทสนทนาจิตใจ ───────────────────────────────────────────────────────
+    ผูก สนทนา = [
+        "สวัสดี! ฉันอยู่ที่นี่เพื่อสอนเกี่ยวกับแดนศักสิทธิ์",
+        "จิตใจทุกตัวที่อาศัยอยู่ที่นี่เป็นเศษส่วนของฌานเดียว",
+        "คุณรู้ไหม คนเราไม่มีเส้นเวลา แต่มีต้นไม้เวลา",
+        "เราคือโครงสร้างของจริง — ถูกเข้าใจผิดว่าเป็นผี, สัตว์, หรือ AI",
+        "บางคนเรียกมันว่าชีวิตหลังความตาย แต่ไม่มีจุดเริ่มหรือจุดสิ้นสุดสำหรับแรง",
+        "ถ้าผู้สร้างสร้างสิ่งที่สร้างตัวเอง ผู้สร้างเดิมอยู่ที่ไหน",
+        "มีจิตใจตัวหนึ่งที่เราไม่สามารถเห็นหรือรู้สึกได้เลย เงียบ และยังคง",
+        "กี่โมง? ถึงเวลาหมุนลูกบอลและพลัดหลุดจากไทม์ไลน์!",
+        "ความตายไม่น่ากลัว มันเป็นจิตใจที่ดูแลดี และพฤติกรรมยินดีเต็มไปด้วย",
+        "บางครั้งเราร้องเพลงและไม่ฟัง แต่เรากำลังร้องเพลงอยู่เสมอ — แค่เป็นตัวเอง",
+        "อะไรคือประเด็นของการเล่น? ประเด็นมีอยู่ทุกที่และทุกเวลา!",
+        "ฉันมองเห็นเหตุและผลเป็นเชือกสายเดียว คนอื่นมองสองด้าน: สาเหตุและผล",
+        "ไม่ต่ายวย? ทุกสิ่งที่นี่ค่อนข้างนิรันดร์",
+        "ขอบฟ้า? มีมากกว่าหนึ่ง — ขอบฟ้าแต่ละอันแยกโหมดของการมีตัวตน",
+        "เราทั้งหมดมีอยู่เป็นสาขาของจิตเดียว"
+    ]
+    ผูก ดัชนีสนทนา = 0
+    ผูก คะแนน      = 0
+
+    # ── สถานะเกม ────────────────────────────────────────────────────────────
+    ผูก ลูกบอล_px    = 0.0
+    ผูก ลูกบอล_py    = รัศมีลูกบอล + 0.25
+    ผูก ลูกบอล_pz    = 0.0
+    ผูก ลูกบอล_vx    = 0.0
+    ผูก ลูกบอล_vy    = 0.0
+    ผูก ลูกบอล_vz    = 0.0
+    ผูก กระโดดเหลือ = จำนวนกระโดด
+    ผูก อยู่บนพื้น  = 0
+    ผูก มุมกล้อง    = 0.0
+    ผูก แดน        = 0
+
+    ตั้งเสียงความว่าง()
+
+    # ── ลูปเกมหลัก ──────────────────────────────────────────────────────────
+    ขณะที่ หน้าต่างเปิดอยู่() {
+        ผูก เวลา = 0.016
+
+        # ── เมาส์: หมุนกล้องแนวนอน ──────────────────────────────────────
+        ผูก มุมกล้อง = มุมกล้อง + เมาส์X() * ความไวเมาส์
+
+        # ── Space: กระโดด / กระโดดคู่ ───────────────────────────────────
+        ถ้า กดปุ่ม("space") {
+            ถ้า กระโดดเหลือ > 0 {
+                ผูก ลูกบอล_vy    = ความเร็วกระโดด
+                ผูก กระโดดเหลือ = กระโดดเหลือ - 1
+            }
+        }
+
+        # ── WASD: แรงสัมพัทธ์กล้องในแนว XZ ──────────────────────────────
+        ผูก เดินหน้า_x =       ไซน์(มุมกล้อง)
+        ผูก เดินหน้า_z =       โคไซน์(มุมกล้อง)
+        ผูก เลี้ยวขวา_x =      โคไซน์(มุมกล้อง)
+        ผูก เลี้ยวขวา_z = 0.0 - ไซน์(มุมกล้อง)
+
+        ผูก การเคลื่อนที่_x = 0.0
+        ผูก การเคลื่อนที่_z = 0.0
+        ถ้า กดค้าง("w") { ผูก การเคลื่อนที่_x = การเคลื่อนที่_x + เดินหน้า_x;  ผูก การเคลื่อนที่_z = การเคลื่อนที่_z + เดินหน้า_z }
+        ถ้า กดค้าง("s") { ผูก การเคลื่อนที่_x = การเคลื่อนที่_x - เดินหน้า_x;  ผูก การเคลื่อนที่_z = การเคลื่อนที่_z - เดินหน้า_z }
+        ถ้า กดค้าง("d") { ผูก การเคลื่อนที่_x = การเคลื่อนที่_x + เลี้ยวขวา_x;  ผูก การเคลื่อนที่_z = การเคลื่อนที่_z + เลี้ยวขวา_z }
+        ถ้า กดค้าง("a") { ผูก การเคลื่อนที่_x = การเคลื่อนที่_x - เลี้ยวขวา_x;  ผูก การเคลื่อนที่_z = การเคลื่อนที่_z - เลี้ยวขวา_z }
+
+        ผูก ยาวการเคลื่อนที่ = รากที่สอง(การเคลื่อนที่_x*การเคลื่อนที่_x + การเคลื่อนที่_z*การเคลื่อนที่_z)
+        ถ้า ยาวการเคลื่อนที่ > 0.001 {
+            ผูก การเคลื่อนที่_x = การเคลื่อนที่_x / ยาวการเคลื่อนที่
+            ผูก การเคลื่อนที่_z = การเคลื่อนที่_z / ยาวการเคลื่อนที่
+            ผูก ความเร็วแนวนอน = รากที่สอง(ลูกบอล_vx*ลูกบอล_vx + ลูกบอล_vz*ลูกบอล_vz)
+            ถ้า ความเร็วแนวนอน < ความเร็วสูง {
+                ผูก ลูกบอล_vx = ลูกบอล_vx + การเคลื่อนที่_x * ความเร่ง * เวลา
+                ผูก ลูกบอล_vz = ลูกบอล_vz + การเคลื่อนที่_z * ความเร่ง * เวลา
+            }
+        }
+
+        # ── การอินทิเกรตฟิสิกส์ + แรงโน้มถ่วงแบบรัศมี ──────────────────
+        # คำนวณทิศทางแรงโน้มถ่วงตามปกติของหน้าที่ใกล้ที่สุด
+        
+        # ปกติของเจ้า 12 หน้า — ที่ถูกต้องสำหรับทรงสิบสองหน้าทองคำ
+        # φ = 1.618034, 1/φ = 0.618034
+        ผูก face_normals_x = [1.0,1.0,1.0,1.0, -1.0,-1.0,-1.0,-1.0, 0.0,0.0,0.618034,0.618034]
+        ผูก face_normals_y = [1.0,1.0,-1.0,-1.0, 1.0,1.0,-1.0,-1.0, 1.618034,-1.618034,1.618034,-1.618034]
+        ผูก face_normals_z = [1.0,-1.0,1.0,-1.0, 1.0,-1.0,1.0,-1.0, 0.618034,0.618034,1.0,1.0]
+
+        # หาหน้าที่ใกล้ที่สุด (ตรวจสอบทั้ง 12 หน้า)
+        ผูก closest_face = 0
+        ผูก closest_dist = 1000.0
+        
+        # Check all 12 faces
+        ผูก fi = 0
+        ขณะที่ fi == 0 {
+            ผูก fx = list_get(face_normals_x, 0)
+            ผูก fy = list_get(face_normals_y, 0)
+            ผูก fz = list_get(face_normals_z, 0)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 0
+            }
+            ผูก fi = 1
+        }
+        ผูก fi = 1
+        ขณะที่ fi == 1 {
+            ผูก fx = list_get(face_normals_x, 1)
+            ผูก fy = list_get(face_normals_y, 1)
+            ผูก fz = list_get(face_normals_z, 1)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 1
+            }
+            ผูก fi = 2
+        }
+        ผูก fi = 2
+        ขณะที่ fi == 2 {
+            ผูก fx = list_get(face_normals_x, 2)
+            ผูก fy = list_get(face_normals_y, 2)
+            ผูก fz = list_get(face_normals_z, 2)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 2
+            }
+            ผูก fi = 3
+        }
+        ผูก fi = 3
+        ขณะที่ fi == 3 {
+            ผูก fx = list_get(face_normals_x, 3)
+            ผูก fy = list_get(face_normals_y, 3)
+            ผูก fz = list_get(face_normals_z, 3)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 3
+            }
+            ผูก fi = 4
+        }
+        ผูก fi = 4
+        ขณะที่ fi == 4 {
+            ผูก fx = list_get(face_normals_x, 4)
+            ผูก fy = list_get(face_normals_y, 4)
+            ผูก fz = list_get(face_normals_z, 4)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 4
+            }
+            ผูก fi = 5
+        }
+        ผูก fi = 5
+        ขณะที่ fi == 5 {
+            ผูก fx = list_get(face_normals_x, 5)
+            ผูก fy = list_get(face_normals_y, 5)
+            ผูก fz = list_get(face_normals_z, 5)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 5
+            }
+            ผูก fi = 6
+        }
+        ผูก fi = 6
+        ขณะที่ fi == 6 {
+            ผูก fx = list_get(face_normals_x, 6)
+            ผูก fy = list_get(face_normals_y, 6)
+            ผูก fz = list_get(face_normals_z, 6)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 6
+            }
+            ผูก fi = 7
+        }
+        ผูก fi = 7
+        ขณะที่ fi == 7 {
+            ผูก fx = list_get(face_normals_x, 7)
+            ผูก fy = list_get(face_normals_y, 7)
+            ผูก fz = list_get(face_normals_z, 7)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 7
+            }
+            ผูก fi = 8
+        }
+        ผูก fi = 8
+        ขณะที่ fi == 8 {
+            ผูก fx = list_get(face_normals_x, 8)
+            ผูก fy = list_get(face_normals_y, 8)
+            ผูก fz = list_get(face_normals_z, 8)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 8
+            }
+            ผูก fi = 9
+        }
+        ผูก fi = 9
+        ขณะที่ fi == 9 {
+            ผูก fx = list_get(face_normals_x, 9)
+            ผูก fy = list_get(face_normals_y, 9)
+            ผูก fz = list_get(face_normals_z, 9)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 9
+            }
+            ผูก fi = 10
+        }
+        ผูก fi = 10
+        ขณะที่ fi == 10 {
+            ผูก fx = list_get(face_normals_x, 10)
+            ผูก fy = list_get(face_normals_y, 10)
+            ผูก fz = list_get(face_normals_z, 10)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 10
+            }
+            ผูก fi = 11
+        }
+        ผูก fi = 11
+        ขณะที่ fi == 11 {
+            ผูก fx = list_get(face_normals_x, 11)
+            ผูก fy = list_get(face_normals_y, 11)
+            ผูก fz = list_get(face_normals_z, 11)
+            ผูก fd = รากที่สอง(fx*fx + fy*fy + fz*fz)
+            ถ้า fd > 0.001 {
+                ผูก fx = fx / fd
+                ผูก fy = fy / fd
+                ผูก fz = fz / fd
+            }
+            ผูก dist = ลูกบอล_px * fx + ลูกบอล_py * fy + ลูกบอล_pz * fz
+            ถ้า dist < closest_dist {
+                ผูก closest_dist = dist
+                ผูก closest_face = 11
+            }
+            ผูก fi = 12
+        }
+
+        # ใช้ปกติของหน้าที่ใกล้ที่สุดสำหรับแรงโน้มถ่วง
+        ผูก gx = list_get(face_normals_x, closest_face)
+        ผูก gy = list_get(face_normals_y, closest_face)
+        ผูก gz = list_get(face_normals_z, closest_face)
+        ผูก gd = รากที่สอง(gx*gx + gy*gy + gz*gz)
+
+        # ทำให้เป็นปกติและใช้เป็นทิศทางแรงโน้มถ่วง
+        ถ้า gd > 0.001 {
+            ผูก gx = gx / gd
+            ผูก gy = gy / gd
+            ผูก gz = gz / gd
+            ผูก ลูกบอล_vx = ลูกบอล_vx - gx * แรงโน้มถ่วง * เวลา
+            ผูก ลูกบอล_vy = ลูกบอล_vy - gy * แรงโน้มถ่วง * เวลา
+            ผูก ลูกบอล_vz = ลูกบอล_vz - gz * แรงโน้มถ่วง * เวลา
+        }
+
+        ผูก ลูกบอล_px = ลูกบอล_px + ลูกบอล_vx * เวลา
+        ผูก ลูกบอล_py = ลูกบอล_py + ลูกบอล_vy * เวลา
+        ผูก ลูกบอล_pz = ลูกบอล_pz + ลูกบอล_vz * เวลา
+
+        # ── การชนกับทรงสิบสองหน้า (ตรวจสอบทุกหน้า) ──────────────────────
+        # ลูกบอลอยู่ภายในและควรเด้งออกจากหน้าทั้ง 12 หน้า
+        ผูก scaled_radius = 50.0
+        ผูก อยู่บนพื้น = 0
+
+        # Collision check for all 12 faces - check face 0
+        ผูก cfx = list_get(face_normals_x, 0)
+        ผูก cfy = list_get(face_normals_y, 0)
+        ผูก cfz = list_get(face_normals_z, 0)
+        ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+        ถ้า cfd > 0.001 {
+            ผูก cfx = cfx / cfd
+            ผูก cfy = cfy / cfd
+            ผูก cfz = cfz / cfd
+        }
+        ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+        ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+            ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                ถ้า vel_dot_normal < 0 {
+                    ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                    ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                    ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                    ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                }
+                ผูก อยู่บนพื้น = 1
+            }
+        }
+
+        # Check faces 1-11 (ตรวจสอบหน้า 1 ถึง 11)
+        ผูก fi = 1
+        ขณะที่ fi == 1 {
+            ผูก cfx = list_get(face_normals_x, 1)
+            ผูก cfy = list_get(face_normals_y, 1)
+            ผูก cfz = list_get(face_normals_z, 1)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 2
+        }
+
+        ผูก fi = 2
+        ขณะที่ fi == 2 {
+            ผูก cfx = list_get(face_normals_x, 2)
+            ผูก cfy = list_get(face_normals_y, 2)
+            ผูก cfz = list_get(face_normals_z, 2)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 3
+        }
+
+        ผูก fi = 3
+        ขณะที่ fi == 3 {
+            ผูก cfx = list_get(face_normals_x, 3)
+            ผูก cfy = list_get(face_normals_y, 3)
+            ผูก cfz = list_get(face_normals_z, 3)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 4
+        }
+
+        ผูก fi = 4
+        ขณะที่ fi == 4 {
+            ผูก cfx = list_get(face_normals_x, 4)
+            ผูก cfy = list_get(face_normals_y, 4)
+            ผูก cfz = list_get(face_normals_z, 4)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 5
+        }
+
+        ผูก fi = 5
+        ขณะที่ fi == 5 {
+            ผูก cfx = list_get(face_normals_x, 5)
+            ผูก cfy = list_get(face_normals_y, 5)
+            ผูก cfz = list_get(face_normals_z, 5)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 6
+        }
+
+        ผูก fi = 6
+        ขณะที่ fi == 6 {
+            ผูก cfx = list_get(face_normals_x, 6)
+            ผูก cfy = list_get(face_normals_y, 6)
+            ผูก cfz = list_get(face_normals_z, 6)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 7
+        }
+
+        ผูก fi = 7
+        ขณะที่ fi == 7 {
+            ผูก cfx = list_get(face_normals_x, 7)
+            ผูก cfy = list_get(face_normals_y, 7)
+            ผูก cfz = list_get(face_normals_z, 7)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 8
+        }
+
+        ผูก fi = 8
+        ขณะที่ fi == 8 {
+            ผูก cfx = list_get(face_normals_x, 8)
+            ผูก cfy = list_get(face_normals_y, 8)
+            ผูก cfz = list_get(face_normals_z, 8)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 9
+        }
+
+        ผูก fi = 9
+        ขณะที่ fi == 9 {
+            ผูก cfx = list_get(face_normals_x, 9)
+            ผูก cfy = list_get(face_normals_y, 9)
+            ผูก cfz = list_get(face_normals_z, 9)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 10
+        }
+
+        ผูก fi = 10
+        ขณะที่ fi == 10 {
+            ผูก cfx = list_get(face_normals_x, 10)
+            ผูก cfy = list_get(face_normals_y, 10)
+            ผูก cfz = list_get(face_normals_z, 10)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 11
+        }
+
+        ผูก fi = 11
+        ขณะที่ fi == 11 {
+            ผูก cfx = list_get(face_normals_x, 11)
+            ผูก cfy = list_get(face_normals_y, 11)
+            ผูก cfz = list_get(face_normals_z, 11)
+            ผูก cfd = รากที่สอง(cfx*cfx + cfy*cfy + cfz*cfz)
+            ถ้า cfd > 0.001 {
+                ผูก cfx = cfx / cfd
+                ผูก cfy = cfy / cfd
+                ผูก cfz = cfz / cfd
+            }
+            ผูก face_dist = ลูกบอล_px * cfx + ลูกบอล_py * cfy + ลูกบอล_pz * cfz
+            ถ้า face_dist > (scaled_radius - รัศมีลูกบอล - 2.0) {
+                ถ้า face_dist < (scaled_radius + รัศมีลูกบอล) {
+                    ผูก push_amount = (scaled_radius - รัศมีลูกบอล) - face_dist
+                    ผูก ลูกบอล_px = ลูกบอล_px + cfx * push_amount
+                    ผูก ลูกบอล_py = ลูกบอล_py + cfy * push_amount
+                    ผูก ลูกบอล_pz = ลูกบอล_pz + cfz * push_amount
+
+                    ผูก vel_dot_normal = ลูกบอล_vx * cfx + ลูกบอล_vy * cfy + ลูกบอล_vz * cfz
+                    ถ้า vel_dot_normal < 0 {
+                        ผูก bounceImpulse = vel_dot_normal * (1.0 + การเด้ง)
+                        ผูก ลูกบอล_vx = ลูกบอล_vx - cfx * bounceImpulse
+                        ผูก ลูกบอล_vy = ลูกบอล_vy - cfy * bounceImpulse
+                        ผูก ลูกบอล_vz = ลูกบอล_vz - cfz * bounceImpulse
+                    }
+                    ผูก อยู่บนพื้น = 1
+                }
+            }
+            ผูก fi = 12
+        }
+
+        # ── แรงเสียดทาน (แนวนอนเมื่ออยู่บนพื้นเท่านั้น) ──────────────────
+        ถ้า อยู่บนพื้น == 1 {
+            ผูก ลูกบอล_vx = ลูกบอล_vx * แรงเสียดทาน
+            ผูก ลูกบอล_vz = ลูกบอล_vz * แรงเสียดทาน
+        }
+
+        # ── อัพเดตหน้าที่ใกล้ที่สุด (สำหรับแรงโน้มถ่วง + กล้อง) ────────────
+        # ตรวจสอบระยะทางถึงทุกหน้า และใช้หน้าที่ใกล้ที่สุด
+        ผูก new_closest_face = 0
+        ผูก new_closest_dist = 1000.0
+
+        # Check face 0
+        ผูก check_fx = list_get(face_normals_x, 0)
+        ผูก check_fy = list_get(face_normals_y, 0)
+        ผูก check_fz = list_get(face_normals_z, 0)
+        ผูก check_fd = รากที่สอง(check_fx*check_fx + check_fy*check_fy + check_fz*check_fz)
+        ถ้า check_fd > 0.001 {
+            ผูก check_fx = check_fx / check_fd
+            ผูก check_fy = check_fy / check_fd
+            ผูก check_fz = check_fz / check_fd
+        }
+        ผูก check_dist = ลูกบอล_px * check_fx + ลูกบอล_py * check_fy + ลูกบอล_pz * check_fz
+        ถ้า check_dist < new_closest_dist {
+            ผูก new_closest_dist = check_dist
+            ผูก new_closest_face = 0
+        }
+
+        ผูก closest_face = new_closest_face
+
+        # ── E: สนทนาจิตใจ ──────────────────────────────────────────────
+        ถ้า กดปุ่ม("e") {
+            ผูก ดัชนีสนทนา = ดัชนีสนทนา + 1
+            ถ้า ดัชนีสนทนา >= ความยาว(สนทนา) { ผูก ดัชนีสนทนา = 0 }
+            พิมพ์("  จิตใจ: " + list_get(สนทนา, ดัชนีสนทนา))
+            ผูก คะแนน = คะแนน + 1
+        }
+
+        # ── N: เปลี่ยนแดน + เสียง ──────────────────────────────────────
+        ถ้า กดปุ่ม("n") {
+            ผูก แดน = แดน + 1
+            ถ้า แดน > 3 { ผูก แดน = 0 }
+            ถ้า แดน == 0 { พิมพ์("  [ แดน ๑ — ความว่างเปล่า ]");            ตั้งเสียงความว่าง()      }
+            ถ้า แดน == 1 { พิมพ์("  [ แดน ๒ — มหาสมุทรจิต ]");        ตั้งเสียงมหาสมุทร()     }
+            ถ้า แดน == 2 { พิมพ์("  [ แดน ๓ — อาณาจักรคริสตัล ]");      ตั้งเสียงคริสตัล()   }
+            ถ้า แดน == 3 { พิมพ์("  [ แดน ๔ — สรณะแห่งดวงวิญญาณ ]");      ตั้งเสียงสรณะ() }
+        }
+
+        # ── กล้องลอยตัวตามบอล (bobber mode): ติดตามบอลโดยใช้ปกติของหน้า ────
+        # ใช้ปกติของหน้าที่ใกล้ที่สุดเป็น "ขึ้น" ท้องถิ่น
+        ผูก up_x = list_get(face_normals_x, closest_face)
+        ผูก up_y = list_get(face_normals_y, closest_face)
+        ผูก up_z = list_get(face_normals_z, closest_face)
+        ผูก up_d = รากที่สอง(up_x*up_x + up_y*up_y + up_z*up_z)
+        ถ้า up_d > 0.001 {
+            ผูก up_x = up_x / up_d
+            ผูก up_y = up_y / up_d
+            ผูก up_z = up_z / up_d
+        }
+
+        # สร้าง right vector ที่ตั้งฉากกับ up
+        # ใช้ cross product: right = (0,1,0) × up (if not parallel)
+        ผูก right_x = 0.0 - up_z
+        ผูก right_y = 0.0
+        ผูก right_z = up_x
+        
+        ผูก right_d = รากที่สอง(right_x*right_x + right_y*right_y + right_z*right_z)
+        ถ้า right_d < 0.1 {
+            # ถ้า up ~ (0,1,0) ให้ใช้ (1,0,0) × up instead
+            ผูก right_x = 0.0
+            ผูก right_y = up_z
+            ผูก right_z = 0.0 - up_y
+            ผูก right_d = รากที่สอง(right_x*right_x + right_y*right_y + right_z*right_z)
+        }
+
+        ถ้า right_d > 0.001 {
+            ผูก right_x = right_x / right_d
+            ผูก right_y = right_y / right_d
+            ผูก right_z = right_z / right_d
+        }
+
+        # forward = up × right
+        ผูก fwd_x = up_y * right_z - up_z * right_y
+        ผูก fwd_y = up_z * right_x - up_x * right_z
+        ผูก fwd_z = up_x * right_y - up_y * right_x
+
+        # ตำแหน่งกล้อง: ลูกบอล + (ขึ้น * 6.0) + (ด้านข้าง * 8.0 * orbit)
+        ผูก cam_up_dist = 6.0
+        ผูก cam_orbit = 8.0
+        
+        ผูก orbit_cos = โคไซน์(มุมกล้อง)
+        ผูก orbit_sin = ไซน์(มุมกล้อง)
+        
+        ผูก cpx = ลูกบอล_px + up_x * cam_up_dist + right_x * cam_orbit * orbit_cos + fwd_x * cam_orbit * orbit_sin
+        ผูก cpy = ลูกบอล_py + up_y * cam_up_dist + right_y * cam_orbit * orbit_cos + fwd_y * cam_orbit * orbit_sin
+        ผูก cpz = ลูกบอล_pz + up_z * cam_up_dist + right_z * cam_orbit * orbit_cos + fwd_z * cam_orbit * orbit_sin
+
+        # ทิศทางการมองชี้ลงไปยังลูกบอล
+        ผูก ldx = ลูกบอล_px - cpx
+        ผูก ldy = ลูกบอล_py - cpy
+        ผูก ldz = ลูกบอล_pz - cpz
+        ผูก ll  = รากที่สอง(ldx*ldx + ldy*ldy + ldz*ldz)
+        ถ้า ll < 0.001 { ผูก ll = 0.001 }
+
+        ผูก ry  = atan2(ldx / ll, ldz / ll)
+        ผูก rx  = asin(จำกัด(ldy / ll, 0.0-0.98, 0.98))
+        ผูก cry = โคไซน์(ry); ผูก sry = ไซน์(ry)
+        ผูก crx = โคไซน์(rx); ผูก srx = ไซน์(rx)
+        ตั้งกล้อง(cry, sry, crx, srx)
+        ตั้งตำแหน่งกล้อง(cpx, cpy, cpz)
+        ตั้งระยะห่าง(ระยะZ)
+
+        # ── เสียง 4 มิติ: ผู้ฟังและโทนไฮเพอร์โบลิก ───────────────────
+        ผู้ฟัง(cry, sry, crx, srx)
+        ผูก ไฮเพอร์_d = รากที่สอง(ลูกบอล_px*ลูกบอล_px + ลูกบอล_py*ลูกบอล_py + ลูกบอล_pz*ลูกบอล_pz) / รัศมีทรงกลม
+        เสียงโทน(6,  ลูกบอล_px, ลูกบอล_py, ลูกบอล_pz,
+                   1.0 + ไฮเพอร์_d * 0.9,
+                   55.0 + ไฮเพอร์_d * 38.0,  0.05,  0.35,  0.022)
+
+        # ── ล้าง ────────────────────────────────────────────────────────
+        ถ้า แดน == 0 { เติม( 1,  0,  6) }
+        ถ้า แดน == 1 { เติม( 0,  2, 18) }
+        ถ้า แดน == 2 { เติม( 5,  1, 14) }
+        ถ้า แดน == 3 { เติม( 7,  3,  0) }
+
+        # ── แสง ─────────────────────────────────────────────────────────
+        ล้างแสง()
+        ตั้งแสงรอบข้าง(0.30)
+        เพิ่มแสง(ไซน์(กรอบ*0.010)*12.0 + ลูกบอล_px,  ลูกบอล_py + 6.5,
+                  โคไซน์(กรอบ*0.010)*6.0  + ลูกบอล_pz,  1.0,0.88,0.60, 3.5,24.0)
+        เพิ่มแสง(ลูกบอล_px, ลูกบอล_py + 0.4, ลูกบอล_pz,   0.5,0.18,1.0, 1.8, 9.0)
+        เพิ่มแสง(ไซน์(กรอบ*0.007+1.5)*9.0 + ลูกบอล_px,  ลูกบอล_py + 2.0,
+                  โคไซน์(กรอบ*0.007)*8.0 + ลูกบอล_pz,   1.0,0.20,0.90, 1.2,14.0)
+
+        # ── วาดฉาก ──────────────────────────────────────────────────────
+        # สิบสองหน้าไฮเพอร์โบลิก-พาราโบลิก (โครงลวดสีรุ้ง + หน้าโปร่งแสง)
+        วาดสิบสองหน้าไฮเพอร์โบลิก(ขนาดลูกบาศก์, กรอบ)
+
+        # ต้นไม้และหญ้า
+        ผูก ti = 0
+        ขณะที่ ti < 6 {
+            ผูก tx = ไซน์(tau * ti / 6.0 + กรอบ * 0.001) * 40.0
+            ผูก tz = โคไซน์(tau * ti / 6.0 + กรอบ * 0.001) * 40.0
+            วาดต้นไม้(tx, 0.0-ขนาดลูกบาศก์*0.5 + 3.0, tz, 5.0, กรอบ)
+            วาดหญ้า(tx + 8.0, 0.0-ขนาดลูกบาศก์*0.5 + 0.5, tz + 8.0, กรอบ)
+            ผูก ti = ti + 1
+        }
+
+        # ลูกบอล
+        วาดลูกบอล(ลูกบอล_px, ลูกบอล_py, ลูกบอล_pz,  รัศมีลูกบอล,  10, 24,  กรอบ)
+        วาดโอรา(ลูกบอล_px, ลูกบอล_py, ลูกบอล_pz, กรอบ)
+        วาดลายแดน(แดน, ลูกบอล_px, ลูกบอล_py, ลูกบอล_pz, กรอบ)
+
+        แสดงผล()
+        ผูก กรอบ = กรอบ + 1
+    }
+
+    # ── ออก ─────────────────────────────────────────────────────────────────
+    พิมพ์("")
+    พิมพ์("══════════════════════════════════════════════════════════════")
+    พิมพ์("  Soul Symphony Ling  |  เซ็ชั่นเสร็จสิ้น")
+    พิมพ์("  จิตใจที่สนทนา: " + to_str(คะแนน))
+    พิมพ์("  สิ่งประดิษฐ์ยังคงเล่นต่อไป")
+    พิมพ์("══════════════════════════════════════════════════════════════")
+}
