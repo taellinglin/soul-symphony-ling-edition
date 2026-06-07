@@ -1,0 +1,52 @@
+# ─── Rust build output ────────────────────────────────────────────────────────
+target/
+Cargo.lock
+
+# ─── Tool build output (glyphgen, midiconv) ───────────────────────────────────
+เครื่องมือ/*/target/
+เครื่องมือ/*/Cargo.lock
+
+# ─── Old / archived music (keep only the active WAV + MIDI .ling + wrapper) ──
+เพลง/old/*.ogg
+เพลง/old/*.wav
+เพลง/old/*.mid
+# SubsynthWinter_3.ling is still used by the game — keep it
+# เพลง/old/SubsynthWinter_3.ling  ← intentionally NOT ignored
+
+# ─── Font source files (only the baked Daemon .ling glyphs are needed at runtime)
+ฟอนต์/ข้อความ/
+ฟอนต์/จักร/
+ฟอนต์/สัญลักษณ์/
+ฟอนต์/อื่นๆ/
+ฟอนต์/โลก/
+
+# ─── Image assets (not loaded by current game code) ──────────────────────────
+ภาพ/
+
+# ─── Sound effect WAVs (game uses เสียงโทน synthesis, not these files) ─────────
+เสียง/
+
+# ─── Original Rust source backup ─────────────────────────────────────────────
+ต้นฉบับ/
+
+# ─── OS junk ──────────────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ─── IDE / editor ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/
+
+# ─── Misc build / temp ────────────────────────────────────────────────────────
+*.pdb
+*.log
+flycheck*/
