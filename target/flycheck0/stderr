@@ -1,6 +1,8 @@
-    Blocking waiting for file lock on package cache
-   0.298002200s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: fingerprint error for soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)/Check { test: false }/TargetInner { name: "soul-symphony-ling", doc: true, ..: with_path("J:\\soul-symphony-ling\\src\\main.rs", Edition2021) }
-   0.298155600s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:     err: failed to read `J:\soul-symphony-ling\target\debug\.fingerprint\soul-symphony-ling-0885516ce3cbb696\bin-soul-symphony-ling`
+   0.159813000s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: stale: changed "C:\\Users\\User\\Programs\\ling\\src\\lib.rs"
+   0.159844400s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:           (vs) "J:\\soul-symphony-ling\\target\\debug\\.fingerprint\\ling-lang-c9a3115d92ae8630\\dep-lib-ling"
+   0.159848600s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 13425325814, nanos: 678993000 } < FileTime { seconds: 13425325914, nanos: 209499900 }
+   0.159940100s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: fingerprint error for soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)/Check { test: false }/TargetInner { name: "soul-symphony-ling", doc: true, ..: with_path("J:\\soul-symphony-ling\\src\\main.rs", Edition2021) }
+   0.159959500s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:     err: failed to read `J:\soul-symphony-ling\target\debug\.fingerprint\soul-symphony-ling-82188322c47b0a5f\bin-soul-symphony-ling`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -27,8 +29,10 @@ Stack backtrace:
   18: git_midx_writer_dump
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
-   0.354943500s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: fingerprint error for soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)/Check { test: true }/TargetInner { name: "soul-symphony-ling", doc: true, ..: with_path("J:\\soul-symphony-ling\\src\\main.rs", Edition2021) }
-   0.354986700s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:     err: failed to read `J:\soul-symphony-ling\target\debug\.fingerprint\soul-symphony-ling-c279ed307ecc4f3a\test-bin-soul-symphony-ling`
+   0.165466000s  INFO prepare_target{force=false package_id=ling-lang v2030.1.18 (C:\Users\User\Programs\ling) target="ling"}: cargo::core::compiler::fingerprint: fingerprint dirty for ling-lang v2030.1.18 (C:\Users\User\Programs\ling)/Check { test: false }/TargetInner { ..: lib_target("ling", ["lib"], "C:\\Users\\User\\Programs\\ling\\src\\lib.rs", Edition2021) }
+   0.165485500s  INFO prepare_target{force=false package_id=ling-lang v2030.1.18 (C:\Users\User\Programs\ling) target="ling"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "J:\\soul-symphony-ling\\target\\debug\\.fingerprint\\ling-lang-c9a3115d92ae8630\\dep-lib-ling", reference_mtime: FileTime { seconds: 13425325814, nanos: 678993000 }, stale: "C:\\Users\\User\\Programs\\ling\\src\\lib.rs", stale_mtime: FileTime { seconds: 13425325914, nanos: 209499900 } }))
+   0.288661400s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: fingerprint error for soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)/Check { test: true }/TargetInner { name: "soul-symphony-ling", doc: true, ..: with_path("J:\\soul-symphony-ling\\src\\main.rs", Edition2021) }
+   0.288682800s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:     err: failed to read `J:\soul-symphony-ling\target\debug\.fingerprint\soul-symphony-ling-d98a933ede05322d\test-bin-soul-symphony-ling`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -55,7 +59,5 @@ Stack backtrace:
   18: git_midx_writer_dump
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
-    Checking soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)
-error: could not compile `soul-symphony-ling` (bin "soul-symphony-ling" test) due to 1 previous error
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `soul-symphony-ling` (bin "soul-symphony-ling") due to 1 previous error
+    Checking ling-lang v2030.1.18 (C:\Users\User\Programs\ling)
+error: could not compile `ling-lang` (lib) due to 1 previous error; 6 warnings emitted
