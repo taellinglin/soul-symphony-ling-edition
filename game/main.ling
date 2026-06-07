@@ -1,0 +1,497 @@
+
+ใช้ "../music/เพลงชื่อเรื่อง"
+ใช้ "../font/Daemon"
+ใช้ "../font/English"
+
+use "color"
+use "audio"
+use "title"
+use "play"
+use "level"
+
+# ════════════════════════════════════════════════════════════════════════════
+# Soul Symphony Ling — เครื่องสถานะ + charge-jump + follow-cam + saves + ภาษา
+# ════════════════════════════════════════════════════════════════════════════
+bind ST_BOOT  = 0
+bind ST_TITLE = 1
+bind ST_MENU  = 2
+bind ST_LOAD  = 3
+bind ST_NEW   = 4
+bind ST_MP    = 5
+bind ST_OPT   = 6
+bind ST_PLAY  = 7
+bind ST_LANG  = 8
+
+bind เริ่ม = do {
+    เปิดหน้าต่าง(1920, 1080)
+    จับเมาส์()
+    audio_volume(0.6)
+
+    bind เพลงหลัก       = โหลดเพลง("music/Soul Symphony_Colors_Mix_Master.wav")
+    bind ความยาวเพลงหลัก = ความยาวเพลง(เพลงหลัก)
+    bind เพลงเกม        = โหลดเพลง("music/Antarctica.wav")
+    bind ยาวเพลงเกม     = ความยาวเพลง(เพลงเกม)
+
+    # ── โหลดตัวเลือก (options.cfg = "music;lang") ────────────────────────────
+    bind cfg  = อ่านไฟล์("options.cfg")
+    bind cfgp = แยก(cfg, ";")
+    bind musicOn = floor(list_get(cfgp, 0))
+    bind ภาษา    = floor(list_get(cfgp, 1))
+
+    # ── โหลดช่องเซฟ (saves.dat = "slot0;slot1;slot2") ───────────────────────
+    bind sav  = อ่านไฟล์("saves.dat")
+    bind savp = แยก(sav, ";")
+    bind slot0Data = list_get(savp, 0)
+    bind slot1Data = list_get(savp, 1)
+    bind slot2Data = list_get(savp, 2)
+
+    พิมพ์("══════════════════════════════════════════════")
+    พิมพ์("   Soul Symphony Ling — Made in Ling Country")
+    พิมพ์("   ↑/↓ เลือก · Enter ตกลง · Esc ย้อน/พัก · K เซฟ")
+    พิมพ์("══════════════════════════════════════════════")
+
+    bind สถานะ    = ST_BOOT
+    bind sel       = 0
+    bind ออกเกม    = 0
+    bind กรอบ      = 0.0
+    bind bootStart = เวลาปัจจุบัน()
+
+    bind paused    = 0
+    bind gameMode  = 0
+    bind optReturn = ST_MENU
+    bind รีเซ็ต    = 1
+    bind currentSlot = 0
+    bind startX = 0.0  bind startY = 0.0 - 2.0  bind startZ = 0.0
+
+    # ── ออร์บ + ของเหลว ───────────────────────────────────────────────────────
+    bind R = 2.0
+    bind GROUND = 3.0
+    bind ball = soft_ball(0.0, 0.0 - 2.0, 0.0, R)
+    bind liq  = liquid_new(56.0, 56.0)
+    liquid_rainbow(liq, 1.0)
+
+    # ── พื้นเชเดอร์ของเหลว ROYGBIV (กริดหยาบ คลุมทั้งเลเวล) ──────────────────
+    bind เหลวพื้น = liquid_new(24.0, 24.0)
+    liquid_rainbow(เหลวพื้น, 1.0)
+    bind fsx = 0.0
+    ขณะที่ fsx < 24.0 {
+        liquid_splat(เหลวพื้น, fsx, 8.0,  1.0, 0.9, 2.0)
+        liquid_splat(เหลวพื้น, fsx, 16.0, 0.0, 1.0, 2.2)
+        bind fsx = fsx + 2.0
+    }
+
+    bind jumps = 0.0
+    bind chargeT = 0.0
+    bind spDown = 0.0
+    bind px = 0.0  bind py = 0.0  bind pz = 0.0
+    bind camX = 0.0  bind camZ = 0.0 - 12.0
+    bind lastDirx = 0.0  bind lastDirz = 1.0
+
+    ตั้งเสียงชื่อ()
+    ถ้า musicOn == 1 { ระดับเพลง(0.82) }
+    มิฉะนั้น { ระดับเพลง(0.0) }
+
+    # ════════════════════════════════════════════════════════════════════════
+    ขณะที่ หน้าต่างเปิดอยู่() && ออกเกม == 0 {
+        bind t = เวลาปัจจุบัน()
+
+        # ── BOOT ──────────────────────────────────────────────────────────────
+        ถ้า สถานะ == ST_BOOT {
+            bind el = t - bootStart
+            bind prog = el / 4.2
+            bind fade = 1.0
+            ถ้า prog > 0.8 { bind fade = (1.0 - prog) / 0.2 }
+            ถ้า fade < 0.0 { bind fade = 0.0 }
+            bind lfo = 9.0 * (1.0 - prog)
+            ถ้า lfo < 0.0 { bind lfo = 0.0 }
+            bind a = 0.22 * fade
+            เสียงโทน(0, 0,0,0, 1.0, 261.63, a,      lfo,      0.45*fade)
+            เสียงโทน(1, 0,0,0, 1.0, 329.63, a*0.85, lfo*0.9,  0.45*fade)
+            เสียงโทน(2, 0,0,0, 1.0, 392.00, a*0.8,  lfo*0.8,  0.45*fade)
+            เสียงโทน(3, 0,0,0, 1.0, 493.88, a*0.7,  lfo*0.65, 0.45*fade)
+            เสียงโทน(4, 0,0,0, 1.0, 523.25, a*0.6,  lfo*0.5,  0.45*fade)
+            ผู้ฟัง(1.0, 0.0, 1.0, 0.0)
+
+            เติม(4, 4, 12)
+            ตั้งแสงรอบข้าง(0.5)
+            ตั้งกล้องมอง(0.0, 0.0, -24.0, 0.0, 0.0, 0.0)
+            ตั้งระยะห่าง(2.8)
+            วาดบูต(prog, el)
+            แสดงผล()
+
+            ถ้า prog >= 1.0 { bind สถานะ = ST_TITLE }
+            ถ้า กดปุ่ม("enter") { bind สถานะ = ST_TITLE }
+            ถ้า กดปุ่ม("space") { bind สถานะ = ST_TITLE }
+            ถ้า สถานะ == ST_TITLE {
+                เสียงโทน(0,0,0,0,1.0,261.0,0.0,0.0,0.0)
+                เสียงโทน(1,0,0,0,1.0,329.0,0.0,0.0,0.0)
+                เสียงโทน(2,0,0,0,1.0,392.0,0.0,0.0,0.0)
+                เสียงโทน(3,0,0,0,1.0,493.0,0.0,0.0,0.0)
+                เสียงโทน(4,0,0,0,1.0,523.0,0.0,0.0,0.0)
+                ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) }
+            }
+        }
+
+        # ── TITLE ─────────────────────────────────────────────────────────────
+        ถ้า สถานะ == ST_TITLE {
+            bind ระยะ = 16.0
+            bind cpx  = ไซน์(กรอบ * 0.0025) * ระยะ
+            bind cpz  = 0.0 - โคไซน์(กรอบ * 0.0025) * ระยะ
+            ตั้งกล้องมอง(cpx, 9.0, cpz, 0.0, 0.0, 0.0)
+            ตั้งระยะห่าง(2.8)
+            ถ้า ความยาวเพลงหลัก > 1.0 {
+                ถ้า ตำแหน่งเพลง() >= ความยาวเพลงหลัก - 0.5 {
+                    ค้นหาเพลง(0)
+                    ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) }
+                }
+            }
+            วาดฉากชื่อเรื่อง(กรอบ)
+            แสดงผล()
+            ถ้า กดปุ่ม("space") { bind สถานะ = ST_MENU;  bind sel = 0 }
+            ถ้า กดปุ่ม("enter") { bind สถานะ = ST_MENU;  bind sel = 0 }
+        }
+
+        # ── MENU ──────────────────────────────────────────────────────────────
+        ถ้า สถานะ == ST_MENU {
+            ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 4 } }
+            ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 4 { bind sel = 0 } }
+            วาดพื้นหลังเมนู(กรอบ)
+            วาดข้อความ(คำ_เมนูหลัก, 0.0, 0.0-7.5, 0.0, 1.1, ภาษา)
+            วาดเมนู(เมนูหลักรายการ, sel, 1.0, 2.4, t, ภาษา)
+            แสดงผล()
+            ถ้า กดปุ่ม("enter") {
+                ถ้า sel == 0 { bind สถานะ = ST_LOAD;  bind sel = 0 }
+                ถ้า sel == 1 { bind สถานะ = ST_NEW }
+                ถ้า sel == 2 { bind สถานะ = ST_MP;    bind sel = 0 }
+                ถ้า sel == 3 { bind optReturn = ST_MENU;  bind สถานะ = ST_OPT;  bind sel = 0 }
+                ถ้า sel == 4 { bind ออกเกม = 1 }
+            }
+            ถ้า กดปุ่ม("escape") { bind สถานะ = ST_TITLE }
+        }
+
+        # ── LOAD SAVE ─────────────────────────────────────────────────────────
+        ถ้า สถานะ == ST_LOAD {
+            ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 2 } }
+            ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 2 { bind sel = 0 } }
+            วาดพื้นหลังเมนู(กรอบ)
+            วาดข้อความ(คำ_โหลด, 0.0, 0.0-6.0, 0.0, 1.0, ภาษา)
+            วาดเมนู(เมนูเซฟ, sel, 0.9, 2.2, t, ภาษา)
+            # สถานะช่อง (saved / empty)
+            สีดินสอ(80, 200, 130)
+            ถ้า slot0Data == "empty" { สีดินสอ(90,90,90);  วาดข้อความ(คำ_ว่าง, 6.5, 0.0-2.2, 0.0, 0.6, ภาษา) }
+            มิฉะนั้น { วาดข้อความ(คำ_บันทึก, 6.5, 0.0-2.2, 0.0, 0.6, ภาษา) }
+            สีดินสอ(80, 200, 130)
+            ถ้า slot1Data == "empty" { สีดินสอ(90,90,90);  วาดข้อความ(คำ_ว่าง, 6.5, 0.0, 0.0, 0.6, ภาษา) }
+            มิฉะนั้น { วาดข้อความ(คำ_บันทึก, 6.5, 0.0, 0.0, 0.6, ภาษา) }
+            สีดินสอ(80, 200, 130)
+            ถ้า slot2Data == "empty" { สีดินสอ(90,90,90);  วาดข้อความ(คำ_ว่าง, 6.5, 2.2, 0.0, 0.6, ภาษา) }
+            มิฉะนั้น { วาดข้อความ(คำ_บันทึก, 6.5, 2.2, 0.0, 0.6, ภาษา) }
+            flush_3d()
+            แสดงผล()
+            ถ้า กดปุ่ม("enter") {
+                bind currentSlot = sel
+                bind data = slot0Data
+                ถ้า sel == 1 { bind data = slot1Data }
+                ถ้า sel == 2 { bind data = slot2Data }
+                bind startX = 0.0;  bind startY = 0.0 - 2.0;  bind startZ = 0.0
+                ถ้า data == "empty" { bind startX = 0.0 }
+                มิฉะนั้น {
+                    bind pp = แยก(data, ",")
+                    bind startX = list_get(pp, 0)
+                    bind startY = list_get(pp, 1)
+                    bind startZ = list_get(pp, 2)
+                }
+                bind gameMode = 0;  bind รีเซ็ต = 1;  bind paused = 0
+                หยุดเพลง()
+                bind สถานะ = ST_PLAY
+            }
+            ถ้า กดปุ่ม("escape") { bind สถานะ = ST_MENU;  bind sel = 0 }
+        }
+
+        # ── NEW GAME (cinematic) ──────────────────────────────────────────────
+        ถ้า สถานะ == ST_NEW {
+            เติม(2, 1, 6)
+            ตั้งแสงรอบข้าง(0.5)
+            ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)
+            ตั้งระยะห่าง(2.8)
+            โหมดผสม(1)
+            สีดินสอ(180, 160, 220)
+            วาดข้อความ(คำ_บทหนึ่ง, 0.0, 0.0-1.0, 0.0, 1.2, ภาษา)
+            ถ้า (floor(กรอบ * 0.04) % 2) == 0 {
+                สีดินสอ(220, 220, 255)
+                วาดข้อความ(คำ_ปุ่ม, 0.0, 4.0, 0.0, 0.6, ภาษา)
+            }
+            flush_3d()
+            โหมดผสม(0)
+            แสดงผล()
+            ถ้า กดปุ่ม("enter") {
+                bind currentSlot = 0
+                bind startX = 0.0;  bind startY = 0.0 - 2.0;  bind startZ = 0.0
+                bind gameMode = 0;  bind รีเซ็ต = 1;  bind paused = 0
+                หยุดเพลง()
+                bind สถานะ = ST_PLAY
+            }
+            ถ้า กดปุ่ม("escape") { bind สถานะ = ST_MENU;  bind sel = 0 }
+        }
+
+        # ── MULTIPLAYER ───────────────────────────────────────────────────────
+        ถ้า สถานะ == ST_MP {
+            ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 1 } }
+            ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 1 { bind sel = 0 } }
+            วาดพื้นหลังเมนู(กรอบ)
+            วาดข้อความ(คำ_มัลติ, 0.0, 0.0-5.0, 0.0, 1.0, ภาษา)
+            วาดเมนู(เมนูมัลติ, sel, 0.9, 2.2, t, ภาษา)
+            แสดงผล()
+            ถ้า กดปุ่ม("enter") {
+                bind currentSlot = 0
+                bind startX = 0.0;  bind startY = 0.0 - 2.0;  bind startZ = 0.0
+                bind gameMode = 1;  bind รีเซ็ต = 1;  bind paused = 0
+                หยุดเพลง()
+                bind สถานะ = ST_PLAY
+            }
+            ถ้า กดปุ่ม("escape") { bind สถานะ = ST_MENU;  bind sel = 0 }
+        }
+
+        # ── OPTIONS ───────────────────────────────────────────────────────────
+        ถ้า สถานะ == ST_OPT {
+            ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 3 } }
+            ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 3 { bind sel = 0 } }
+            วาดพื้นหลังเมนู(กรอบ)
+            วาดข้อความ(คำ_ตัวเลือก, 0.0, 0.0-5.5, 0.0, 1.0, ภาษา)
+            วาดเมนู(เมนูตัวเลือก, sel, 0.9, 2.0, t, ภาษา)
+            ถ้า musicOn == 1 { สีดินสอ(60, 230, 120) }
+            มิฉะนั้น { สีดินสอ(90, 90, 90) }
+            วาดข้อความ(คำ_เพลง, 6.0, 0.0-3.0, 0.0, 0.55, ภาษา)
+            flush_3d()
+            แสดงผล()
+            ถ้า กดปุ่ม("enter") {
+                ถ้า sel == 0 {
+                    bind musicOn = 1 - musicOn
+                    ถ้า musicOn == 1 { ระดับเพลง(0.82) }
+                    มิฉะนั้น { ระดับเพลง(0.0) }
+                }
+                ถ้า sel == 1 { bind สถานะ = ST_LANG;  bind sel = ภาษา }
+                ถ้า sel == 2 {
+                    เขียนไฟล์("options.cfg", to_str(musicOn) + ";" + to_str(ภาษา))
+                    bind สถานะ = optReturn
+                    ถ้า optReturn == ST_PLAY { bind paused = 1 }
+                    bind sel = 0
+                }
+                ถ้า sel == 3 {
+                    bind สถานะ = optReturn
+                    ถ้า optReturn == ST_PLAY { bind paused = 1 }
+                    bind sel = 0
+                }
+            }
+            ถ้า กดปุ่ม("escape") {
+                bind สถานะ = optReturn
+                ถ้า optReturn == ST_PLAY { bind paused = 1 }
+                bind sel = 0
+            }
+        }
+
+        # ── LANGUAGE ──────────────────────────────────────────────────────────
+        ถ้า สถานะ == ST_LANG {
+            ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 5 } }
+            ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 5 { bind sel = 0 } }
+            วาดพื้นหลังเมนู(กรอบ)
+            วาดข้อความ(คำ_ภาษาคำ, 0.0, 0.0-8.0, 0.0, 1.0, sel)
+            วาดเมนู(เมนูภาษา, sel, 0.85, 1.9, t, sel)
+            แสดงผล()
+            ถ้า กดปุ่ม("enter")  { bind ภาษา = sel;  bind สถานะ = ST_OPT;  bind sel = 1 }
+            ถ้า กดปุ่ม("escape") { bind สถานะ = ST_OPT;  bind sel = 1 }
+        }
+
+        # ── PLAY ──────────────────────────────────────────────────────────────
+        ถ้า สถานะ == ST_PLAY {
+            ถ้า รีเซ็ต == 1 {
+                bind ball = soft_ball(startX, startY, startZ, R)
+                soft_kick(ball, 0.4, 0.0, 0.3, 0.06)
+                bind liq = liquid_new(56.0, 56.0)
+                liquid_rainbow(liq, 1.0)
+                bind sx = 0.0
+                ขณะที่ sx < 56.0 {
+                    liquid_splat(liq, sx, 18.0, 1.0, 0.9, 2.2)
+                    liquid_splat(liq, sx, 38.0, 0.0, 1.0, 2.4)
+                    bind sx = sx + 3.0
+                }
+                bind jumps = 0.0;  bind chargeT = 0.0;  bind spDown = 0.0
+                bind px = startX;  bind py = startY;  bind pz = startZ
+                bind camX = startX;  bind camZ = startZ - 12.0
+                bind lastDirx = 0.0;  bind lastDirz = 1.0
+                bind รีเซ็ต = 0
+                set_zdist(32.0)
+                ถ้า gameMode == 0 { ถ้า musicOn == 1 { หยุดเพลง();  เล่นเพลง(เพลงเกม) } }
+            }
+
+            # วนเพลง Antarctica (story)
+            ถ้า gameMode == 0 { ถ้า musicOn == 1 { ถ้า ยาวเพลงเกม > 1.0 {
+                ถ้า ตำแหน่งเพลง() >= ยาวเพลงเกม - 0.5 { ค้นหาเพลง(0);  เล่นเพลง(เพลงเกม) }
+            } } }
+
+            ถ้า กดปุ่ม("escape") { bind paused = 1 - paused;  bind sel = 0 }
+
+            bind doUpdate = 1
+            ถ้า paused == 1 { ถ้า gameMode == 0 { bind doUpdate = 0 } }
+
+            ถ้า doUpdate == 1 {
+                ถ้า กดค้าง("a") { soft_kick(ball, 0.0-1.0, 0.0, 0.0, 0.018)  soft_spin(ball, 0.0, 0.0, 0.0-1.0, 0.12) }
+                ถ้า กดค้าง("d") { soft_kick(ball, 1.0, 0.0, 0.0, 0.018)      soft_spin(ball, 0.0, 0.0, 1.0, 0.12) }
+                ถ้า กดค้าง("w") { soft_kick(ball, 0.0, 0.0, 0.0-1.0, 0.018)  soft_spin(ball, 1.0, 0.0, 0.0, 0.12) }
+                ถ้า กดค้าง("s") { soft_kick(ball, 0.0, 0.0, 1.0, 0.018)      soft_spin(ball, 0.0-1.0, 0.0, 0.0, 0.12) }
+
+                # ── charge-up jump: ยิ่งกดค้างนาน ยิ่งสูง, ปล่อยแล้วกระโดดครั้งเดียว, double-jump ได้
+                bind spNow = 0.0
+                ถ้า กดค้าง("space") { bind spNow = 1.0 }
+                ถ้า spNow > 0.5 {
+                    ถ้า jumps < 2.0 {
+                        bind chargeT = chargeT + 0.016
+                        ถ้า chargeT > 3.0 { bind chargeT = 3.0 }
+                    }
+                }
+                มิฉะนั้น {
+                    ถ้า spDown > 0.5 {
+                        ถ้า jumps < 2.0 {
+                            bind imp = 0.18 + (chargeT / 3.0) * 0.72
+                            soft_kick(ball, 0.0, 0.0-1.0, 0.0, imp)
+                            bind jumps = jumps + 1.0
+                        }
+                    }
+                    bind chargeT = 0.0
+                }
+                bind spDown = spNow
+
+                soft_step(ball, 0.016, 12.0)
+                soft_bounce(ball, GROUND, 0.72)
+                กล่องนุ่ม(ball, 0.0-42.0, 0.0-10.0, 0.0-42.0, 42.0, GROUND, 42.0, 0.6)
+            }
+
+            bind c = soft_centroid(ball)
+            bind cx = c[0.0]  bind cy = c[1.0]  bind cz = c[2.0]
+            ถ้า cy + R > GROUND - 0.25 { bind jumps = 0.0 }
+
+            bind vx = cx - px  bind vy = cy - py  bind vz = cz - pz
+            bind speed = รากที่สอง(vx*vx + vy*vy + vz*vz)
+
+            # quick-save (story เท่านั้น)
+            ถ้า gameMode == 0 {
+                ถ้า กดปุ่ม("k") {
+                    bind line = to_str(cx) + "," + to_str(cy) + "," + to_str(cz)
+                    ถ้า currentSlot == 0 { bind slot0Data = line }
+                    ถ้า currentSlot == 1 { bind slot1Data = line }
+                    ถ้า currentSlot == 2 { bind slot2Data = line }
+                    เขียนไฟล์("saves.dat", slot0Data + ";" + slot1Data + ";" + slot2Data)
+                    พิมพ์("  ★ เซฟช่อง " + to_str(currentSlot))
+                }
+            }
+
+            ถ้า doUpdate == 1 {
+                bind gxs = ไซน์(t * 0.7) * 18.0
+                ถ้า vx >  0.04 { bind gxs = gxs + 16.0 }
+                ถ้า vx < 0.0-0.04 { bind gxs = gxs - 16.0 }
+                bind gys = 24.0
+                ถ้า vy < 0.0-0.04 { bind gys = 12.0 }
+                liquid_gravity(liq, gxs, gys)
+                liquid_step(liq, 0.016)
+                liquid_splat(liq, 28.0 + ไซน์(t * 1.3) * 15.0, 20.0 + โคไซน์(t * 1.1) * 9.0, 1.0, 0.22, 3.0)
+                liquid_splat(liq, 28.0 + โคไซน์(t * 0.9) * 15.0, 36.0 + ไซน์(t * 1.7) * 9.0, 0.0, 0.24, 3.2)
+                # พื้นเชเดอร์
+                liquid_step(เหลวพื้น, 0.016)
+                liquid_splat(เหลวพื้น, 12.0 + ไซน์(t*0.6)*6.0, 12.0 + โคไซน์(t*0.5)*6.0, 1.0, 0.18, 2.6)
+            }
+            bind def = soft_deform(ball)
+
+            ถ้า doUpdate == 1 {
+                bind ang = soft_angular_speed(ball)
+                bind height = GROUND - cy
+                ถ้า height < 0.0 { bind height = 0.0 }
+                bind mix = liquid_mix(liq)
+                bind base = 120.0 + height * 55.0 + speed * 180.0
+                bind amp = 0.04 + speed * 4.0 + ang * 0.5 + def * 0.35
+                ถ้า amp > 0.5 { bind amp = 0.5 }
+                bind wdim = 1.0 + ang * 8.0
+                เสียงโทน(0, cx,cy,cz, wdim, base,        amp * 0.85,                 4.0 + ang*5.0, 0.03 + def*0.06)
+                เสียงโทน(1, cx,cy,cz, 1.0,  base * 2.0,  amp * (0.22 + ang * 1.1),   3.0, 0.02)
+                เสียงโทน(2, cx,cy,cz, 1.0,  base * 1.5,  amp * (0.16 + mix * 0.5),   2.0, 0.015)
+                เสียงโทน(3, cx,cy,cz, 0.0,  base * 0.5,  amp * 0.55,                 1.0, 0.01)
+                เสียงโทน(4, cx,cy,cz, 2.0,  base * 2.01, amp * (0.10 + speed * 0.6), 6.0 + ang*4.0, 0.05)
+                กรองความถี่ต่ำ(0.18 + mix * 0.8)
+            }
+            มิฉะนั้น {
+                เสียงโทน(0,0,0,0,1.0,200.0,0.0,0.0,0.0)
+                เสียงโทน(1,0,0,0,1.0,200.0,0.0,0.0,0.0)
+                เสียงโทน(2,0,0,0,1.0,200.0,0.0,0.0,0.0)
+                เสียงโทน(3,0,0,0,1.0,200.0,0.0,0.0,0.0)
+                เสียงโทน(4,0,0,0,1.0,200.0,0.0,0.0,0.0)
+            }
+
+            # ── follow camera (SM64-ish): trail behind movement, look at ball ──
+            ถ้า speed > 0.02 {
+                bind lastDirx = vx / speed
+                bind lastDirz = vz / speed
+            }
+            bind desx = cx - lastDirx * 12.0
+            bind desz = cz - lastDirz * 12.0
+            bind camX = camX + (desx - camX) * 0.06
+            bind camZ = camZ + (desz - camZ) * 0.06
+            ตั้งกล้องมอง(camX, cy - 6.0, camZ, cx, cy, cz)
+            ตั้งระยะห่าง(2.8)
+
+            # ── render scene ──
+            set_color(6, 6, 14)
+            เติม()
+            ตั้งแสงรอบข้าง(0.4)
+            โหมดผสม(1)
+
+            # พื้นเชเดอร์ของเหลว (Rust call เดียว) + สถาปัตยกรรมเลเวล
+            liquid_draw_surface(เหลวพื้น, 0, 0.0, GROUND, 0.0, 42.0, 0.0)
+            flush_3d()
+            วาดเลเวล(t)
+            flush_3d()
+
+            bind cb = chargeT / 3.0
+            liquid_draw_surface(liq, 1.0, cx, cy, cz, R * (1.0 + def*0.4 + cb*0.2), R)
+
+            bind pr = (ไซน์(t*0.5)*0.5+0.5)*120.0 + 135.0
+            bind pg = (ไซน์(t*0.5+2.094)*0.5+0.5)*120.0 + 135.0
+            bind pb = (ไซน์(t*0.5+4.188)*0.5+0.5)*120.0 + 135.0
+            orb_particles(cx, cy, cz, R * 0.92, 240.0, t, pr, pg, pb)
+            flush_3d()
+
+            bind scp = project_3d(cx, cy, cz)
+            ถ้า scp[0.0] > 0.0 - 90000.0 {
+                bind ssx = scp[0.0]  bind ssy = scp[1.0]  bind depth = scp[2.0]
+                bind rpx = R * 520.0 / depth
+                ถ้า rpx > 600.0 { bind rpx = 600.0 }
+                ถ้า rpx < 8.0 { bind rpx = 8.0 }
+                sparkle(ssx - rpx, ssy - rpx, rpx*2.0, rpx*2.0, 28.0, t)
+            }
+
+            bind px = cx  bind py = cy  bind pz = cz
+
+            # ── pause overlay ──
+            ถ้า paused == 1 {
+                ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 3 } }
+                ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 3 { bind sel = 0 } }
+                ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)
+                ตั้งระยะห่าง(2.8)
+                สีดินสอ(230, 200, 120)
+                วาดข้อความ(คำ_พัก, 0.0, 0.0-6.0, 0.0, 1.2, ภาษา)
+                วาดเมนู(เมนูพักรายการ, sel, 0.9, 2.0, t, ภาษา)
+                ถ้า กดปุ่ม("enter") {
+                    ถ้า sel == 0 { bind paused = 0 }
+                    ถ้า sel == 1 { bind optReturn = ST_PLAY;  bind สถานะ = ST_OPT;  bind sel = 0 }
+                    ถ้า sel == 2 { bind สถานะ = ST_MENU;  bind paused = 0;  bind sel = 0;  ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) } }
+                    ถ้า sel == 3 { bind ออกเกม = 1 }
+                }
+            }
+
+            set_blend(0)
+            แสดงผล()
+        }
+
+        bind กรอบ = กรอบ + 1.0
+    }
+
+    พิมพ์("  ลาก่อน — Made in Ling Country")
+}

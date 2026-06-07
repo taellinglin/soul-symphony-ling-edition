@@ -1408,7 +1408,7 @@ dependencies = [
 
 [[package]]
 name = "ling-codegen"
-version = "2030.0.0"
+version = "2030.0.1"
 dependencies = [
  "anyhow",
  "cranelift",
@@ -1422,7 +1422,7 @@ dependencies = [
 
 [[package]]
 name = "ling-core"
-version = "2030.0.0"
+version = "2030.0.1"
 dependencies = [
  "anyhow",
  "serde",
@@ -1460,7 +1460,7 @@ dependencies = [
 
 [[package]]
 name = "ling-graphics"
-version = "2030.0.2"
+version = "2030.0.3"
 dependencies = [
  "fontdue",
  "glam",
@@ -1471,7 +1471,7 @@ dependencies = [
 
 [[package]]
 name = "ling-lang"
-version = "2030.1.17"
+version = "2030.1.18"
 dependencies = [
  "glam",
  "js-sys",
@@ -1514,7 +1514,7 @@ dependencies = [
 
 [[package]]
 name = "ling-mir"
-version = "2030.0.0"
+version = "2030.0.1"
 dependencies = [
  "anyhow",
  "ling-ast",
@@ -1534,7 +1534,7 @@ dependencies = [
 
 [[package]]
 name = "ling-physics"
-version = "2030.1.6"
+version = "2030.1.7"
 dependencies = [
  "glam",
 ]

@@ -1,0 +1,578 @@
+# ────────────────────────────────────────────────────────────────────────────
+# รูปทรง.ling — รูปทรง 3 มิติที่ใช้ร่วมกัน
+#   วาดเมอร์คาบา(ox, oy, oz, mr, กรอบ)
+#   วาดลูกบอล(wx, wy, wz, r, ชั้น, ส่วน, กรอบ)
+#   วาดสิบสองหน้าไฮเพอร์โบลิก(ขนาด, กรอบ)
+#
+# หมายเหตุ: อย่าใช้ชื่อตัวแปรว่า 'si' — เป็นคำสงวนภาษาสเปน (if)
+# ────────────────────────────────────────────────────────────────────────────
+
+# ── เมอร์คาบา: จัตุรมุขสองอันหมุนสวนกัน ──────────────────────────────────────
+ฟังก์ชัน วาดเมอร์คาบา(ox, oy, oz, mr, กรอบ) {
+    bind rot = กรอบ * 0.011
+    bind mc  = โคไซน์(rot)
+    bind ms  = ไซน์(rot)
+    bind ค   = กรอบ * 0.020
+    bind bob = ไซน์(กรอบ * 0.028) * 0.35
+
+    # จัตุรมุขบน
+    bind v0x = 0.0
+    bind v0y = mr + bob + oy
+    bind v0z = oz
+    bind v1x = mr * 0.9428 * mc
+    bind v1y = 0.0 - mr * 0.3333 + bob + oy
+    bind v1z = 0.0 - mr * 0.9428 * ms + oz
+    bind v2x = 0.0 - mr * 0.4714 * mc + mr * 0.8165 * ms
+    bind v2y = 0.0 - mr * 0.3333 + bob + oy
+    bind v2z = mr * 0.4714 * ms + mr * 0.8165 * mc + oz
+    bind v3x = 0.0 - mr * 0.4714 * mc - mr * 0.8165 * ms
+    bind v3y = 0.0 - mr * 0.3333 + bob + oy
+    bind v3z = mr * 0.4714 * ms - mr * 0.8165 * mc + oz
+
+    color(ค, 0.00) วาดสามเหลี่ยม3มิติ(v0x,v0y,v0z, v1x,v1y,v1z, v2x,v2y,v2z)
+    color(ค, 0.78) วาดสามเหลี่ยม3มิติ(v0x,v0y,v0z, v1x,v1y,v1z, v3x,v3y,v3z)
+    color(ค, 1.57) วาดสามเหลี่ยม3มิติ(v0x,v0y,v0z, v2x,v2y,v2z, v3x,v3y,v3z)
+    color(ค, 2.36) วาดสามเหลี่ยม3มิติ(v1x,v1y,v1z, v2x,v2y,v2z, v3x,v3y,v3z)
+
+    # จัตุรมุขล่าง (หมุนสวน)
+    bind u0x = 0.0
+    bind u0y = 0.0 - mr + bob + oy
+    bind u0z = oz
+    bind u1x = 0.0 - mr * 0.9428 * mc
+    bind u1y = mr * 0.3333 + bob + oy
+    bind u1z = mr * 0.9428 * ms + oz
+    bind u2x = mr * 0.4714 * mc - mr * 0.8165 * ms
+    bind u2y = mr * 0.3333 + bob + oy
+    bind u2z = 0.0 - mr * 0.4714 * ms - mr * 0.8165 * mc + oz
+    bind u3x = mr * 0.4714 * mc + mr * 0.8165 * ms
+    bind u3y = mr * 0.3333 + bob + oy
+    bind u3z = 0.0 - mr * 0.4714 * ms + mr * 0.8165 * mc + oz
+
+    color(ค+1.5, 0.00) วาดสามเหลี่ยม3มิติ(u0x,u0y,u0z, u1x,u1y,u1z, u2x,u2y,u2z)
+    color(ค+1.5, 0.78) วาดสามเหลี่ยม3มิติ(u0x,u0y,u0z, u1x,u1y,u1z, u3x,u3y,u3z)
+    color(ค+1.5, 1.57) วาดสามเหลี่ยม3มิติ(u0x,u0y,u0z, u2x,u2y,u2z, u3x,u3y,u3z)
+    color(ค+1.5, 2.36) วาดสามเหลี่ยม3มิติ(u1x,u1y,u1z, u2x,u2y,u2z, u3x,u3y,u3z)
+}
+
+# ── ลูกบอลชายหาด: 6 แถบตามแนวลองจิจูดพร้อมขอบซิกแซก ────────────────────────
+ฟังก์ชัน วาดลูกบอล(wx, wy, wz, r, ชั้น, ส่วน, กรอบ) {
+    bind จำนวนแถบ = 6.0
+    bind i = 0
+    ขณะที่ i < ชั้น {
+        bind j = 0
+        ขณะที่ j < ส่วน {
+            bind th0 = พาย * i / ชั้น
+            bind th1 = พาย * (i + 1) / ชั้น
+            bind ph0 = tau * j / ส่วน
+            bind ph1 = tau * (j + 1) / ส่วน
+
+            bind ax = ไซน์(th0) * โคไซน์(ph0) * r + wx
+            bind ay = โคไซน์(th0) * r + wy
+            bind az = ไซน์(th0) * ไซน์(ph0) * r + wz
+            bind bx = ไซน์(th1) * โคไซน์(ph0) * r + wx
+            bind by = โคไซน์(th1) * r + wy
+            bind bz = ไซน์(th1) * ไซน์(ph0) * r + wz
+            bind cx = ไซน์(th0) * โคไซน์(ph1) * r + wx
+            bind cy = โคไซน์(th0) * r + wy
+            bind cz = ไซน์(th0) * ไซน์(ph1) * r + wz
+            bind dx = ไซน์(th1) * โคไซน์(ph1) * r + wx
+            bind dy = โคไซน์(th1) * r + wy
+            bind dz = ไซน์(th1) * ไซน์(ph1) * r + wz
+
+            bind th_m = (th0 + th1) * 0.5
+            bind ph_m = (ph0 + ph1) * 0.5
+
+            # ขอบแถบแบบซิกแซก
+            bind zig = ไซน์(th_m * 3.5) * (tau / จำนวนแถบ * 0.32)
+            bind s_t = fract((ph_m + zig) / tau + 10.0)
+            bind sn  = floor(s_t * จำนวนแถบ)
+            bind wf  = s_t * จำนวนแถบ - sn
+
+            # สีของแถบ (ค่อย ๆ หมุนตามเวลา)
+            bind t_สี   = sn / จำนวนแถบ * tau + กรอบ * 0.0008
+            bind แดง    = ไซน์(t_สี)         * 118 + 137
+            bind เขียว  = ไซน์(t_สี + 2.094) * 118 + 137
+            bind น้ำเงิน = ไซน์(t_สี + 4.189) * 118 + 137
+
+            # ทำให้ขอบแถบมืดลง (สว่างตรงกลาง มืดที่ขอบ)
+            bind ขอบ   = 0.30 + 0.70 * ไซน์(wf * พาย)
+            bind ลาย   = ไซน์(th_m * 9.0 + sn * 1.047) * ไซน์(wf * พาย * 4.0)
+            bind รูปแบบ = 0.90 + 0.10 * ลาย
+
+            สีดินสอ(แดง * ขอบ * รูปแบบ, เขียว * ขอบ * รูปแบบ, น้ำเงิน * ขอบ * รูปแบบ)
+
+            วาดสามเหลี่ยม3มิติ(ax,ay,az, bx,by,bz, cx,cy,cz)
+            วาดสามเหลี่ยม3มิติ(bx,by,bz, dx,dy,dz, cx,cy,cz)
+            bind j = j + 1
+        }
+        bind i = i + 1
+    }
+}
+
+# ── ลูกบาศก์ไฮเพอร์โบลิก ────────────────────────────────────────────────────
+# Poincaré model: ขนาด ≤ 1 = outside, ≥ 1 = deep inside (compressed perspective)
+ฟังก์ชัน วาดลูกบาศก์ไฮเพอร์โบลิก(ขนาด, กรอบ) {
+    bind ครึ่ง = ขนาด * 0.5
+
+    # สีพื้นดิน: ลายไซเคเดลิก
+    bind ฟเสื่อม = ไซน์(กรอบ * 0.002) * 0.5 + 0.5
+
+    # 6 หน้า (บน, ล่าง, ซ้าย, ขวา, หน้า, หลัง)
+    # ล่าง (Y = -ครึ่ง)
+    color(ฟเสื่อม + 0.3, ฟเสื่อม + 0.1, ฟเสื่อม + 0.5)
+    วาดสามเหลี่ยม3มิติ(0.0-ครึ่ง, 0.0-ครึ่ง, 0.0-ครึ่ง,  ครึ่ง, 0.0-ครึ่ง, 0.0-ครึ่ง,  0.0-ครึ่ง, 0.0-ครึ่ง, ครึ่ง)
+    วาดสามเหลี่ยม3มิติ(ครึ่ง, 0.0-ครึ่ง, 0.0-ครึ่ง,  ครึ่ง, 0.0-ครึ่ง, ครึ่ง,  0.0-ครึ่ง, 0.0-ครึ่ง, ครึ่ง)
+
+    # บน (Y = ครึ่ง)
+    color(ฟเสื่อม + 0.2, ฟเสื่อม + 0.4, ฟเสื่อม + 0.6)
+    วาดสามเหลี่ยม3มิติ(0.0-ครึ่ง, ครึ่ง, 0.0-ครึ่ง,  0.0-ครึ่ง, ครึ่ง, ครึ่ง,  ครึ่ง, ครึ่ง, 0.0-ครึ่ง)
+    วาดสามเหลี่ยม3มิติ(ครึ่ง, ครึ่ง, 0.0-ครึ่ง,  0.0-ครึ่ง, ครึ่ง, ครึ่ง,  ครึ่ง, ครึ่ง, ครึ่ง)
+
+    # ซ้าย (X = -ครึ่ง)
+    color(ฟเสื่อม + 0.1, ฟเสื่อม + 0.2, ฟเสื่อม + 0.4)
+    วาดสามเหลี่ยม3มิติ(0.0-ครึ่ง, 0.0-ครึ่ง, 0.0-ครึ่ง,  0.0-ครึ่ง, ครึ่ง, 0.0-ครึ่ง,  0.0-ครึ่ง, 0.0-ครึ่ง, ครึ่ง)
+    วาดสามเหลี่ยม3มิติ(0.0-ครึ่ง, ครึ่ง, 0.0-ครึ่ง,  0.0-ครึ่ง, ครึ่ง, ครึ่ง,  0.0-ครึ่ง, 0.0-ครึ่ง, ครึ่ง)
+
+    # ขวา (X = ครึ่ง)
+    color(ฟเสื่อม + 0.25, ฟเสื่อม + 0.35, ฟเสื่อม + 0.55)
+    วาดสามเหลี่ยม3มิติ(ครึ่ง, 0.0-ครึ่ง, 0.0-ครึ่ง,  ครึ่ง, 0.0-ครึ่ง, ครึ่ง,  ครึ่ง, ครึ่ง, 0.0-ครึ่ง)
+    วาดสามเหลี่ยม3มิติ(ครึ่ง, ครึ่ง, 0.0-ครึ่ง,  ครึ่ง, 0.0-ครึ่ง, ครึ่ง,  ครึ่ง, ครึ่ง, ครึ่ง)
+
+    # หน้า (Z = ครึ่ง)
+    color(ฟเสื่อม + 0.15, ฟเสื่อม + 0.25, ฟเสื่อม + 0.45)
+    วาดสามเหลี่ยม3มิติ(0.0-ครึ่ง, 0.0-ครึ่ง, ครึ่ง,  ครึ่ง, 0.0-ครึ่ง, ครึ่ง,  0.0-ครึ่ง, ครึ่ง, ครึ่ง)
+    วาดสามเหลี่ยม3มิติ(ครึ่ง, 0.0-ครึ่ง, ครึ่ง,  ครึ่ง, ครึ่ง, ครึ่ง,  0.0-ครึ่ง, ครึ่ง, ครึ่ง)
+
+    # หลัง (Z = -ครึ่ง)
+    color(ฟเสื่อม + 0.05, ฟเสื่อม + 0.15, ฟเสื่อม + 0.35)
+    วาดสามเหลี่ยม3มิติ(0.0-ครึ่ง, 0.0-ครึ่ง, 0.0-ครึ่ง,  0.0-ครึ่ง, ครึ่ง, 0.0-ครึ่ง,  ครึ่ง, 0.0-ครึ่ง, 0.0-ครึ่ง)
+    วาดสามเหลี่ยม3มิติ(ครึ่ง, 0.0-ครึ่ง, 0.0-ครึ่ง,  0.0-ครึ่ง, ครึ่ง, 0.0-ครึ่ง,  ครึ่ง, ครึ่ง, 0.0-ครึ่ง)
+}
+
+# ── สิบสองหน้าไฮเพอร์โบลิก-พาราโบลิก ────────────────────────────────────────
+#   โครงลวด (wireframe) ขอบสีรุ้ง + หน้าโปร่งแสง (สีจางเหมือนกระจกสี)
+#   20 จุดยอด · 30 ขอบ · 12 หน้าห้าเหลี่ยม  (กล้องอยู่ภายใน)
+#   หมายเหตุ: ling ไม่มีช่องอัลฟา → "โปร่งแสง" จำลองด้วยสีจาง + วางหน้าไว้ด้านหลังขอบ
+ฟังก์ชัน วาดสิบสองหน้าไฮเพอร์โบลิก(ขนาด, กรอบ) {
+    bind sc = ขนาด * 0.5 / 1.7320508       # circumradius = ขนาด/2
+
+    # หายใจเข้าออก (พัลส์ไฮเพอร์โบลิก) + ยืดแนวตั้งเล็กน้อย (พาราโบลิก)
+    bind wob = 1.0 + 0.04 * ไซน์(กรอบ * 0.012)
+    bind หน้าคูณ = sc * wob * 1.02          # หน้าดันออกด้านหลังขอบเล็กน้อย
+    bind ขอบคูณ = sc * wob
+
+    # 20 จุดยอด (φ=1.618034, 1/φ=0.618034)
+    bind vx = [1.0,1.0,1.0,1.0, -1.0,-1.0,-1.0,-1.0, 0.0,0.0,0.0,0.0, 0.618034,0.618034,-0.618034,-0.618034, 1.618034,1.618034,-1.618034,-1.618034]
+    bind vy = [1.0,1.0,-1.0,-1.0, 1.0,1.0,-1.0,-1.0, 0.618034,0.618034,-0.618034,-0.618034, 1.618034,-1.618034,1.618034,-1.618034, 0.0,0.0,0.0,0.0]
+    bind vz = [1.0,-1.0,1.0,-1.0, 1.0,-1.0,1.0,-1.0, 1.618034,-1.618034,1.618034,-1.618034, 0.0,0.0,0.0,0.0, 0.618034,-0.618034,0.618034,-0.618034]
+
+    # 12 หน้า × 5 ดัชนีจุดยอด
+    bind fid = [0,8,10,2,16, 0,16,17,1,12, 0,12,14,4,8, 1,9,5,14,12, 1,17,3,11,9, 2,10,6,15,13, 2,13,3,17,16, 3,13,15,7,11, 4,14,5,19,18, 4,18,6,10,8, 5,9,11,7,19, 6,18,19,7,15]
+
+    # 30 ขอบ (คู่ดัชนี)
+    bind ea = [0,8,2,2,0, 16,1,1,0, 12,4,4, 1,5,5, 3,3,9, 6,6,13,2, 3, 7,7, 5,18,4, 6, 7]
+    bind eb = [8,10,10,16,16, 17,17,12,12, 14,14,8, 9,9,14, 17,11,11, 10,15,15,13, 13, 15,11, 19,19,18, 18, 19]
+
+    # ── หน้าโปร่งแสง (สีจาง) — วาดก่อนเพื่อให้ขอบอยู่ด้านหน้า ───────────────
+    bind f = 0
+    ขณะที่ f < 12 {
+        bind ฐาน = f * 5
+
+        # คำนวณศูนย์กลางและปกติของหน้า
+        bind ix0 = list_get(fid, ฐาน)
+        bind ix1 = list_get(fid, ฐาน + 1)
+        bind ix2 = list_get(fid, ฐาน + 2)
+        bind ix3 = list_get(fid, ฐาน + 3)
+        bind ix4 = list_get(fid, ฐาน + 4)
+
+        bind cx = (list_get(vx, ix0) + list_get(vx, ix1) + list_get(vx, ix2) + list_get(vx, ix3) + list_get(vx, ix4)) / 5.0
+        bind cy = (list_get(vy, ix0) + list_get(vy, ix1) + list_get(vy, ix2) + list_get(vy, ix3) + list_get(vy, ix4)) / 5.0
+        bind cz = (list_get(vz, ix0) + list_get(vz, ix1) + list_get(vz, ix2) + list_get(vz, ix3) + list_get(vz, ix4)) / 5.0
+
+        # ปกติของหน้า = ทิศทางศูนย์กลาง (สำหรับทรงกลม/ทรงสิบสองหน้า)
+        bind nx = cx
+        bind ny = cy
+        bind nz = cz
+        bind nlen = รากที่สอง(nx*nx + ny*ny + nz*nz)
+        ถ้า nlen > 0.001 {
+            bind nx = nx / nlen
+            bind ny = ny / nlen
+            bind nz = nz / nlen
+        }
+
+        # คำนวณการส่องสว่าง: ประมาณแสงที่อยู่ตรงข้างศูนย์กลางหน้า
+        bind lighting = 0.30  # ambient base
+        
+        # เพิ่มแสงตามทิศทางออกจากศูนย์กลาง (หน้าภายนอก)
+        bind outward = nx * -1.0 + ny * -1.0 + nz * -1.0
+        bind lighting = lighting + 0.15 * (outward * 0.5 + 0.5)
+
+        # สีกระจกจาง ไล่เฉดตามหน้า
+        bind เฉด = f / 12.0 * tau + กรอบ * 0.004
+        bind base_r = ไซน์(เฉด)*34+44
+        bind base_g = ไซน์(เฉด+2.094)*34+44
+        bind base_b = ไซน์(เฉด+4.189)*34+44
+
+        # ปรับสีตามการส่องสว่าง
+        bind r = base_r * lighting * 2.5
+        bind g = base_g * lighting * 2.5
+        bind b = base_b * lighting * 2.5
+        
+        สีดินสอ(r, g, b)
+
+        # จุดยอดแรก (พัด triangulate)
+        bind ia = list_get(fid, ฐาน)
+        bind vax = list_get(vx, ia) * หน้าคูณ
+        bind vay = list_get(vy, ia) * หน้าคูณ * 1.12
+        bind vaz = list_get(vz, ia) * หน้าคูณ
+        bind ib = list_get(fid, ฐาน + 1)
+        bind vbx = list_get(vx, ib) * หน้าคูณ
+        bind vby = list_get(vy, ib) * หน้าคูณ * 1.12
+        bind vbz = list_get(vz, ib) * หน้าคูณ
+
+        bind k = 2
+        ขณะที่ k == 2 {
+            bind ic = list_get(fid, ฐาน + k)
+            bind vcx = list_get(vx, ic) * หน้าคูณ
+            bind vcy = list_get(vy, ic) * หน้าคูณ * 1.12
+            bind vcz = list_get(vz, ic) * หน้าคูณ
+
+            # ── ตัวแบ่งย่อย: 2x2 grid ──
+            bind p0x = vax
+            bind p0y = vay
+            bind p0z = vaz
+            bind p1x = vax * 0.5 + vbx * 0.5
+            bind p1y = vay * 0.5 + vby * 0.5
+            bind p1z = vaz * 0.5 + vbz * 0.5
+            bind p2x = vax * 0.5 + vcx * 0.5
+            bind p2y = vay * 0.5 + vcy * 0.5
+            bind p2z = vaz * 0.5 + vcz * 0.5
+            bind p3x = vbx * 0.5 + vcx * 0.5
+            bind p3y = vby * 0.5 + vcy * 0.5
+            bind p3z = vbz * 0.5 + vcz * 0.5
+
+            วาดสามเหลี่ยม3มิติ(p0x,p0y,p0z, p1x,p1y,p1z, p2x,p2y,p2z)
+            วาดสามเหลี่ยม3มิติ(p1x,p1y,p1z, p3x,p3y,p3z, p2x,p2y,p2z)
+
+            bind vbx = vcx
+            bind vby = vcy
+            bind vbz = vcz
+            bind k = 3
+        }
+        ขณะที่ k == 3 {
+            bind ic = list_get(fid, ฐาน + k)
+            bind vcx = list_get(vx, ic) * หน้าคูณ
+            bind vcy = list_get(vy, ic) * หน้าคูณ * 1.12
+            bind vcz = list_get(vz, ic) * หน้าคูณ
+
+            bind p0x = vax
+            bind p0y = vay
+            bind p0z = vaz
+            bind p1x = vax * 0.5 + vbx * 0.5
+            bind p1y = vay * 0.5 + vby * 0.5
+            bind p1z = vaz * 0.5 + vbz * 0.5
+            bind p2x = vax * 0.5 + vcx * 0.5
+            bind p2y = vay * 0.5 + vcy * 0.5
+            bind p2z = vaz * 0.5 + vcz * 0.5
+            bind p3x = vbx * 0.5 + vcx * 0.5
+            bind p3y = vby * 0.5 + vcy * 0.5
+            bind p3z = vbz * 0.5 + vcz * 0.5
+
+            วาดสามเหลี่ยม3มิติ(p0x,p0y,p0z, p1x,p1y,p1z, p2x,p2y,p2z)
+            วาดสามเหลี่ยม3มิติ(p1x,p1y,p1z, p3x,p3y,p3z, p2x,p2y,p2z)
+
+            bind vbx = vcx
+            bind vby = vcy
+            bind vbz = vcz
+            bind k = 4
+        }
+        ขณะที่ k == 4 {
+            bind ic = list_get(fid, ฐาน + k)
+            bind vcx = list_get(vx, ic) * หน้าคูณ
+            bind vcy = list_get(vy, ic) * หน้าคูณ * 1.12
+            bind vcz = list_get(vz, ic) * หน้าคูณ
+
+            bind p0x = vax
+            bind p0y = vay
+            bind p0z = vaz
+            bind p1x = vax * 0.5 + vbx * 0.5
+            bind p1y = vay * 0.5 + vby * 0.5
+            bind p1z = vaz * 0.5 + vbz * 0.5
+            bind p2x = vax * 0.5 + vcx * 0.5
+            bind p2y = vay * 0.5 + vcy * 0.5
+            bind p2z = vaz * 0.5 + vcz * 0.5
+            bind p3x = vbx * 0.5 + vcx * 0.5
+            bind p3y = vby * 0.5 + vcy * 0.5
+            bind p3z = vbz * 0.5 + vcz * 0.5
+
+            วาดสามเหลี่ยม3มิติ(p0x,p0y,p0z, p1x,p1y,p1z, p2x,p2y,p2z)
+            วาดสามเหลี่ยม3มิติ(p1x,p1y,p1z, p3x,p3y,p3z, p2x,p2y,p2z)
+
+            bind vbx = vcx
+            bind vby = vcy
+            bind vbz = vcz
+            bind k = 5
+        }
+
+        # ── วาดพอลกาดอทบนหน้า ──
+        bind num_dots = 3
+        bind dot_idx = 0
+        ขณะที่ dot_idx == 0 {
+            bind dot_seed = f * 17 + dot_idx * 43
+            bind dot_offset_x = (ไซน์(dot_seed * 0.1) * 0.4)
+            bind dot_offset_y = (ไซน์(dot_seed * 0.2 + 1.5) * 0.4)
+            bind dot_offset_z = (ไซน์(dot_seed * 0.15 + 3.0) * 0.4)
+            
+            bind dot_cx = cx * หน้าคูณ * 1.1 + dot_offset_x * หน้าคูณ
+            bind dot_cy = cy * หน้าคูณ * 1.12 * 1.1 + dot_offset_y * หน้าคูณ * 1.12
+            bind dot_cz = cz * หน้าคูณ * 1.1 + dot_offset_z * หน้าคูณ
+            
+            วาดวงกลมพอลกา(dot_cx, dot_cy, dot_cz, nx, ny, nz, 2.0, กรอบ)
+            bind dot_idx = 1
+        }
+        ขณะที่ dot_idx == 1 {
+            bind dot_seed = f * 17 + dot_idx * 43
+            bind dot_offset_x = (ไซน์(dot_seed * 0.1) * 0.4)
+            bind dot_offset_y = (ไซน์(dot_seed * 0.2 + 1.5) * 0.4)
+            bind dot_offset_z = (ไซน์(dot_seed * 0.15 + 3.0) * 0.4)
+            
+            bind dot_cx = cx * หน้าคูณ * 1.1 + dot_offset_x * หน้าคูณ
+            bind dot_cy = cy * หน้าคูณ * 1.12 * 1.1 + dot_offset_y * หน้าคูณ * 1.12
+            bind dot_cz = cz * หน้าคูณ * 1.1 + dot_offset_z * หน้าคูณ
+            
+            วาดวงกลมพอลกา(dot_cx, dot_cy, dot_cz, nx, ny, nz, 2.0, กรอบ)
+            bind dot_idx = 2
+        }
+        ขณะที่ dot_idx == 2 {
+            bind dot_seed = f * 17 + dot_idx * 43
+            bind dot_offset_x = (ไซน์(dot_seed * 0.1) * 0.4)
+            bind dot_offset_y = (ไซน์(dot_seed * 0.2 + 1.5) * 0.4)
+            bind dot_offset_z = (ไซน์(dot_seed * 0.15 + 3.0) * 0.4)
+            
+            bind dot_cx = cx * หน้าคูณ * 1.1 + dot_offset_x * หน้าคูณ
+            bind dot_cy = cy * หน้าคูณ * 1.12 * 1.1 + dot_offset_y * หน้าคูณ * 1.12
+            bind dot_cz = cz * หน้าคูณ * 1.1 + dot_offset_z * หน้าคูณ
+            
+            วาดวงกลมพอลกา(dot_cx, dot_cy, dot_cz, nx, ny, nz, 2.0, กรอบ)
+            bind dot_idx = 3
+        }
+
+        bind f = f + 1
+    }
+
+    # ── ขอบโครงลวดสีรุ้ง ───────────────────────────────────────────────────
+    bind e = 0
+    ขณะที่ e < 30 {
+        bind ja = list_get(ea, e)
+        bind jb = list_get(eb, e)
+        bind eax = list_get(vx, ja) * ขอบคูณ
+        bind eay = list_get(vy, ja) * ขอบคูณ * 1.12
+        bind eaz = list_get(vz, ja) * ขอบคูณ
+        bind ebx = list_get(vx, jb) * ขอบคูณ
+        bind eby = list_get(vy, jb) * ขอบคูณ * 1.12
+        bind ebz = list_get(vz, jb) * ขอบคูณ
+
+        bind เฉดข = e / 30.0 * tau + กรอบ * 0.010
+        สีดินสอ(ไซน์(เฉดข)*120+135, ไซน์(เฉดข+2.094)*120+135, ไซน์(เฉดข+4.189)*120+135)
+        วาดเส้น3มิติ(eax,eay,eaz, ebx,eby,ebz)
+        bind e = e + 1
+    }
+
+    # ── วาดต้นไม้บนแต่ละหน้า ─────────────────────────────────────────────
+    bind f_tree = 0
+    ขณะที่ f_tree == 0 {
+        bind ฐาน_tree = f_tree * 5
+
+        # คำนวณศูนย์กลางของหน้า (ค่าเฉลี่ยของจุดยอด 5 ตัว)
+        bind ix0 = list_get(fid, ฐาน_tree)
+        bind ix1 = list_get(fid, ฐาน_tree + 1)
+        bind ix2 = list_get(fid, ฐาน_tree + 2)
+        bind ix3 = list_get(fid, ฐาน_tree + 3)
+        bind ix4 = list_get(fid, ฐาน_tree + 4)
+
+        bind center_x = (list_get(vx, ix0) + list_get(vx, ix1) + list_get(vx, ix2) + list_get(vx, ix3) + list_get(vx, ix4)) / 5.0
+        bind center_y = (list_get(vy, ix0) + list_get(vy, ix1) + list_get(vy, ix2) + list_get(vy, ix3) + list_get(vy, ix4)) / 5.0
+        bind center_z = (list_get(vz, ix0) + list_get(vz, ix1) + list_get(vz, ix2) + list_get(vz, ix3) + list_get(vz, ix4)) / 5.0
+
+        # ปรับให้ตรงกับมาตราส่วนของหน้า
+        bind center_x = center_x * หน้าคูณ * 1.1
+        bind center_y = center_y * หน้าคูณ * 1.12 * 1.1
+        bind center_z = center_z * หน้าคูณ * 1.1
+
+        # วาดต้นไม้บนหน้า
+        วาดต้นไม้(center_x, center_y, center_z, 4.0, กรอบ)
+
+        bind f_tree = 1
+    }
+
+    # ── วาดไฟสลายและต้นไม้ด้านใน ─────────────────────────────────────────
+    bind f_in = 0
+    ขณะที่ f_in == 0 {
+        bind ฐาน_in = f_in * 5
+
+        bind ix0 = list_get(fid, ฐาน_in)
+        bind ix1 = list_get(fid, ฐาน_in + 1)
+        bind ix2 = list_get(fid, ฐาน_in + 2)
+        bind ix3 = list_get(fid, ฐาน_in + 3)
+        bind ix4 = list_get(fid, ฐาน_in + 4)
+
+        bind center_x = (list_get(vx, ix0) + list_get(vx, ix1) + list_get(vx, ix2) + list_get(vx, ix3) + list_get(vx, ix4)) / 5.0
+        bind center_y = (list_get(vy, ix0) + list_get(vy, ix1) + list_get(vy, ix2) + list_get(vy, ix3) + list_get(vy, ix4)) / 5.0
+        bind center_z = (list_get(vz, ix0) + list_get(vz, ix1) + list_get(vz, ix2) + list_get(vz, ix3) + list_get(vz, ix4)) / 5.0
+
+        bind center_x = center_x * ขอบคูณ * 0.6
+        bind center_y = center_y * ขอบคูณ * 0.6
+        bind center_z = center_z * ขอบคูณ * 0.6
+
+        # ไฟสลายด้านใน (หมุนตามเวลา)
+        bind light_hue = f_in / 12.0 * tau + กรอบ * 0.008
+        bind lr = ไซน์(light_hue) * 80 + 100
+        bind lg = ไซน์(light_hue + 2.094) * 80 + 100
+        bind lb = ไซน์(light_hue + 4.189) * 80 + 100
+
+        เพิ่มแสง(center_x, center_y, center_z, lr/255.0, lg/255.0, lb/255.0, 2.0, 16.0)
+
+        # ต้นไม้ด้านใน
+        วาดต้นไม้สีวัฏจักร(center_x, center_y, center_z, 3.0, กรอบ)
+
+        bind f_in = 1
+    }
+}
+
+# ── ต้นไม้ (ง่ายดาย) ────────────────────────────────────────────────────────────
+ฟังก์ชัน วาดต้นไม้(x, y, z, ขนาด, กรอบ) {
+    # ลำต้น: สีน้ำตาล
+    สีดินสอ(101, 67, 33)
+    วาดสามเหลี่ยม3มิติ(x, y, z,  x + ขนาด*0.1, y + ขนาด*0.4, z,  x + ขนาด*0.05, y + ขนาด*0.5, z + ขนาด*0.1)
+
+    # ใบไม้: สีเขียว
+    สีดินสอ(34, 139, 34)
+    ลายดอก(x, y + ขนาด*0.35, z,  1,0,0, 0,0,1,  0.8, ขนาด*0.6,  กรอบ, 0.0)
+}
+
+# ── หญ้า (แนวตั้ง) ─────────────────────────────────────────────────────────────
+ฟังก์ชัน วาดหญ้า(x, y, z, กรอบ) {
+    สีดินสอ(34, 139, 34)
+    bind i = 0
+    ขณะที่ i < 4 {
+        bind ox = x + i * 0.15 - 0.225
+        bind oz = z + floor(i / 2) * 0.15 - 0.075
+        วาดสามเหลี่ยม3มิติ(ox, y, oz,  ox + 0.05, y + 0.08, oz,  ox + 0.025, y + 0.1, oz + 0.02)
+        bind i = i + 1
+    }
+}
+
+# ── ต้นไม้สีวัฏจักร (สำหรับด้านในทรงสิบสองหน้า) ───────────────────────────────
+ฟังก์ชัน วาดต้นไม้สีวัฏจักร(x, y, z, ขนาด, กรอบ) {
+    # ลำต้น: สีวัฏจักร
+    bind trunk_hue = กรอบ * 0.01 + (x + z) * 0.1
+    bind tr = ไซน์(trunk_hue) * 60 + 100
+    bind tg = ไซน์(trunk_hue + 2.094) * 60 + 80
+    bind tb = ไซน์(trunk_hue + 4.189) * 60 + 40
+    สีดินสอ(tr, tg, tb)
+    วาดสามเหลี่ยม3มิติ(x, y, z,  x + ขนาด*0.1, y + ขนาด*0.4, z,  x + ขนาด*0.05, y + ขนาด*0.5, z + ขนาด*0.1)
+
+    # ใบไม้: สีเขียววัฏจักร
+    bind leaf_hue = กรอบ * 0.015 + (x - z) * 0.1
+    bind lr = ไซน์(leaf_hue) * 40 + 80
+    bind lg = ไซน์(leaf_hue + 2.094) * 40 + 140
+    bind lb = ไซน์(leaf_hue + 4.189) * 40 + 60
+    สีดินสอ(lr, lg, lb)
+    ลายดอก(x, y + ขนาด*0.35, z,  1,0,0, 0,0,1,  0.8, ขนาด*0.6,  กรอบ, 0.0)
+}
+
+ฟังก์ชัน วาดวงกลมพอลกา(cx, cy, cz, nx, ny, nz, ขนาด, กรอบ) {
+    # วาดวงกลมพอลกาดอท (จุดสีจ้าสว่าง) บนหน้า
+    # cx,cy,cz = ศูนย์กลางวงกลม
+    # nx,ny,nz = ปกติของหน้า (สำหรับการวางตำแหน่งออฟเซต)
+    # ขนาด = รัศมีวงกลม
+    
+    bind สีหลัก = กรอบ * 0.015 + (cx + cy + cz) * 0.08
+    bind dr = ไซน์(สีหลัก) * 50 + 150
+    bind dg = ไซน์(สีหลัก + 2.094) * 50 + 150
+    bind ฐานข้อมูล = ไซน์(สีหลัก + 4.189) * 50 + 150
+    
+    สีดินสอ(dr, dg, ฐานข้อมูล)
+    
+    # วาดวงกลมโดยใช้ส่วนประกอบ
+    bind เส้นผ่านศูนย์กลาง = 8
+    bind i = 0
+    ขณะที่ i < เส้นผ่านศูนย์กลาง {
+        bind มุม = i / เส้นผ่านศูนย์กลาง * tau
+        bind มุมถัดไป = (i + 1) / เส้นผ่านศูนย์กลาง * tau
+        
+        # เวกเตอร์ที่ตั้งฉากกับปกติ
+        bind px = 0.0 - ny
+        bind py = nx
+        bind pz = 0.0
+        bind plen = รากที่สอง(px*px + py*py + pz*pz)
+        ถ้า plen > 0.001 {
+            bind px = px / plen
+            bind py = py / plen
+            bind pz = pz / plen
+        }
+        
+        # เวกเตอร์ที่สองตั้งฉาก
+        bind qx = ny * pz - nz * py
+        bind qy = nz * px - nx * pz
+        bind qz = nx * py - ny * px
+        
+        bind p1x = cx + (โคไซน์(มุม) * px + ไซน์(มุม) * qx) * ขนาด
+        bind p1y = cy + (โคไซน์(มุม) * py + ไซน์(มุม) * qy) * ขนาด
+        bind p1z = cz + (โคไซน์(มุม) * pz + ไซน์(มุม) * qz) * ขนาด
+        
+        bind p2x = cx + (โคไซน์(มุมถัดไป) * px + ไซน์(มุมถัดไป) * qx) * ขนาด
+        bind p2y = cy + (โคไซน์(มุมถัดไป) * py + ไซน์(มุมถัดไป) * qy) * ขนาด
+        bind p2z = cz + (โคไซน์(มุมถัดไป) * pz + ไซน์(มุมถัดไป) * qz) * ขนาด
+        
+        วาดเส้น3มิติ(p1x, p1y, p1z, p2x, p2y, p2z)
+        
+        bind i = i + 1
+    }
+}
+
+# ── คำนวณเวกเตอร์ปกติของหน้าสิบสองหน้า ────────────────────────────────────
+ฟังก์ชัน คำนวณปกติหน้า(face_idx, vx, vy, vz, fid) {
+    bind ฐาน = face_idx * 5
+    bind i0 = list_get(fid, ฐาน)
+    bind i1 = list_get(fid, ฐาน + 1)
+    bind i2 = list_get(fid, ฐาน + 2)
+
+    bind p0x = list_get(vx, i0)
+    bind p0y = list_get(vy, i0)
+    bind p0z = list_get(vz, i0)
+
+    bind p1x = list_get(vx, i1)
+    bind p1y = list_get(vy, i1)
+    bind p1z = list_get(vz, i1)
+
+    bind p2x = list_get(vx, i2)
+    bind p2y = list_get(vy, i2)
+    bind p2z = list_get(vz, i2)
+
+    # Cross product: (p1 - p0) × (p2 - p0)
+    bind e1x = p1x - p0x
+    bind e1y = p1y - p0y
+    bind e1z = p1z - p0z
+
+    bind e2x = p2x - p0x
+    bind e2y = p2y - p0y
+    bind e2z = p2z - p0z
+
+    bind nx = e1y * e2z - e1z * e2y
+    bind ny = e1z * e2x - e1x * e2z
+    bind nz = e1x * e2y - e1y * e2x
+
+    # Normalize
+    bind nd = รากที่สอง(nx*nx + ny*ny + nz*nz)
+    ถ้า nd > 0.001 {
+        bind nx = nx / nd
+        bind ny = ny / nd
+        bind nz = nz / nd
+    }
+
+    bind result_list = [nx, ny, nz, nd]
+    ผลลัพธ์ result_list
+}
+
+# (ฟังก์ชันทรงกลมพื้นดินเก่าถูกลบออก — ปัจจุบันใช้ วาดสิบสองหน้าไฮเพอร์โบลิก)

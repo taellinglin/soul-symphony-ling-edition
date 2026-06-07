@@ -1,5 +1,61 @@
-error: can't find bin `soul-symphony-ling` at path `J:\soul-symphony-ling\src\main.rs`
- --> J:\soul-symphony-ling\Cargo.toml
-error: can't find bin `soul-symphony-ling` at path `J:\soul-symphony-ling\src\main.rs`
- --> J:\soul-symphony-ling\Cargo.toml
-error: could not compile due to 2 previous target resolution errors
+    Blocking waiting for file lock on package cache
+   0.298002200s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: fingerprint error for soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)/Check { test: false }/TargetInner { name: "soul-symphony-ling", doc: true, ..: with_path("J:\\soul-symphony-ling\\src\\main.rs", Edition2021) }
+   0.298155600s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:     err: failed to read `J:\soul-symphony-ling\target\debug\.fingerprint\soul-symphony-ling-0885516ce3cbb696\bin-soul-symphony-ling`
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   0.354943500s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: fingerprint error for soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)/Check { test: true }/TargetInner { name: "soul-symphony-ling", doc: true, ..: with_path("J:\\soul-symphony-ling\\src\\main.rs", Edition2021) }
+   0.354986700s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:     err: failed to read `J:\soul-symphony-ling\target\debug\.fingerprint\soul-symphony-ling-c279ed307ecc4f3a\test-bin-soul-symphony-ling`
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+    Checking soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)
+error: could not compile `soul-symphony-ling` (bin "soul-symphony-ling" test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `soul-symphony-ling` (bin "soul-symphony-ling") due to 1 previous error

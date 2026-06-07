@@ -1,0 +1,14 @@
+[package]
+name = "midiconv"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "midiconv"
+path = "src/main.rs"
+
+[dependencies]
+midly = "0.5"
+
+[profile.release]
+opt-level = 2

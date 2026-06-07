@@ -1,0 +1,59 @@
+# ───────────────────────────────────────────────────────────────
+# English.ling — ดัชนีรูปอักขระเวกเตอร์ (สร้างอัตโนมัติ — อย่าแก้ด้วยมือ)
+# วาดอักขระEnglish(ดัชนี, ox,oy,oz, rx,ry,rz, ux,uy,uz, s)
+# ───────────────────────────────────────────────────────────────
+ใช้ "English/a"
+ใช้ "English/b"
+ใช้ "English/c"
+ใช้ "English/d"
+ใช้ "English/e"
+ใช้ "English/f"
+ใช้ "English/g"
+ใช้ "English/h"
+ใช้ "English/i"
+ใช้ "English/j"
+ใช้ "English/k"
+ใช้ "English/l"
+ใช้ "English/m"
+ใช้ "English/n"
+ใช้ "English/o"
+ใช้ "English/p"
+ใช้ "English/q"
+ใช้ "English/r"
+ใช้ "English/s"
+ใช้ "English/t"
+ใช้ "English/u"
+ใช้ "English/v"
+ใช้ "English/w"
+ใช้ "English/x"
+ใช้ "English/y"
+ใช้ "English/z"
+
+ฟังก์ชัน วาดอักขระEnglish(ดัชนี, ox,oy,oz, rx,ry,rz, ux,uy,uz, s) {
+    ถ้า ดัชนี == 0 { อักขระ_English_a(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 1 { อักขระ_English_b(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 2 { อักขระ_English_c(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 3 { อักขระ_English_d(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 4 { อักขระ_English_e(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 5 { อักขระ_English_f(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 6 { อักขระ_English_g(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 7 { อักขระ_English_h(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 8 { อักขระ_English_i(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 9 { อักขระ_English_j(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 10 { อักขระ_English_k(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 11 { อักขระ_English_l(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 12 { อักขระ_English_m(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 13 { อักขระ_English_n(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 14 { อักขระ_English_o(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 15 { อักขระ_English_p(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 16 { อักขระ_English_q(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 17 { อักขระ_English_r(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 18 { อักขระ_English_s(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 19 { อักขระ_English_t(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 20 { อักขระ_English_u(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 21 { อักขระ_English_v(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 22 { อักขระ_English_w(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 23 { อักขระ_English_x(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 24 { อักขระ_English_y(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 25 { อักขระ_English_z(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+}
