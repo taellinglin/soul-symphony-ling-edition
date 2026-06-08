@@ -21,6 +21,7 @@ bind ST_MP    = 5
 bind ST_OPT   = 6
 bind ST_PLAY  = 7
 bind ST_LANG  = 8
+bind ST_CINE  = 9
 
 bind เริ่ม = do {
     เปิดหน้าต่าง(1920, 1080)
@@ -31,6 +32,10 @@ bind เริ่ม = do {
     bind ความยาวเพลงหลัก = ความยาวเพลง(เพลงหลัก)
     bind เพลงเกม        = โหลดเพลง("music/Antarctica.wav")
     bind ยาวเพลงเกม     = ความยาวเพลง(เพลงเกม)
+    # เพลงเล่นในเกม: ใช้ Antarctica ถ้าเป็นไฟล์จริง มิฉะนั้น fallback เป็น Soul Symphony
+    bind เพลงเล่น    = เพลงหลัก
+    bind ยาวเพลงเล่น = ความยาวเพลงหลัก
+    ถ้า ยาวเพลงเกม > 1.0 { bind เพลงเล่น = เพลงเกม;  bind ยาวเพลงเล่น = ยาวเพลงเกม }
 
     # ── โหลดตัวเลือก (options.cfg = "music;lang") ────────────────────────────
     bind cfg  = อ่านไฟล์("options.cfg")
@@ -61,10 +66,41 @@ bind เริ่ม = do {
     bind optReturn = ST_MENU
     bind รีเซ็ต    = 1
     bind currentSlot = 0
+    bind cineStart = 0.0
+    bind prevLine = 0.0 - 1.0
+    bind คอร์ดระฆัง = [523.0, 587.0, 659.0, 784.0, 880.0]   # เพนทาโทนิก C D E G A
+
+    # ── บทกวีอินโทร 24 บรรทัด (โลกแห่งสมดุลที่แตกสลาย) ──────────────────────
+    bind บทกวี = [
+        "in the beginning there was a song",
+        "every star a note of light",
+        "the world spun in gentle balance",
+        "mountains hummed and rivers rhymed",
+        "all things moved as one in harmony",
+        "then a silence cracked the sky",
+        "the great chord came undone",
+        "the instruments scattered to the dark",
+        "the drum the flute the silver string",
+        "each one lost in a distant star",
+        "the notes forgot their ancient names",
+        "and balance fell to sleeping stone",
+        "yet a single tone remains",
+        "faint inside a wandering soul",
+        "you who still can hear the song",
+        "you must gather what was torn",
+        "find the drum beyond the dawn",
+        "find the flute among the mist",
+        "find the string that binds the spheres",
+        "let every note return to home",
+        "restore the chord of earth and sky",
+        "and wake the world from silent stone",
+        "carry this quiet song within you",
+        "now we must send you to this world"
+    ]
     bind startX = 0.0  bind startY = 0.0 - 2.0  bind startZ = 0.0
 
     # ── ออร์บ + ของเหลว ───────────────────────────────────────────────────────
-    bind R = 2.0
+    bind R = 1.0
     bind GROUND = 3.0
     bind ball = soft_ball(0.0, 0.0 - 2.0, 0.0, R)
     bind liq  = liquid_new(56.0, 56.0)
@@ -161,7 +197,7 @@ bind เริ่ม = do {
             แสดงผล()
             ถ้า กดปุ่ม("enter") {
                 ถ้า sel == 0 { bind สถานะ = ST_LOAD;  bind sel = 0 }
-                ถ้า sel == 1 { bind สถานะ = ST_NEW }
+                ถ้า sel == 1 { bind สถานะ = ST_CINE;  bind cineStart = เวลาปัจจุบัน();  bind prevLine = 0.0 - 1.0;  ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) } }
                 ถ้า sel == 2 { bind สถานะ = ST_MP;    bind sel = 0 }
                 ถ้า sel == 3 { bind optReturn = ST_MENU;  bind สถานะ = ST_OPT;  bind sel = 0 }
                 ถ้า sel == 4 { bind ออกเกม = 1 }
@@ -302,6 +338,91 @@ bind เริ่ม = do {
             ถ้า กดปุ่ม("escape") { bind สถานะ = ST_OPT;  bind sel = 1 }
         }
 
+        # ── CINEMATIC: สโนว์โกลบดาว + บทกวี 24 บรรทัด → เฟดขาว → เล่น ──────────
+        ถ้า สถานะ == ST_CINE {
+            bind clock = t - cineStart
+            bind SECPER = 3.4
+            bind totalCine = 24.0 * SECPER          # ~81.6s
+            bind fadeStart = totalCine - 3.4
+
+            # เฟดขาวช่วงท้าย
+            bind wf = 0.0
+            ถ้า clock > fadeStart { bind wf = (clock - fadeStart) / 3.4 }
+            ถ้า wf > 1.0 { bind wf = 1.0 }
+            bind skyFade = 1.0 - wf
+            bind bgv = floor(wf * 255.0)
+            เติม(bgv, bgv, bgv)
+            ตั้งแสงรอบข้าง(0.5)
+            โหมดผสม(1)
+
+            # กล้องล่องลอยในสโนว์โกลบ; ช่วงท้ายเข้าหาดาวเคราะห์ (ลูก)
+            bind endf = 0.0
+            ถ้า clock > totalCine - 16.0 { bind endf = (clock - (totalCine - 16.0)) / 16.0 }
+            ถ้า endf > 1.0 { bind endf = 1.0 }
+            bind ccx = ไซน์(clock * 0.06) * 6.0
+            bind ccy = ไซน์(clock * 0.04) * 4.0 - 2.0
+            bind ccz = โคไซน์(clock * 0.06) * 6.0
+            bind tgx = ไซน์(clock * 0.06 + 1.5) * 25.0
+            bind tgy = ไซน์(clock * 0.03) * 8.0
+            bind tgz = โคไซน์(clock * 0.06 + 1.5) * 25.0
+            # ดาวเคราะห์ที่ (0,-14,0): กล้อง/เป้าเลื่อนเข้าหามันช่วงท้าย
+            bind ccx = ccx * (1.0 - endf) + โคไซน์(clock*0.2) * 11.0 * endf
+            bind ccz = ccz * (1.0 - endf) + ไซน์(clock*0.2) * 11.0 * endf
+            bind ccy = ccy * (1.0 - endf) + (0.0-16.0) * endf
+            bind tgx = tgx * (1.0 - endf) + 0.0
+            bind tgy = tgy * (1.0 - endf) + (0.0-14.0) * endf
+            bind tgz = tgz * (1.0 - endf) + 0.0
+            ตั้งกล้องมอง(ccx, ccy, ccz, tgx, tgy, tgz)
+            ตั้งระยะห่าง(1.9)
+
+            # ดาว + เครื่องดนตรี (gather = endf → รวมเข้าหาดาวเคราะห์ช่วงท้าย)
+            เมฆดาว(t, skyFade, endf)
+            flush_3d()
+
+            # ดาวเคราะห์ (ลูกของเหลว)
+            liquid_step(liq, 0.016)
+            liquid_splat(liq, 28.0 + ไซน์(t)*12.0, 28.0 + โคไซน์(t*1.1)*12.0, 1.0, 0.2, 4.0)
+            liquid_draw_surface(liq, 1, 0.0, 0.0-14.0, 0.0, 5.0, 5.0)
+            อนุภาคทรงกลม(0.0, 0.0-14.0, 0.0, 4.6, 200.0, t, floor(200*skyFade), floor(180*skyFade), floor(255*skyFade))
+            flush_3d()
+
+            # ทวิงเคิล
+            ประกาย(380.0, 240.0, 480.0, 340.0, 22.0, t)
+            ประกาย(1240.0, 720.0, 520.0, 360.0, 22.0, t)
+
+            # ── บทกวี (โอเวอร์เลย์ล่าง) + ระฆังต่อบรรทัด ──
+            bind lineIdx = floor(clock / SECPER)
+            ถ้า lineIdx > prevLine {
+                ถ้า lineIdx < 24 {
+                    bind deg = lineIdx - floor(lineIdx / 5.0) * 5.0
+                    เสียงเอฟเฟกต์(0.0, 0.0, 0.0, 1.0, list_get(คอร์ดระฆัง, deg), 0.4, 1.4, "sine")
+                }
+                bind prevLine = lineIdx
+            }
+            ถ้า lineIdx < 24 {
+                bind line = list_get(บทกวี, lineIdx)
+                bind localT = clock - lineIdx * SECPER
+                bind lf = 1.0
+                ถ้า localT < 0.7 { bind lf = localT / 0.7 }
+                ถ้า localT > SECPER - 0.7 { bind lf = (SECPER - localT) / 0.7 }
+                ถ้า lf < 0.0 { bind lf = 0.0 }
+                ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)
+                ตั้งระยะห่าง(2.8)
+                bind cv = floor(235.0 * lf)
+                # เฟดขาว: เปลี่ยนตัวอักษรเป็นเข้มบนพื้นขาว
+                ถ้า wf > 0.5 { สีดินสอ(floor(40.0*lf), floor(40.0*lf), floor(60.0*lf)) }
+                มิฉะนั้น { สีดินสอ(cv, cv, cv) }
+                วาดสตริง(line, 0.0, 8.5, 0.0, 0.5, ภาษา)
+                flush_3d()
+            }
+
+            แสดงผล()
+
+            # จบ / ข้าม → เข้าเล่น
+            ถ้า clock >= totalCine { bind gameMode = 0;  bind รีเซ็ต = 1;  bind paused = 0;  bind startX = 0.0;  bind startY = 0.0-2.0;  bind startZ = 0.0;  หยุดเพลง();  bind สถานะ = ST_PLAY }
+            ถ้า กดปุ่ม("escape") { bind gameMode = 0;  bind รีเซ็ต = 1;  bind paused = 0;  bind startX = 0.0;  bind startY = 0.0-2.0;  bind startZ = 0.0;  หยุดเพลง();  bind สถานะ = ST_PLAY }
+        }
+
         # ── PLAY ──────────────────────────────────────────────────────────────
         ถ้า สถานะ == ST_PLAY {
             ถ้า รีเซ็ต == 1 {
@@ -321,12 +442,12 @@ bind เริ่ม = do {
                 bind lastDirx = 0.0;  bind lastDirz = 1.0
                 bind รีเซ็ต = 0
                 set_zdist(32.0)
-                ถ้า gameMode == 0 { ถ้า musicOn == 1 { หยุดเพลง();  เล่นเพลง(เพลงเกม) } }
+                ถ้า gameMode == 0 { ถ้า musicOn == 1 { หยุดเพลง();  เล่นเพลง(เพลงเล่น) } }
             }
 
-            # วนเพลง Antarctica (story)
-            ถ้า gameMode == 0 { ถ้า musicOn == 1 { ถ้า ยาวเพลงเกม > 1.0 {
-                ถ้า ตำแหน่งเพลง() >= ยาวเพลงเกม - 0.5 { ค้นหาเพลง(0);  เล่นเพลง(เพลงเกม) }
+            # วนเพลงเกม (story)
+            ถ้า gameMode == 0 { ถ้า musicOn == 1 { ถ้า ยาวเพลงเล่น > 1.0 {
+                ถ้า ตำแหน่งเพลง() >= ยาวเพลงเล่น - 0.5 { ค้นหาเพลง(0);  เล่นเพลง(เพลงเล่น) }
             } } }
 
             ถ้า กดปุ่ม("escape") { bind paused = 1 - paused;  bind sel = 0 }
@@ -335,10 +456,10 @@ bind เริ่ม = do {
             ถ้า paused == 1 { ถ้า gameMode == 0 { bind doUpdate = 0 } }
 
             ถ้า doUpdate == 1 {
-                ถ้า กดค้าง("a") { soft_kick(ball, 0.0-1.0, 0.0, 0.0, 0.018)  soft_spin(ball, 0.0, 0.0, 0.0-1.0, 0.12) }
-                ถ้า กดค้าง("d") { soft_kick(ball, 1.0, 0.0, 0.0, 0.018)      soft_spin(ball, 0.0, 0.0, 1.0, 0.12) }
-                ถ้า กดค้าง("w") { soft_kick(ball, 0.0, 0.0, 0.0-1.0, 0.018)  soft_spin(ball, 1.0, 0.0, 0.0, 0.12) }
-                ถ้า กดค้าง("s") { soft_kick(ball, 0.0, 0.0, 1.0, 0.018)      soft_spin(ball, 0.0-1.0, 0.0, 0.0, 0.12) }
+                ถ้า กดค้าง("a") { soft_kick(ball, 0.0-1.0, 0.0, 0.0, 0.022)  soft_spin(ball, 0.0, 0.0, 0.0-1.0, 0.20) }
+                ถ้า กดค้าง("d") { soft_kick(ball, 1.0, 0.0, 0.0, 0.022)      soft_spin(ball, 0.0, 0.0, 1.0, 0.20) }
+                ถ้า กดค้าง("w") { soft_kick(ball, 0.0, 0.0, 0.0-1.0, 0.022)  soft_spin(ball, 1.0, 0.0, 0.0, 0.20) }
+                ถ้า กดค้าง("s") { soft_kick(ball, 0.0, 0.0, 1.0, 0.022)      soft_spin(ball, 0.0-1.0, 0.0, 0.0, 0.20) }
 
                 # ── charge-up jump: ยิ่งกดค้างนาน ยิ่งสูง, ปล่อยแล้วกระโดดครั้งเดียว, double-jump ได้
                 bind spNow = 0.0
@@ -352,7 +473,7 @@ bind เริ่ม = do {
                 มิฉะนั้น {
                     ถ้า spDown > 0.5 {
                         ถ้า jumps < 2.0 {
-                            bind imp = 0.18 + (chargeT / 3.0) * 0.72
+                            bind imp = 0.12 + (chargeT / 3.0) * 0.5
                             soft_kick(ball, 0.0, 0.0-1.0, 0.0, imp)
                             bind jumps = jumps + 1.0
                         }
@@ -363,15 +484,22 @@ bind เริ่ม = do {
 
                 soft_step(ball, 0.016, 12.0)
                 soft_bounce(ball, GROUND, 0.72)
-                กล่องนุ่ม(ball, 0.0-42.0, 0.0-10.0, 0.0-42.0, 42.0, GROUND, 42.0, 0.6)
+                กล่องนุ่ม(ball, 0.0-168.0, 0.0-40.0, 0.0-168.0, 168.0, GROUND, 168.0, 0.6)
             }
 
             bind c = soft_centroid(ball)
             bind cx = c[0.0]  bind cy = c[1.0]  bind cz = c[2.0]
             ถ้า cy + R > GROUND - 0.25 { bind jumps = 0.0 }
+            ถ้า doUpdate == 1 { ชนเลเวล(ball, cx, cz, R) }
 
             bind vx = cx - px  bind vy = cy - py  bind vz = cz - pz
             bind speed = รากที่สอง(vx*vx + vy*vy + vz*vz)
+
+            # แรงเสียดทานเบา ๆ (กันลื่นไถลทั่วพื้น) — ต้านเฉพาะแนวนอน
+            ถ้า doUpdate == 1 {
+                bind hsp = รากที่สอง(vx*vx + vz*vz)
+                ถ้า hsp > 0.004 { เตะนุ่ม(ball, 0.0-vx, 0.0, 0.0-vz, hsp * 0.06) }
+            }
 
             # quick-save (story เท่านั้น)
             ถ้า gameMode == 0 {
@@ -395,9 +523,30 @@ bind เริ่ม = do {
                 liquid_step(liq, 0.016)
                 liquid_splat(liq, 28.0 + ไซน์(t * 1.3) * 15.0, 20.0 + โคไซน์(t * 1.1) * 9.0, 1.0, 0.22, 3.0)
                 liquid_splat(liq, 28.0 + โคไซน์(t * 0.9) * 15.0, 36.0 + ไซน์(t * 1.7) * 9.0, 0.0, 0.24, 3.2)
-                # พื้นเชเดอร์
+                # ── พื้นเชเดอร์ audio-reactive: คนน้ำตามสเปกตรัมเพลง ──
                 liquid_step(เหลวพื้น, 0.016)
-                liquid_splat(เหลวพื้น, 12.0 + ไซน์(t*0.6)*6.0, 12.0 + โคไซน์(t*0.5)*6.0, 1.0, 0.18, 2.6)
+                ถ้า gameMode == 0 {
+                    bind bands = สเปกตรัมเพลง(เพลงเล่น, 12)
+                    bind bi = 0
+                    ขณะที่ bi < 12 {
+                        bind m = list_get(bands, bi) * 4.0
+                        ถ้า m > 2.2 { bind m = 2.2 }
+                        bind ang = bi * 0.5236 + t * 0.5
+                        bind rad = 2.5 + bi * 0.75
+                        bind ux = 12.0 + โคไซน์(ang) * rad
+                        bind uz = 12.0 + ไซน์(ang) * rad
+                        bind kind = 1.0
+                        ถ้า (bi % 2) == 1 { bind kind = 0.0 }
+                        liquid_splat(เหลวพื้น, ux, uz, kind, 0.12 + m * 0.5, 1.3 + m)
+                        bind bi = bi + 1
+                    }
+                    # เบสคุมการกระเพื่อม (gravity slosh)
+                    bind bass = (list_get(bands,0) + list_get(bands,1)) * 4.0
+                    liquid_gravity(เหลวพื้น, ไซน์(t*0.7)*bass*16.0, 16.0 + bass*12.0)
+                }
+                มิฉะนั้น {
+                    liquid_splat(เหลวพื้น, 12.0 + ไซน์(t*0.6)*6.0, 12.0 + โคไซน์(t*0.5)*6.0, 1.0, 0.18, 2.6)
+                }
             }
             bind def = soft_deform(ball)
 
@@ -430,12 +579,13 @@ bind เริ่ม = do {
                 bind lastDirx = vx / speed
                 bind lastDirz = vz / speed
             }
-            bind desx = cx - lastDirx * 12.0
-            bind desz = cz - lastDirz * 12.0
+            bind desx = cx - lastDirx * 14.0
+            bind desz = cz - lastDirz * 14.0
             bind camX = camX + (desx - camX) * 0.06
             bind camZ = camZ + (desz - camZ) * 0.06
-            ตั้งกล้องมอง(camX, cy - 6.0, camZ, cx, cy, cz)
-            ตั้งระยะห่าง(2.8)
+            # กล้องสูงเหนือยอดผนัง (-10) แต่ต่ำกว่าเพดาน (-24) → ไม่มีผนัง cull ที่ near plane
+            ตั้งกล้องมอง(camX, cy - 16.0, camZ, cx, cy, cz)
+            ตั้งระยะห่าง(2.2)
 
             # ── render scene ──
             set_color(6, 6, 14)
@@ -444,7 +594,7 @@ bind เริ่ม = do {
             โหมดผสม(1)
 
             # พื้นเชเดอร์ของเหลว (Rust call เดียว) + สถาปัตยกรรมเลเวล
-            liquid_draw_surface(เหลวพื้น, 0, 0.0, GROUND, 0.0, 42.0, 0.0)
+            liquid_draw_surface(เหลวพื้น, 0, 0.0, GROUND, 0.0, 168.0, 0.0)
             flush_3d()
             วาดเลเวล(t)
             flush_3d()

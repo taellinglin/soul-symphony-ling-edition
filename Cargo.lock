@@ -1580,7 +1580,7 @@ dependencies = [
 
 [[package]]
 name = "ling-lang"
-version = "2030.1.18"
+version = "2030.1.19"
 dependencies = [
  "base64 0.22.1",
  "flate2",
