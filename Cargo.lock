@@ -1496,6 +1496,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ling-ai"
+version = "2030.0.0"
+dependencies = [
+ "ling-core",
+ "ndarray",
+ "num-traits",
+ "rand",
+]
+
+[[package]]
 name = "ling-ast"
 version = "2030.0.0"
 dependencies = [
@@ -1580,13 +1590,14 @@ dependencies = [
 
 [[package]]
 name = "ling-lang"
-version = "2030.1.19"
+version = "2030.1.20"
 dependencies = [
  "base64 0.22.1",
  "flate2",
  "glam",
  "js-sys",
  "lalrpop",
+ "ling-ai",
  "ling-ast",
  "ling-audio",
  "ling-codegen",
@@ -1730,6 +1741,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "matrixmultiply"
+version = "0.3.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06de3016e9fae57a36fd14dba131fccf49f74b40b7fbdb472f96e361ec71a08"
+dependencies = [
+ "autocfg",
+ "rawpointer",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1828,6 +1849,19 @@ checksum = "bb85c154ba489f01b25c0d36ae69a87e4a1c73a72631fc6c0eb6dde34a73e44b"
 dependencies = [
  "num-traits",
  "pxfm",
+]
+
+[[package]]
+name = "ndarray"
+version = "0.15.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adb12d4e967ec485a5f71c6311fe28158e9d6f4bc4a447b474184d0f91a8fa32"
+dependencies = [
+ "matrixmultiply",
+ "num-complex",
+ "num-integer",
+ "num-traits",
+ "rawpointer",
 ]
 
 [[package]]
@@ -2291,6 +2325,12 @@ name = "raw-window-handle"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
+
+[[package]]
+name = "rawpointer"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 
 [[package]]
 name = "rayon"

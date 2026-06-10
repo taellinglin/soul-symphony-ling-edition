@@ -1,5 +1,5 @@
-   0.327457300s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: fingerprint error for soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)/Check { test: false }/TargetInner { name: "soul-symphony-ling", doc: true, ..: with_path("J:\\soul-symphony-ling\\src\\main.rs", Edition2021) }
-   0.327545600s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:     err: failed to read `J:\soul-symphony-ling\target\debug\.fingerprint\soul-symphony-ling-8a14c83ef476fd80\bin-soul-symphony-ling`
+   0.218662300s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: fingerprint error for soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)/Check { test: false }/TargetInner { name: "soul-symphony-ling", doc: true, ..: with_path("J:\\soul-symphony-ling\\src\\main.rs", Edition2021) }
+   0.218712700s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:     err: failed to read `J:\soul-symphony-ling\target\debug\.fingerprint\soul-symphony-ling-d34dac2730affaad\bin-soul-symphony-ling`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -26,8 +26,8 @@ Stack backtrace:
   18: git_midx_writer_dump
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
-   0.420189600s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: fingerprint error for soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)/Check { test: true }/TargetInner { name: "soul-symphony-ling", doc: true, ..: with_path("J:\\soul-symphony-ling\\src\\main.rs", Edition2021) }
-   0.420225200s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:     err: failed to read `J:\soul-symphony-ling\target\debug\.fingerprint\soul-symphony-ling-b8df44c5faff6c44\test-bin-soul-symphony-ling`
+   0.259526600s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint: fingerprint error for soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)/Check { test: true }/TargetInner { name: "soul-symphony-ling", doc: true, ..: with_path("J:\\soul-symphony-ling\\src\\main.rs", Edition2021) }
+   0.259550300s  INFO prepare_target{force=false package_id=soul-symphony-ling v0.1.0 (J:\soul-symphony-ling) target="soul-symphony-ling"}: cargo::core::compiler::fingerprint:     err: failed to read `J:\soul-symphony-ling\target\debug\.fingerprint\soul-symphony-ling-7b5dd309bfb80c68\test-bin-soul-symphony-ling`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -55,6 +55,6 @@ Stack backtrace:
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
     Checking soul-symphony-ling v0.1.0 (J:\soul-symphony-ling)
-error: could not compile `soul-symphony-ling` (bin "soul-symphony-ling") due to 1 previous error
-warning: build failed, waiting for other jobs to finish...
 error: could not compile `soul-symphony-ling` (bin "soul-symphony-ling" test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `soul-symphony-ling` (bin "soul-symphony-ling") due to 1 previous error
