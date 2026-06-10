@@ -1,0 +1,23 @@
+use "music/songs"
+use "font/Daemon"
+use "font/English"
+use "font/Daemon3D"
+use "game/color"
+use "game/title"
+use "game/level"
+bind _ = do {
+    เปิดหน้าต่าง(640, 480)
+    bind i = 0
+    ขณะที่ i < 2 {
+        เติม(6, 6, 14)
+        ตั้งแสงรอบข้าง(1.0)
+        ตั้งกล้องมอง(0.0, 0.0-1.0, 0.0-7.0, 0.0, 2.5, 0.0)
+        ตั้งระยะห่าง(4.6)
+        โหมดผสม(0)
+        วาดพื้น(0.0, 0.0)
+        flush_3d()
+        แสดงผล()
+        bind i = i + 1
+    }
+    record_frame()
+}

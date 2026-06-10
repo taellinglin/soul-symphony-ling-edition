@@ -1,0 +1,351 @@
+# ────────────────────────────────────────────────────────────────────────────
+# proc_gen_level.ling — LEVEL 2: ลานสุ่ม + ชั้นยกสูง (ramp ขึ้นไป) + กล่องตัวอักษร
+#   ใช้ฟังก์ชันร่วมจาก level.ling (วาดผนังเต็ม, LVL_F, LVL_C) + builtins.
+#   ดิสแพตช์จาก main เมื่อ ด่าน >= 1 (วาดเลเวล2/หากล่อง2/ความสูงพื้น2/...).
+#
+#   PARAMS (ปรับเพื่อ vary แต่ละเลเวล):
+#     PG_SEED   — เมล็ดสุ่ม (ตำแหน่งกล่อง)
+#     PG_HALF   — ครึ่งขนาดลาน
+#     PG_LEDGE  — ความสูงพื้นชั้นยก (ลบ = สูงขึ้น เพราะ +y ลง)
+#     PG_BOXN   — จำนวนกล่องตัวอักษร
+# ────────────────────────────────────────────────────────────────────────────
+
+bind PG_SEED  = 7.0
+bind PG_HALF  = 220.0
+bind PG_LEDGE = 0.0 - 46.0
+bind PG_BOXN  = 9
+bind PG_LH    = 80.0           # ครึ่งขนาดชั้นยกกลาง
+bind PG_RW    = 26.0           # ครึ่งความกว้าง ramp
+bind PG_RAMPZ = 200.0          # ปลายล่าง ramp (z) — อยู่ในพื้น (< PG_HALF) ไม่ชนผนัง
+
+# สุ่มเทียม 0..1 จากดัชนี + เลเวล (แต่ละ lvl ได้ผังต่างกัน)
+ฟังก์ชัน pgRand(i, lvl) {
+    bind s = ไซน์(i * 12.9898 + (PG_SEED + lvl * 4.7) * 78.233) * 43758.5453
+    คืน s - ปัดลง(s)
+}
+
+# จำนวนกล่อง/มอนสเตอร์ ตามเลเวล
+ฟังก์ชัน จำนวนกล่อง(lvl) { bind n = 5.0 + ปัดลง(lvl);  ถ้า n > 14.0 { bind n = 14.0 }  คืน n }
+ฟังก์ชัน จำนวนมอน(lvl)   { bind n = 2.0 + ปัดลง(lvl);  ถ้า n > 12.0 { bind n = 12.0 }  คืน n }
+
+# ตำแหน่งกล่องตัวอักษร i → [x, z]
+ฟังก์ชัน ตำแหน่งกล่อง(i, lvl) {
+    bind rx = (pgRand(i, lvl) * 2.0 - 1.0) * (PG_HALF - 40.0)
+    bind rz = (pgRand(i + 37.0, lvl) * 2.0 - 1.0) * (PG_HALF - 40.0)
+    คืน [rx, rz]
+}
+
+# ชนิดมอน: 0 = drifter (ช้า เดินวน), 1 = hunter (เร็ว ไล่ผู้เล่น)
+ฟังก์ชัน ชนิดมอน(i, lvl) {
+    ถ้า lvl < 1.5 { คืน 0 }
+    ถ้า pgRand(i + 500.0, lvl) > 0.55 { คืน 1 }
+    คืน 0
+}
+
+# 8 สเตตัส [STR,AGI,VIT,FOC,DEF,LCK,SPD,PWR] (สเกลตามเลเวล)
+ฟังก์ชัน สเตตัสมอน(seed, lvl) {
+    bind b = 3.0 + lvl * 1.5
+    คืน [
+        floor(b + pgRand(seed+1.0, lvl)*lvl*3.0), floor(b + pgRand(seed+2.0, lvl)*lvl*3.0),
+        floor(b + pgRand(seed+3.0, lvl)*lvl*3.0), floor(b + pgRand(seed+4.0, lvl)*lvl*3.0),
+        floor(b + pgRand(seed+5.0, lvl)*lvl*3.0), floor(b + pgRand(seed+6.0, lvl)*lvl*3.0),
+        floor(b + pgRand(seed+7.0, lvl)*lvl*3.0), floor(b + pgRand(seed+8.0, lvl)*lvl*3.0)
+    ]
+}
+
+# ตำแหน่งมอน i → [x,z]; typ 1 = นักล่า ไล่ (px,pz) — rule-based AI (ไม่ใช่ LLM)
+ฟังก์ชัน ตำแหน่งมอน(i, lvl, t, spread, typ, px, pz) {
+    bind bx = (pgRand(i + 200.0, lvl) * 2.0 - 1.0) * spread
+    bind bz = (pgRand(i + 260.0, lvl) * 2.0 - 1.0) * spread
+    bind a = t * 0.45 + i * 1.3
+    bind ox = bx + โคไซน์(a) * 18.0
+    bind oz = bz + ไซน์(a) * 18.0
+    ถ้า typ > 0.5 {
+        bind hx = px - ox;  bind hz = pz - oz
+        bind chase = (ไซน์(t*0.55 + i)*0.5+0.5) * 0.82   # พุ่งเข้าหาเป็นจังหวะ
+        คืน [ox + hx*chase, oz + hz*chase]
+    }
+    คืน [ox, oz]
+}
+
+# ── ออกตาฮีดรอนเติม (ลำตัวมอนแหลม 3D) ────────────────────────────────────────
+ฟังก์ชัน วาดออคตา(cx,cy,cz, rx,ry,rz) {
+    bind ty=cy-ry;  bind by=cy+ry;  bind ey=cy
+    bind ax=cx+rx;  bind bx2=cx;     bind cx2=cx-rx;  bind dx2=cx
+    bind az=cz;     bind bz2=cz+rz;  bind cz2=cz;     bind dz2=cz-rz
+    วาดสามเหลี่ยม3มิติ(cx,ty,cz, ax,ey,az, bx2,ey,bz2)  วาดสามเหลี่ยม3มิติ(cx,ty,cz, bx2,ey,bz2, cx2,ey,cz2)
+    วาดสามเหลี่ยม3มิติ(cx,ty,cz, cx2,ey,cz2, dx2,ey,dz2) วาดสามเหลี่ยม3มิติ(cx,ty,cz, dx2,ey,dz2, ax,ey,az)
+    วาดสามเหลี่ยม3มิติ(cx,by,cz, bx2,ey,bz2, ax,ey,az)  วาดสามเหลี่ยม3มิติ(cx,by,cz, cx2,ey,cz2, bx2,ey,bz2)
+    วาดสามเหลี่ยม3มิติ(cx,by,cz, dx2,ey,dz2, cx2,ey,cz2) วาดสามเหลี่ยม3มิติ(cx,by,cz, ax,ey,az, dx2,ey,dz2)
+}
+
+# ไอคอนบัฟ stat (0-7) ที่ (x,y) ระนาบ x-y — สีต่างกัน 8 แบบ
+ฟังก์ชัน ไอคอนบัฟ(stat, x, y, z, s) {
+    bind h = stat * 0.785
+    สีดินสอ(floor((ไซน์(h)*0.5+0.5)*200+55), floor((ไซน์(h+2.094)*0.5+0.5)*200+55), floor((ไซน์(h+4.189)*0.5+0.5)*200+55))
+    วาดสามเหลี่ยม3มิติ(x,y-s,z, x+s,y,z, x,y+s,z)
+    วาดสามเหลี่ยม3มิติ(x,y-s,z, x,y+s,z, x-s,y,z)
+}
+
+# ── ความสูงพื้นที่ (x,z): ฐาน LVL_F; วัด/สเก็ตพาร์ค — 3 ramp (ใต้/ตะวันตก/ตะวันออก) ──
+ฟังก์ชัน ความสูงพื้น2(x, z) {
+    # ramp ใต้: z=PG_RAMPZ (พื้น) → z=PG_LH (ขอบชั้น)
+    ถ้า x > 0.0-PG_RW { ถ้า x < PG_RW { ถ้า z > PG_LH { ถ้า z < PG_RAMPZ {
+        คืน LVL_F + (PG_LEDGE - LVL_F) * ((PG_RAMPZ - z) / (PG_RAMPZ - PG_LH))
+    } } } }
+    # ramp ตะวันตก: x=-PG_RAMPZ (พื้น) → x=-PG_LH (ขอบชั้น)
+    ถ้า z > 0.0-PG_RW { ถ้า z < PG_RW { ถ้า x > 0.0-PG_RAMPZ { ถ้า x < 0.0-PG_LH {
+        คืน LVL_F + (PG_LEDGE - LVL_F) * ((x + PG_RAMPZ) / (PG_RAMPZ - PG_LH))
+    } } } }
+    # ramp ตะวันออก: x=PG_RAMPZ (พื้น) → x=PG_LH (ขอบชั้น)
+    ถ้า z > 0.0-PG_RW { ถ้า z < PG_RW { ถ้า x < PG_RAMPZ { ถ้า x > PG_LH {
+        คืน LVL_F + (PG_LEDGE - LVL_F) * ((PG_RAMPZ - x) / (PG_RAMPZ - PG_LH))
+    } } } }
+    # ชั้นยกกลาง (platform = วิหารกลาง)
+    ถ้า x > 0.0-PG_LH { ถ้า x < PG_LH { ถ้า z > 0.0-PG_LH { ถ้า z < PG_LH {
+        คืน PG_LEDGE
+    } } } }
+    คืน LVL_F
+}
+
+# ── กล่องชน: ลานนอก (1 กล่อง) — คืน [pen,qx,qz] ──
+ฟังก์ชัน หากล่อง2(cx, cz, R) {
+    bind x0 = 0.0-PG_HALF;  bind x1 = PG_HALF;  bind z0 = 0.0-PG_HALF;  bind z1 = PG_HALF
+    bind qx = cx;  ถ้า qx < x0+R { bind qx = x0+R }  ถ้า qx > x1-R { bind qx = x1-R }
+    bind qz = cz;  ถ้า qz < z0+R { bind qz = z0+R }  ถ้า qz > z1-R { bind qz = z1-R }
+    คืน [รากที่สอง((cx-qx)*(cx-qx) + (cz-qz)*(cz-qz)), qx, qz]
+}
+
+# ── กำแพงรอบชั้นยก: กันลูก "ปีน" ขึ้นชั้น 2 ตรง ๆ (ขึ้นได้เฉพาะทาง ramp) ──
+#   ใช้ cy: ถ้าลูกอยู่ระดับพื้นล่าง + อยู่ในรอยเท้าชั้นยก (ไม่ใช่ช่อง ramp) → ดันออก
+ฟังก์ชัน หากล่องชั้น(cx, cz, cy, R) {
+    ถ้า cy - R > PG_LEDGE + 16.0 {                 # ลูกต่ำกว่าชั้นยก (อยู่พื้นล่าง)
+        bind gap = 0
+        ถ้า cx > 0.0-PG_RW-R { ถ้า cx < PG_RW+R { ถ้า cz > PG_LH-2.0 { bind gap = 1 } } }  # ช่อง ramp
+        ถ้า gap == 0 {
+            bind L = PG_LH + R
+            ถ้า cx > 0.0-L { ถ้า cx < L { ถ้า cz > 0.0-L { ถ้า cz < L {
+                bind dl = cx + L;  bind dr = L - cx;  bind db = cz + L;  bind dfr = L - cz
+                bind m = dl;  bind qx = 0.0-L;  bind qz = cz
+                ถ้า dr < m { bind m = dr;  bind qx = L;  bind qz = cz }
+                ถ้า db < m { bind m = db;  bind qx = cx;  bind qz = 0.0-L }
+                ถ้า dfr < m { bind m = dfr;  bind qx = cx;  bind qz = L }
+                คืน [1.0, qx, qz]
+            } } } }
+        }
+    }
+    คืน [0.0, cx, cz]
+}
+
+# ── จุดเก็บตัวอักษร i (จาก n) กระจายสม่ำเสมอ (เกลียวซันฟลาวเวอร์) → [x, y, z] ──
+#   ถ้าตำแหน่งพื้นล่างถูกบล็อก (ในกล่องตัวอักษร) → ย้ายขึ้นชั้น 2 (PG_LEDGE)
+ฟังก์ชัน ตำแหน่งเก็บ2(i, n, lvl) {
+    bind ang = i * 2.3999632                       # golden angle → กระจายทั่วถึง
+    bind rad = รากที่สอง((i + 0.5) / n) * (PG_HALF - 36.0)
+    bind x = โคไซน์(ang) * rad
+    bind z = ไซน์(ang) * rad
+    # บล็อกไหม? (อยู่ในรอยเท้ากล่องตัวอักษร half=13+ระยะเผื่อ)
+    bind blocked = 0
+    bind nb = จำนวนกล่อง(lvl)
+    bind k = 0
+    ขณะที่ k < nb {
+        bind p = ตำแหน่งกล่อง(k, lvl)
+        bind dx = x - list_get(p,0);  bind dz = z - list_get(p,1)
+        ถ้า dx*dx + dz*dz < 400.0 { bind blocked = 1 }
+        bind k = k + 1
+    }
+    ถ้า blocked == 1 {
+        # ย้ายขึ้นชั้น 2: ยุบรัศมีให้อยู่ในรอยเท้าชั้นยก + ความสูง PG_LEDGE
+        bind rad2 = (PG_LH - 18.0) * ((i - ปัดลง(i/4.0)*4.0) / 4.0 + 0.2)
+        คืน [โคไซน์(ang)*rad2, PG_LEDGE - 2.2, ไซน์(ang)*rad2]
+    }
+    คืน [x, LVL_F - 2.2, z]
+}
+
+# ── รายการ bumper (กล่องตัวอักษร) แบน [x,z,รัศมี, ...] สำหรับชนในฟิสิกส์ ──
+ฟังก์ชัน กล่องเลเวล2(lvl) {
+    bind out = []
+    bind nb = จำนวนกล่อง(lvl)
+    bind i = 0
+    ขณะที่ i < nb {
+        bind p = ตำแหน่งกล่อง(i, lvl)
+        bind out = list_push(out, list_get(p,0))
+        bind out = list_push(out, list_get(p,1))
+        bind out = list_push(out, 13.0)
+        bind i = i + 1
+    }
+    คืน out
+}
+
+# ── กล่องตัวอักษร: ลูกบาศก์เติม (ลายผนัง) + กลิฟวางบนหน้าบน ──
+ฟังก์ชัน วาดกล่องตัวอักษร(x, z, gi, t) {
+    bind w = 11.0
+    bind top = LVL_F - 22.0          # หน้าบน (ขึ้น)
+    วาดผนังเต็ม(x-w, z-w, x+w, z-w)
+    วาดผนังเต็ม(x+w, z-w, x+w, z+w)
+    วาดผนังเต็ม(x+w, z+w, x-w, z+w)
+    วาดผนังเต็ม(x-w, z+w, x-w, z-w)
+    # หน้าบน (filled, สีพื้น)
+    สีดินสอ(16, 52, 50)
+    วาดสามเหลี่ยม3มิติ(x-w, top, z-w,  x+w, top, z-w,  x+w, top, z+w)
+    วาดสามเหลี่ยม3มิติ(x-w, top, z-w,  x+w, top, z+w,  x-w, top, z+w)
+    # กลิฟวางราบบนหน้าบน (สีหมุนเวียน)
+    bind hh = t*1.2 + x*0.05
+    สีดินสอ(floor((ไซน์(hh)*0.5+0.5)*180+70), floor((ไซน์(hh+2.094)*0.5+0.5)*180+70), floor((ไซน์(hh+4.189)*0.5+0.5)*180+70))
+    วาดอักขระDaemon(gi, x, top-0.6, z, 1,0,0, 0,0,1, 7.0)   # flat (เบากว่า 3D มาก) — FPS
+}
+
+# ── พื้นชั้นยก: กระเบื้องเติมบน platform (ที่ PG_LEDGE) ──
+ฟังก์ชัน วาดชั้นยก(t) {
+    bind S = 20.0;  bind n = 0.0 - PG_LH
+    bind iz = 0.0 - PG_LH
+    ขณะที่ iz < PG_LH {
+        bind ix = 0.0 - PG_LH
+        ขณะที่ ix < PG_LH {
+            ถ้า (ปัดลง(ix/S) + ปัดลง(iz/S)) - ปัดลง((ปัดลง(ix/S)+ปัดลง(iz/S))/2.0)*2.0 == 0.0 { สีดินสอ(14,40,38) }
+            มิฉะนั้น { สีดินสอ(22,60,58) }
+            วาดสามเหลี่ยม3มิติ(ix, PG_LEDGE, iz,  ix+S, PG_LEDGE, iz,  ix+S, PG_LEDGE, iz+S)
+            วาดสามเหลี่ยม3มิติ(ix, PG_LEDGE, iz,  ix+S, PG_LEDGE, iz+S,  ix, PG_LEDGE, iz+S)
+            bind ix = ix + S
+        }
+        bind iz = iz + S
+    }
+}
+
+# ผนังเตี้ยช่วง y0..y1 (เติม)
+ฟังก์ชัน ผนังช่วง(ax, az, bx, bz, y0, y1) {
+    สีดินสอ(20, 30, 70)
+    วาดสามเหลี่ยม3มิติ(ax, y0, az,  bx, y0, bz,  bx, y1, bz)
+    วาดสามเหลี่ยม3มิติ(ax, y0, az,  bx, y1, bz,  ax, y1, az)
+}
+
+# ── ภาพศิลป์เฟรมบนผนัง: กรอบทอง 2 ชั้น + ลายเวกเตอร์เคลื่อนไหวในกรอบ ──────────
+#   (cx,cy,cz)=กลางเฟรม; (rx,rz)=แกนขวาแนวนอนของผนัง; up=(0,-1,0); cull จาก (bx,bz)
+ฟังก์ชัน วาดศิลป์ผนัง(cx, cy, cz, rx, rz, w, h, t, kind, hue, bx, bz) {
+    ถ้า (cx-bx)*(cx-bx) + (cz-bz)*(cz-bz) > 110000.0 { คืน 0 }
+    bind o = 1.6
+    สีดินสอ(190, 155, 75)
+    วาดเส้น3มิติ(cx-rx*(w+o), cy-h-o, cz-rz*(w+o),  cx+rx*(w+o), cy-h-o, cz+rz*(w+o))
+    วาดเส้น3มิติ(cx-rx*(w+o), cy+h+o, cz-rz*(w+o),  cx+rx*(w+o), cy+h+o, cz+rz*(w+o))
+    วาดเส้น3มิติ(cx-rx*(w+o), cy-h-o, cz-rz*(w+o),  cx-rx*(w+o), cy+h+o, cz-rz*(w+o))
+    วาดเส้น3มิติ(cx+rx*(w+o), cy-h-o, cz+rz*(w+o),  cx+rx*(w+o), cy+h+o, cz+rz*(w+o))
+    สีดินสอ(110, 88, 44)
+    วาดเส้น3มิติ(cx-rx*w, cy-h, cz-rz*w,  cx+rx*w, cy-h, cz+rz*w)
+    วาดเส้น3มิติ(cx-rx*w, cy+h, cz-rz*w,  cx+rx*w, cy+h, cz+rz*w)
+    วาดเส้น3มิติ(cx-rx*w, cy-h, cz-rz*w,  cx-rx*w, cy+h, cz-rz*w)
+    วาดเส้น3มิติ(cx+rx*w, cy-h, cz+rz*w,  cx+rx*w, cy+h, cz+rz*w)
+    # ลายเวกเตอร์เคลื่อนไหวภายในกรอบ (vector "texture overlay")
+    ถ้า kind == 0 { ลายจักร(cx,cy,cz, rx,0,rz, 0,0.0-1.0,0, w*0.8, 10, t, hue) }
+    ถ้า kind == 1 { ลายยันต์(cx,cy,cz, rx,0,rz, 0,0.0-1.0,0, 6, h*0.8, t, hue) }
+    ถ้า kind == 2 { ลายดาว(cx,cy,cz, rx,0,rz, 0,0.0-1.0,0, 7, w*0.8, w*0.4, 0.1, t, hue) }
+    ถ้า kind == 3 { ลายดอกบัว(cx,cy,cz, rx,0,rz, 0,0.0-1.0,0, 2.0, w*0.8, 8, t, hue) }
+    คืน 0
+}
+
+ฟังก์ชัน วาดเลเวล2(t, cx, cz, lvl) {
+    # ผนังลานนอก (กล่องเปิดด้านบน)
+    วาดผนังเต็ม(0.0-PG_HALF, 0.0-PG_HALF, PG_HALF, 0.0-PG_HALF)
+    วาดผนังเต็ม(PG_HALF, 0.0-PG_HALF, PG_HALF, PG_HALF)
+    วาดผนังเต็ม(PG_HALF, PG_HALF, 0.0-PG_HALF, PG_HALF)
+    วาดผนังเต็ม(0.0-PG_HALF, PG_HALF, 0.0-PG_HALF, 0.0-PG_HALF)
+    # ชั้นยกกลาง + ผนังขอบชั้น (ยกเว้นด้าน ramp ทางใต้)
+    วาดชั้นยก(t)
+    ผนังช่วง(0.0-PG_LH, 0.0-PG_LH, PG_LH, 0.0-PG_LH, PG_LEDGE, LVL_F)   # เหนือ
+    ผนังช่วง(0.0-PG_LH, 0.0-PG_LH, 0.0-PG_LH, PG_LH, PG_LEDGE, LVL_F)   # ตะวันตก
+    ผนังช่วง(PG_LH, 0.0-PG_LH, PG_LH, PG_LH, PG_LEDGE, LVL_F)           # ตะวันออก
+    ผนังช่วง(0.0-PG_LH, PG_LH, 0.0-PG_RW, PG_LH, PG_LEDGE, LVL_F)       # ใต้ ซ้าย (เว้น ramp)
+    ผนังช่วง(PG_RW, PG_LH, PG_LH, PG_LH, PG_LEDGE, LVL_F)               # ใต้ ขวา
+    # ทางลาด (ramp) จาก z=PG_RAMPZ (ในห้อง) → ขึ้นขอบชั้นยก (z=PG_LH); ลาดพอกลิ้งขึ้นได้
+    สีดินสอ(20, 56, 54)
+    วาดสามเหลี่ยม3มิติ(0.0-PG_RW, LVL_F, PG_RAMPZ,  PG_RW, LVL_F, PG_RAMPZ,  PG_RW, PG_LEDGE, PG_LH)
+    วาดสามเหลี่ยม3มิติ(0.0-PG_RW, LVL_F, PG_RAMPZ,  PG_RW, PG_LEDGE, PG_LH,  0.0-PG_RW, PG_LEDGE, PG_LH)
+    # ผนังข้าง ramp (เติม) — กันตก + ดูเป็นทางลาดจริง
+    สีดินสอ(16, 42, 40)
+    วาดสามเหลี่ยม3มิติ(PG_RW, LVL_F, PG_RAMPZ,  PG_RW, PG_LEDGE, PG_LH,  PG_RW, LVL_F, PG_LH)
+    วาดสามเหลี่ยม3มิติ(0.0-PG_RW, LVL_F, PG_RAMPZ,  0.0-PG_RW, LVL_F, PG_LH,  0.0-PG_RW, PG_LEDGE, PG_LH)
+    # โคมระย้ากลางเหนือชั้นยก
+    วาดโคมระย้า(0.0, 0.0, t)
+    # กล่องตัวอักษร (สุ่มตามเลเวล) — วาดเฉพาะตัวใกล้ (cull) เพื่อ FPS
+    bind nb = จำนวนกล่อง(lvl)
+    bind i = 0
+    ขณะที่ i < nb {
+        bind p = ตำแหน่งกล่อง(i, lvl)
+        bind px = list_get(p,0);  bind pz = list_get(p,1)
+        ถ้า (px-cx)*(px-cx) + (pz-cz)*(pz-cz) < 90000.0 {
+            วาดกล่องตัวอักษร(px, pz, (i*7.0 + lvl*3.0) % 26.0, t)
+        }
+        bind i = i + 1
+    }
+    # คบไฟผนังลาน
+    วาดคบไฟ(0.0-PG_HALF+8.0, 0.0, t, 0.0)
+    วาดคบไฟ(PG_HALF-8.0, 0.0, t, 1.4)
+    วาดคบไฟ(0.0, 0.0-PG_HALF+8.0, t, 2.8)
+    วาดคบไฟ(0.0, PG_HALF-8.0, t, 4.2)
+    # ── ภาพศิลป์เฟรมบนผนัง (vector overlay เคลื่อนไหวในกรอบ) — cull ใกล้ ──
+    วาดศิลป์ผนัง(0.0-100.0, 0.0-44.0, 0.0-PG_HALF+1.5,  1,0,  14.0, 12.0, t, 0, lvl*0.7,        cx, cz)
+    วาดศิลป์ผนัง(100.0, 0.0-44.0, 0.0-PG_HALF+1.5,      1,0,  14.0, 12.0, t, 2, lvl*0.7+1.5,    cx, cz)
+    วาดศิลป์ผนัง(0.0-100.0, 0.0-44.0, PG_HALF-1.5,      1,0,  14.0, 12.0, t, 1, lvl*0.7+3.0,    cx, cz)
+    วาดศิลป์ผนัง(100.0, 0.0-44.0, PG_HALF-1.5,          1,0,  14.0, 12.0, t, 3, lvl*0.7+4.5,    cx, cz)
+    วาดศิลป์ผนัง(0.0-PG_HALF+1.5, 0.0-44.0, 0.0-100.0,  0,1,  14.0, 12.0, t, 2, lvl*0.7+0.8,    cx, cz)
+    วาดศิลป์ผนัง(0.0-PG_HALF+1.5, 0.0-44.0, 100.0,      0,1,  14.0, 12.0, t, 0, lvl*0.7+2.3,    cx, cz)
+    วาดศิลป์ผนัง(PG_HALF-1.5, 0.0-44.0, 0.0-100.0,      0,1,  14.0, 12.0, t, 3, lvl*0.7+3.8,    cx, cz)
+    วาดศิลป์ผนัง(PG_HALF-1.5, 0.0-44.0, 100.0,          0,1,  14.0, 12.0, t, 1, lvl*0.7+5.3,    cx, cz)
+}
+
+ฟังก์ชัน ดึงกล้อง2(cx, cz) {
+    bind b = หากล่อง2(cx, cz, 3.0)
+    คืน [list_get(b,1), list_get(b,2)]
+}
+
+# ของเก็บกระจายในลาน (จาก MIDI offset ขยายเข้าลาน)
+ฟังก์ชัน ตำแหน่งเก็บ2(ci) {
+    คืน [list_get(เก็บX, ci) * 7.0, list_get(เก็บZ, ci) * 7.0]
+}
+
+# มอนสเตอร์ปีศาจ: ลำตัวมืด + หนามแดงหมุน + ตาเรือง + เขา (วาดเมื่อยังไม่ตาย)
+# มอนสเตอร์ 3D เติม น่ากลัว: typ 0=ปีศาจแดง, 1=นักล่าม่วง; hpfrac=เลือด, lvl=เลเวล
+ฟังก์ชัน วาดมอน(x, z, t, seed, typ, hpfrac, lvl) {
+    bind by = (LVL_F - 5.0) + ไซน์(t*3.0 + seed) * 0.6
+    bind r1=120.0; bind g1=12.0; bind b1=24.0
+    ถ้า typ > 0.5 { bind r1=95.0; bind g1=10.0; bind b1=135.0 }
+    โหมดผสม(0)
+    สีดินสอ(floor(r1*0.4), floor(g1*0.4), floor(b1*0.4))
+    วาดออคตา(x, by, z, 3.2, 5.2, 3.2)                       # ลำตัวมืด
+    bind pulse = ไซน์(t*5.0+seed)*0.5+0.5
+    สีดินสอ(floor(r1*0.7+pulse*70.0), floor(g1+pulse*30.0), floor(b1*0.7+pulse*55.0))
+    วาดออคตา(x, by, z, 1.7, 6.6, 1.7)                       # แกนเรือง
+    สีดินสอ(floor(r1), floor(g1), floor(b1))
+    วาดออคตา(x, by, z, 5.4, 1.1, 5.4)                       # หนามข้าง
+    # ตาเรือง + เขา
+    โหมดผสม(1)
+    อนุภาคทรงกลม(x-1.3, by-1.8, z-2.4, 0.6, 6, t*5.0+seed, 255, 230, 60)
+    อนุภาคทรงกลม(x+1.3, by-1.8, z-2.4, 0.6, 6, t*5.0+seed, 255, 230, 60)
+    โหมดผสม(0)
+    สีดินสอ(floor(r1*1.3), floor(g1), floor(b1))
+    วาดสามเหลี่ยม3มิติ(x-2.2,by-4.2,z, x-1.3,by-4.0,z, x-3.6,by-7.6,z)
+    วาดสามเหลี่ยม3มิติ(x+2.2,by-4.2,z, x+1.3,by-4.0,z, x+3.6,by-7.6,z)
+    # ── แถบเลือด + เลเวล (pips) เหนือหัว (billboard ระนาบ x-y) ──
+    bind hy = by - 9.0
+    สีดินสอ(40, 8, 8)
+    วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x+4.0,hy,z, x+4.0,hy-0.8,z)  วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x+4.0,hy-0.8,z, x-4.0,hy-0.8,z)
+    bind hw = 8.0 * hpfrac
+    สีดินสอ(40, 220, 90)
+    วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x-4.0+hw,hy,z, x-4.0+hw,hy-0.8,z)  วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x-4.0+hw,hy-0.8,z, x-4.0,hy-0.8,z)
+    สีดินสอ(255, 210, 80)
+    bind pp = 0
+    ขณะที่ pp < lvl { ถ้า pp < 8 {
+        bind pxp = x - 3.5 + pp*1.0
+        วาดสามเหลี่ยม3มิติ(pxp,hy-1.3,z, pxp+0.6,hy-1.3,z, pxp+0.3,hy-2.1,z)
+    }  bind pp = pp + 1 }
+}
+
+ฟังก์ชัน ตั้งแสงเลเวล2(cx, cz, t, lvl) {
+    ล้างแสง()
+    # โคมกลาง: สีเปลี่ยนตามเลเวล (environment change)
+    เพิ่มแสง(0.0, PG_LEDGE-30.0, 0.0,
+        0.6+ไซน์(lvl*1.1)*0.4, 0.6+ไซน์(lvl*1.1+2.0)*0.4, 0.6+ไซน์(lvl*1.1+4.0)*0.4,
+        1.5, 360.0)
+    # ไฟผนัง 2 ดวง (ลดจาก 4 → FPS; แสง×สามเหลี่ยม แพง)
+    เพิ่มแสง(0.0-PG_HALF+8.0, คบY, 0.0, 1.0,0.5,0.18, 1.2, 240.0)
+    เพิ่มแสง(PG_HALF-8.0, คบY, 0.0, 1.0,0.5,0.18, 1.2, 240.0)
+}

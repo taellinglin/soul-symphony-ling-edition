@@ -1,0 +1,59 @@
+# ───────────────────────────────────────────────────────────────
+# Daemon3D.ling — ดัชนีรูปอักขระเวกเตอร์ (สร้างอัตโนมัติ — อย่าแก้ด้วยมือ)
+# วาดอักขระDaemon3D(ดัชนี, ox,oy,oz, rx,ry,rz, ux,uy,uz, s)
+# ───────────────────────────────────────────────────────────────
+ใช้ "Daemon3D/a"
+ใช้ "Daemon3D/b"
+ใช้ "Daemon3D/c"
+ใช้ "Daemon3D/d"
+ใช้ "Daemon3D/e"
+ใช้ "Daemon3D/f"
+ใช้ "Daemon3D/g"
+ใช้ "Daemon3D/h"
+ใช้ "Daemon3D/i"
+ใช้ "Daemon3D/j"
+ใช้ "Daemon3D/k"
+ใช้ "Daemon3D/l"
+ใช้ "Daemon3D/m"
+ใช้ "Daemon3D/n"
+ใช้ "Daemon3D/o"
+ใช้ "Daemon3D/p"
+ใช้ "Daemon3D/q"
+ใช้ "Daemon3D/r"
+ใช้ "Daemon3D/s"
+ใช้ "Daemon3D/t"
+ใช้ "Daemon3D/u"
+ใช้ "Daemon3D/v"
+ใช้ "Daemon3D/w"
+ใช้ "Daemon3D/x"
+ใช้ "Daemon3D/y"
+ใช้ "Daemon3D/z"
+
+ฟังก์ชัน วาดอักขระDaemon3D(ดัชนี, ox,oy,oz, rx,ry,rz, ux,uy,uz, s) {
+    ถ้า ดัชนี == 0 { อักขระ_Daemon3D_a(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 1 { อักขระ_Daemon3D_b(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 2 { อักขระ_Daemon3D_c(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 3 { อักขระ_Daemon3D_d(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 4 { อักขระ_Daemon3D_e(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 5 { อักขระ_Daemon3D_f(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 6 { อักขระ_Daemon3D_g(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 7 { อักขระ_Daemon3D_h(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 8 { อักขระ_Daemon3D_i(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 9 { อักขระ_Daemon3D_j(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 10 { อักขระ_Daemon3D_k(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 11 { อักขระ_Daemon3D_l(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 12 { อักขระ_Daemon3D_m(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 13 { อักขระ_Daemon3D_n(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 14 { อักขระ_Daemon3D_o(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 15 { อักขระ_Daemon3D_p(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 16 { อักขระ_Daemon3D_q(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 17 { อักขระ_Daemon3D_r(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 18 { อักขระ_Daemon3D_s(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 19 { อักขระ_Daemon3D_t(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 20 { อักขระ_Daemon3D_u(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 21 { อักขระ_Daemon3D_v(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 22 { อักขระ_Daemon3D_w(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 23 { อักขระ_Daemon3D_x(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 24 { อักขระ_Daemon3D_y(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 25 { อักขระ_Daemon3D_z(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+}

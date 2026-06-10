@@ -1,0 +1,39 @@
+# songs.ling — รวมข้อมูลเพลงทุกเพลง (จาก midiconv) + ตารางเลือกเพลงต่อเลเวล
+#   ข้อมูลเพลง_<NAME>() → [count, [glyphs], [freqs], [xs], [zs]]
+ใช้ "Antartica_data"
+ใช้ "Bassline_data"
+ใช้ "Canopy_data"
+ใช้ "Death_data"
+ใช้ "Festival_data"
+ใช้ "Lift_data"
+ใช้ "Purika_data"
+ใช้ "PeaceLoveHappiness_data"
+ใช้ "Swing_data"
+
+bind จำนวนเพลง = 9
+
+# ข้อมูล MIDI (โน้ต/ตำแหน่งของเก็บ) ของเพลงดัชนี i — คู่กับ WAV ดัชนีเดียวกัน
+ฟังก์ชัน ข้อมูลเพลงดัชนี(i) {
+    ถ้า i == 1 { คืน ข้อมูลเพลง_Bassline() }
+    ถ้า i == 2 { คืน ข้อมูลเพลง_Canopy() }
+    ถ้า i == 3 { คืน ข้อมูลเพลง_Death() }
+    ถ้า i == 4 { คืน ข้อมูลเพลง_Festival() }
+    ถ้า i == 5 { คืน ข้อมูลเพลง_Lift() }
+    ถ้า i == 6 { คืน ข้อมูลเพลง_Purika() }
+    ถ้า i == 7 { คืน ข้อมูลเพลง_PeaceLoveHappiness() }
+    ถ้า i == 8 { คืน ข้อมูลเพลง_Swing() }
+    คืน ข้อมูลเพลง_Antartica()
+}
+
+# พาธ WAV (เล่นจริง) ของเพลงดัชนี i — MIDI เดียวกัน → SFX/ของเก็บ sync กับ WAV
+ฟังก์ชัน เพลงWAV(i) {
+    ถ้า i == 1 { คืน "music/Bassline.wav" }
+    ถ้า i == 2 { คืน "music/Canopy.wav" }
+    ถ้า i == 3 { คืน "music/Death.wav" }
+    ถ้า i == 4 { คืน "music/Festival.wav" }
+    ถ้า i == 5 { คืน "music/Lift.wav" }
+    ถ้า i == 6 { คืน "music/Purika.wav" }
+    ถ้า i == 7 { คืน "music/Peace Love Happiness.wav" }
+    ถ้า i == 8 { คืน "music/Swing.wav" }
+    คืน "music/Antartica.wav"
+}

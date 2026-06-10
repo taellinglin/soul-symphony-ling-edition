@@ -28,9 +28,14 @@ bind ST_LEVELSEL = 10
 bind ST_LOBBY = 11
 
 bind เริ่ม = do {
-    เปิดหน้าต่าง(1920, 1080)
+    # ── เต็มจอจริง: ไม่มีขอบ/แถบชื่อ, ใช้ความละเอียด+FPS ของจอจริง ──
+    เปิดหน้าต่างเต็มจอ("Soul Symphony Ling")
+    bind จอกว้าง = ความกว้างจอ()
+    bind จอสูง   = ความสูงจอ()
+    bind จอFPS   = อัตรารีเฟรช()
     จับเมาส์()
     audio_volume(0.6)
+    พิมพ์("   จอ " + to_str(จอกว้าง) + "x" + to_str(จอสูง) + " @ " + to_str(จอFPS) + "Hz (เต็มจอไร้ขอบ)")
 
     bind เพลงหลัก       = โหลดเพลง("music/Soul Symphony_Colors_Mix_Master.wav")
     bind ความยาวเพลงหลัก = ความยาวเพลง(เพลงหลัก)
@@ -49,11 +54,15 @@ bind เริ่ม = do {
     bind เก็บX      = list_get(sd0, 3)
     bind เก็บZ      = list_get(sd0, 4)
 
-    # ── โหลดตัวเลือก (options.cfg = "music;lang") ────────────────────────────
+    # ── โหลดตัวเลือก (options.cfg = "music;lang;sfxvol;bgmvol") ───────────────
     bind cfg  = อ่านไฟล์("options.cfg")
     bind cfgp = แยก(cfg, ";")
     bind musicOn = floor(list_get(cfgp, 0))
     bind ภาษา    = floor(list_get(cfgp, 1))
+    bind ปริมาณSFX = 0.9
+    bind ปริมาณBGM = 0.82
+    ถ้า ความยาว(cfgp) > 2 { bind ปริมาณSFX = list_get(cfgp, 2) * 1.0 }
+    ถ้า ความยาว(cfgp) > 3 { bind ปริมาณBGM = list_get(cfgp, 3) * 1.0 }
 
     # ── เครือข่าย (net.cfg = "ip;port"; ค่าเริ่ม 127.0.0.1:7777) ──────────────
     bind netCfg = อ่านไฟล์("net.cfg")
@@ -79,6 +88,10 @@ bind เริ่ม = do {
     bind ออกเกม    = 0
     bind langReturn = ST_MENU
     bind coopRole   = 0
+    bind vsโหมด     = 0   # 0 = co-op, 1 = VS (PvP เครือข่าย)
+    # ── แชต ──
+    bind chatActive = 0;  bind chatMsg = "";  bind chatMsgT = 0.0;  bind chatLog = []
+    bind chatSend = "";  bind chatSendT = 0.0;  bind chat2Msg = "";  bind chat2T = 0.0;  bind chat2Last = ""
     # RPG: บัฟผู้เล่นสะสมข้ามด่าน [STR,AGI,VIT,FOC,DEF,LCK,SPD,PWR]
     bind ผู้เล่นสเตตัส = [0,0,0,0,0,0,0,0]
     bind บอสโหมด = 0
@@ -86,6 +99,12 @@ bind เริ่ม = do {
     bind กรอบ      = 0.0
     bind bootStart = เวลาปัจจุบัน()
     bind chimeStep = 0.0
+    bind เลเวลก่อน = 0.0 - 1.0   # ตรวจเปลี่ยนเลเวล → พรีโหลด
+    # ── เบิร์สต์ไตเติล: ตารางเวลาโน้ต Soul Symphony (จาก MIDI) ──
+    bind โน้ตเวลา  = เวลาโน้ต_SoulSymphony()
+    bind โน้ตจำนวน = จำนวนโน้ต_SoulSymphony()
+    bind ดัชนีโน้ต = 0
+    bind เบิร์สต์  = 0.0
 
     bind paused    = 0
     bind gameMode  = 0
@@ -149,7 +168,7 @@ bind เริ่ม = do {
     bind bombT = 0.0  bind bombCool = 0.0
 
     ตั้งเสียงชื่อ()
-    ถ้า musicOn == 1 { ระดับเพลง(0.82) }
+    ถ้า musicOn == 1 { ระดับเพลง(ปริมาณBGM) }
     มิฉะนั้น { ระดับเพลง(0.0) }
 
     # ════════════════════════════════════════════════════════════════════════
@@ -213,12 +232,25 @@ bind เริ่ม = do {
                 ถ้า ตำแหน่งเพลง() >= ความยาวเพลงหลัก - 0.5 {
                     ค้นหาเพลง(0)
                     ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) }
+                    bind ดัชนีโน้ต = 0
                 }
             }
-            วาดฉากชื่อเรื่อง(กรอบ)
+            # ── เบิร์สต์ลูกบาศก์ 6 ทิศ ตรงจังหวะ MIDI ของ Soul Symphony ──
+            bind tpos = ตำแหน่งเพลง()
+            ถ้า tpos < 0.05 { bind ดัชนีโน้ต = 0 }
+            bind สแกน = 1
+            ขณะที่ สแกน == 1 {
+                ถ้า ดัชนีโน้ต >= โน้ตจำนวน { bind สแกน = 0 }
+                มิฉะนั้น {
+                    ถ้า list_get(โน้ตเวลา, ดัชนีโน้ต) <= tpos { bind เบิร์สต์ = 1.0;  bind ดัชนีโน้ต = ดัชนีโน้ต + 1 }
+                    มิฉะนั้น { bind สแกน = 0 }
+                }
+            }
+            ถ้า เบิร์สต์ > 0.0 { bind เบิร์สต์ = เบิร์สต์ - 0.05 }
+            วาดฉากชื่อเรื่อง(กรอบ, เบิร์สต์)
             แสดงผล()
-            ถ้า กดปุ่ม("space") { bind สถานะ = ST_MENU;  bind sel = 0 }
-            ถ้า กดปุ่ม("enter") { bind สถานะ = ST_MENU;  bind sel = 0 }
+            ถ้า กดปุ่ม("space") { พรีโหลด(0.4);  bind สถานะ = ST_MENU;  bind sel = 0 }
+            ถ้า กดปุ่ม("enter") { พรีโหลด(0.4);  bind สถานะ = ST_MENU;  bind sel = 0 }
         }
 
         # ── MENU ──────────────────────────────────────────────────────────────
@@ -331,12 +363,16 @@ bind เริ่ม = do {
         ถ้า สถานะ == ST_MP {
             ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 1 } }
             ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 1 { bind sel = 0 } }
+            ถ้า กดปุ่ม("left")  { bind vsโหมด = 0 }     # ←/→ เลือกโหมด
+            ถ้า กดปุ่ม("right") { bind vsโหมด = 1 }
             วาดพื้นหลังเมนู(กรอบ)
             วาดข้อความ(คำ_มัลติ, 0.0, 0.0-6.5, 0.0, 1.0, ภาษา)
             วาดเมนู(เมนูมัลติ, sel, 0.9, 2.2, t, ภาษา)   # Host Game / Join Game (ลอบบี้)
-            # ── หมายเหตุ: co-op เครือข่าย — Host รอผู้เล่น, Join ต่อไป net.cfg ──
-            สีดินสอ(110, 130, 170)
-            วาดข้อความ(คำ_โคออป, 0.0, 4.4, 0.0, 0.42, 1)
+            # ── โหมด (←/→): co-op หรือ VS ──
+            ถ้า vsโหมด == 1 { สีดินสอ(255, 120, 120);  วาดข้อความ(คำ_วีเอส, 0.0, 4.2, 0.0, 0.6, 1) }
+            มิฉะนั้น { สีดินสอ(120, 200, 255);  วาดข้อความ(คำ_โหมดโคออป, 0.0, 4.2, 0.0, 0.6, 1) }
+            สีดินสอ(100, 115, 150)
+            วาดข้อความ(คำ_โคออป, 0.0, 5.5, 0.0, 0.4, 1)
             flush_3d()
             แสดงผล()
             ถ้า กดปุ่ม("enter") {
@@ -371,39 +407,53 @@ bind เริ่ม = do {
 
         # ── OPTIONS ───────────────────────────────────────────────────────────
         ถ้า สถานะ == ST_OPT {
-            ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 2 } }
-            ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 2 { bind sel = 0 } }
+            # 6 แถว: 0 เพลง(เปิด/ปิด) · 1 SFX(สไลเดอร์) · 2 BGM(สไลเดอร์) · 3 ภาษา · 4 เซฟ · 5 ยกเลิก
+            ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 5 } }
+            ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 5 { bind sel = 0 } }
+            ถ้า sel == 1 {
+                ถ้า กดปุ่ม("left")  { bind ปริมาณSFX = ปริมาณSFX - 0.1;  ถ้า ปริมาณSFX < 0.0 { bind ปริมาณSFX = 0.0 } }
+                ถ้า กดปุ่ม("right") { bind ปริมาณSFX = ปริมาณSFX + 0.1;  ถ้า ปริมาณSFX > 1.0 { bind ปริมาณSFX = 1.0 } }
+            }
+            ถ้า sel == 2 {
+                ถ้า กดปุ่ม("left")  { bind ปริมาณBGM = ปริมาณBGM - 0.1;  ถ้า ปริมาณBGM < 0.0 { bind ปริมาณBGM = 0.0 };  ถ้า musicOn == 1 { ระดับเพลง(ปริมาณBGM) } }
+                ถ้า กดปุ่ม("right") { bind ปริมาณBGM = ปริมาณBGM + 0.1;  ถ้า ปริมาณBGM > 1.0 { bind ปริมาณBGM = 1.0 };  ถ้า musicOn == 1 { ระดับเพลง(ปริมาณBGM) } }
+            }
             วาดพื้นหลังเมนู(กรอบ)
-            วาดป้าย(ภาษา, 4, 0.0, 0.0-5.5, 1.0)
-            วาดเมนูภาษา(idsตัวเลือก, sel, ภาษา, 0.0-2.5, 2.0, 0.85, t)
-            ถ้า musicOn == 1 { สีดินสอ(60, 230, 120) }
-            มิฉะนั้น { สีดินสอ(90, 90, 90) }
-            วาดข้อความ(คำ_เพลง, 6.0, 0.0-3.0, 0.0, 0.55, ภาษา)
+            วาดป้าย(ภาษา, 4, 0.0, 0.0-7.0, 0.9)
+            bind oi = 0
+            ขณะที่ oi < 6 {
+                bind yy = 0.0 - 4.4 + oi * 1.7
+                ถ้า oi == sel {
+                    bind h = t*3.0
+                    สีดินสอ(floor((ไซน์(h)*0.5+0.5)*155+100), floor((ไซน์(h+2.094)*0.5+0.5)*155+100), floor((ไซน์(h+4.189)*0.5+0.5)*155+100))
+                    วาดลูกศร(0.0-11.0, yy, 0.0, 0.6)
+                }
+                มิฉะนั้น { สีดินสอ(120, 120, 150) }
+                ถ้า oi == 0 {
+                    วาดข้อความ(คำ_เพลง, 0.0-4.0, yy, 0.0, 0.7, ภาษา)
+                    ถ้า musicOn == 1 { สีดินสอ(60,230,120) }  มิฉะนั้น { สีดินสอ(80,80,90) }
+                    วาดสามเหลี่ยม3มิติ(4.0, yy-0.5, 0.0, 5.0, yy-0.5, 0.0, 5.0, yy+0.5, 0.0)
+                    วาดสามเหลี่ยม3มิติ(4.0, yy-0.5, 0.0, 5.0, yy+0.5, 0.0, 4.0, yy+0.5, 0.0)
+                }
+                ถ้า oi == 1 { วาดข้อความ(คำ_sfx, 0.0-4.0, yy, 0.0, 0.7, 1);  แถบปริมาณ(ปริมาณSFX, yy) }
+                ถ้า oi == 2 { วาดข้อความ(คำ_bgm, 0.0-4.0, yy, 0.0, 0.7, 1);  แถบปริมาณ(ปริมาณBGM, yy) }
+                ถ้า oi == 3 { วาดป้าย(ภาษา, 14, 0.0, yy, 0.7) }
+                ถ้า oi == 4 { วาดป้าย(ภาษา, 15, 0.0, yy, 0.7) }
+                ถ้า oi == 5 { วาดป้าย(ภาษา, 16, 0.0, yy, 0.7) }
+                bind oi = oi + 1
+            }
             flush_3d()
             แสดงผล()
             ถ้า กดปุ่ม("enter") {
-                ถ้า sel == 0 {
-                    bind musicOn = 1 - musicOn
-                    ถ้า musicOn == 1 { ระดับเพลง(0.82) }
-                    มิฉะนั้น { ระดับเพลง(0.0) }
+                ถ้า sel == 0 { bind musicOn = 1 - musicOn;  ถ้า musicOn == 1 { ระดับเพลง(ปริมาณBGM) }  มิฉะนั้น { ระดับเพลง(0.0) } }
+                ถ้า sel == 3 { bind langReturn = ST_OPT;  bind สถานะ = ST_LANG;  bind sel = ภาษา }
+                ถ้า sel == 4 {
+                    เขียนไฟล์("options.cfg", to_str(musicOn) + ";" + to_str(ภาษา) + ";" + to_str(ปริมาณSFX) + ";" + to_str(ปริมาณBGM))
+                    bind สถานะ = optReturn;  ถ้า optReturn == ST_PLAY { bind paused = 1 };  bind sel = 0
                 }
-                ถ้า sel == 1 {
-                    เขียนไฟล์("options.cfg", to_str(musicOn) + ";" + to_str(ภาษา))
-                    bind สถานะ = optReturn
-                    ถ้า optReturn == ST_PLAY { bind paused = 1 }
-                    bind sel = 0
-                }
-                ถ้า sel == 2 {
-                    bind สถานะ = optReturn
-                    ถ้า optReturn == ST_PLAY { bind paused = 1 }
-                    bind sel = 0
-                }
+                ถ้า sel == 5 { bind สถานะ = optReturn;  ถ้า optReturn == ST_PLAY { bind paused = 1 };  bind sel = 0 }
             }
-            ถ้า กดปุ่ม("escape") {
-                bind สถานะ = optReturn
-                ถ้า optReturn == ST_PLAY { bind paused = 1 }
-                bind sel = 0
-            }
+            ถ้า กดปุ่ม("escape") { bind สถานะ = optReturn;  ถ้า optReturn == ST_PLAY { bind paused = 1 };  bind sel = 0 }
         }
 
         # ── LANGUAGE ──────────────────────────────────────────────────────────
@@ -413,8 +463,8 @@ bind เริ่ม = do {
             วาดพื้นหลังเมนู(กรอบ)
             วาดเมนูเลือกภาษา(sel, t)
             แสดงผล()
-            ถ้า กดปุ่ม("enter")  { bind ภาษา = sel;  bind สถานะ = langReturn;  ถ้า langReturn == ST_MENU { bind sel = 5 }  มิฉะนั้น { bind sel = 1 } }
-            ถ้า กดปุ่ม("escape") { bind สถานะ = langReturn;  ถ้า langReturn == ST_MENU { bind sel = 5 }  มิฉะนั้น { bind sel = 1 } }
+            ถ้า กดปุ่ม("enter")  { bind ภาษา = sel;  bind สถานะ = langReturn;  ถ้า langReturn == ST_MENU { bind sel = 5 }  มิฉะนั้น { bind sel = 3 } }
+            ถ้า กดปุ่ม("escape") { bind สถานะ = langReturn;  ถ้า langReturn == ST_MENU { bind sel = 5 }  มิฉะนั้น { bind sel = 3 } }
         }
 
         # ── CINEMATIC: สโนว์โกลบดาว + บทกวี 24 บรรทัด → เฟดขาว → เล่น ──────────
@@ -554,6 +604,8 @@ bind เริ่ม = do {
         # ── PLAY ──────────────────────────────────────────────────────────────
         ถ้า สถานะ == ST_PLAY {
             ถ้า รีเซ็ต == 1 {
+                # พรีโหลดเฉพาะตอนเปลี่ยนเลเวลจริง (ไม่ใช่ตอนเกิดใหม่)
+                ถ้า ด่าน != เลเวลก่อน { พรีโหลด(0.5);  bind เลเวลก่อน = ด่าน }
                 bind liq = liquid_new(56.0, 56.0)
                 liquid_rainbow(liq, 1.0)
                 bind sx = 0.0
@@ -577,10 +629,14 @@ bind เริ่ม = do {
                 bind combo = 0.0;  bind arcFade = 0.0;  bind arcType = 0.0;  bind arcYaw = 0.0
                 bind เลือกไอเทม = 1.0;  bind scrollAcc = 0.0;  bind slashNote = 0.0
                 bind bombT = 0.0;  bind bombCool = 0.0
-                # สกิลที่เลเวลนี้มอบให้ (ด่าน 0 = ดาบ; proc เลเวล N = สกิล N)
+                # ── อาวุธ 3-9 (AoE): สถานะเอฟเฟกต์ + เบิร์น/ฟรีซ ──
+                bind wfxT = 0.0;  bind wfxType = 0.0;  bind wfxCool = 0.0;  bind wfxFire = 0.0
+                bind wfxRad = 0.0;  bind wfxDmg = 0.0;  bind wfxX = 0.0;  bind wfxZ = 0.0
+                bind burnT = 0.0;  bind freezeT = 0.0
                 bind เป้าสกิล = 1.0;  ถ้า ด่าน > 0.5 { bind เป้าสกิล = ด่าน }
                 # มอนสเตอร์: เลเวล 1 (ฮับ) = 4 ตัว; proc = ตามเลเวล
                 bind มอนจำนวน = 4.0;  ถ้า ด่าน > 0.5 { bind มอนจำนวน = จำนวนมอน(ด่าน) }
+                ถ้า vsโหมด == 1 { bind มอนจำนวน = 0.0 }   # VS = PvP ล้วน ไม่มีมอน
                 bind มอนseed = 1.0;  bind มอนspread = 45.0
                 ถ้า ด่าน > 0.5 { bind มอนseed = ด่าน;  bind มอนspread = 165.0 }
                 bind มอนเป็น = [1,1,1,1,1,1,1,1,1,1,1,1]
@@ -597,6 +653,7 @@ bind เริ่ม = do {
                 bind ชีวิตสูงสุด = 100.0 + list_get(ผู้เล่นสเตตัส, 2) * 6.0
                 bind ชีวิต = ชีวิตสูงสุด
                 bind บาดเจ็บ = 0.0
+                bind ตีโดน = 0.0;  bind โดนตี = 0.0   # VS: ดาเมจที่เราทำ / ที่เรารับ
                 จับเมาส์()
                 bind รีเซ็ต = 0
                 set_zdist(32.0)
@@ -630,10 +687,33 @@ bind เริ่ม = do {
                 ถ้า ตำแหน่งเพลง() >= ยาวเพลงเล่น - 0.5 { ค้นหาเพลง(0);  เล่นเพลง(เพลงเล่น) }
             } } }
 
-            ถ้า กดปุ่ม("escape") { bind paused = 1 - paused;  bind sel = 0 }
+            # ── แชต: Enter เปิด/ส่ง, พิมพ์ด้วยคีย์บอร์ด (text_poll), Esc ยกเลิก ──
+            ถ้า chatActive == 0 {
+                ถ้า กดปุ่ม("enter") { bind chatActive = 1;  text_clear() }
+            }
+            มิฉะนั้น {
+                bind chatBuf = text_poll()
+                ถ้า กดปุ่ม("enter") {
+                    bind m = text_get()
+                    ถ้า m != "" {
+                        bind chatMsg = m;  bind chatMsgT = 5.0
+                        bind chatLog = list_push(chatLog, m)
+                        bind chatSend = m;  bind chatSendT = 0.6   # ส่งข้ามเครือข่าย
+                    }
+                    text_clear();  bind chatActive = 0
+                }
+                ถ้า กดปุ่ม("escape") { text_clear();  bind chatActive = 0 }
+            }
+            ถ้า chatMsgT > 0.0 { bind chatMsgT = chatMsgT - 0.016 }
+            ถ้า chat2T  > 0.0 { bind chat2T  = chat2T  - 0.016 }
+            ถ้า chatSendT > 0.0 { bind chatSendT = chatSendT - 0.016 }
+
+            # Esc พักเกม (เฉพาะตอนไม่ได้แชต)
+            ถ้า chatActive == 0 { ถ้า กดปุ่ม("escape") { bind paused = 1 - paused;  bind sel = 0 } }
 
             bind doUpdate = 1
             ถ้า paused == 1 { ถ้า gameMode == 0 { bind doUpdate = 0 } }
+            ถ้า chatActive == 1 { bind doUpdate = 0 }   # หยุดอินพุตเกมขณะพิมพ์
 
             ถ้า doUpdate == 1 {
                 # ── เมาส์ = หมุนกล้องโคจร (yaw) + เงย/ก้ม (pitch) ──
@@ -657,6 +737,7 @@ bind เริ่ม = do {
                         ถ้า combo == 1.0 { bind smul = 1.5 }
                         ถ้า combo == 2.0 { bind smul = 2.0 }
                         เสียงเอฟเฟกต์(0,0,0, 1.0, sfreq * smul, 0.42, 0.18, "saw")
+                        ถ้า vsโหมด == 1 { ถ้า (cx-cx2)*(cx-cx2) + (cz-cz2)*(cz-cz2) < 324.0 { bind ตีโดน = ตีโดน + 6.0*smul } }  # VS: ฟันโดนคู่ต่อสู้
                     } }
                     # ── ไอเทม 2 = HyperBomb: ระเบิด AoE ฆ่ามอนรอบตัว (มีคูลดาวน์) ──
                     ถ้า เลือกไอเทม == 2.0 { ถ้า สกิล >= 2.0 { ถ้า bombCool <= 0.0 {
@@ -674,7 +755,48 @@ bind เริ่ม = do {
                         }
                         พิมพ์("  💥 HyperBomb!")
                     } } }
+                    # ── ไอเทม 3-9 = อาวุธ AoE (รัศมี/ดาเมจ/คูลดาวน์/วิช่วล ต่างกัน) ──
+                    ถ้า เลือกไอเทม >= 3.0 { ถ้า สกิล >= เลือกไอเทม { ถ้า wfxCool <= 0.0 {
+                        bind wfxType = เลือกไอเทม;  bind wfxT = 0.45;  bind wfxFire = 1.0;  bind wfxX = cx;  bind wfxZ = cz
+                        bind wfxRad = 70.0;  bind wfxDmg = 4.0;  bind wfxCool = 1.2;  bind wsnd = 200.0
+                        ถ้า เลือกไอเทม == 3.0 { bind wfxRad = 80.0;  bind wfxDmg = 5.0;  bind wfxCool = 1.0;  bind wsnd = 320.0;  bind vx = vx + ไซน์(camYaw)*0.9;  bind vz = vz + โคไซน์(camYaw)*0.9 }   # Torpedo: พุ่ง
+                        ถ้า เลือกไอเทม == 4.0 { bind wfxRad = 95.0;  bind wfxDmg = 3.0;  bind wfxCool = 1.6;  bind wsnd = 150.0;  bind บาดเจ็บ = 1.3 }                                              # CounterAttack: ช็อค+อมตะชั่วครู่
+                        ถ้า เลือกไอเทม == 5.0 { bind wfxRad = 58.0;  bind wfxDmg = 7.0;  bind wfxCool = 0.8;  bind wsnd = 260.0;  bind slashT = 0.18;  bind arcType = 1.0;  bind arcYaw = camYaw;  bind arcFade = 0.5 }  # DualSword
+                        ถ้า เลือกไอเทม == 6.0 { bind wfxRad = 66.0;  bind wfxDmg = 2.0;  bind wfxCool = 0.5;  bind wsnd = 90.0;   bind burnT = 2.2 }                                              # Burn (DoT)
+                        ถ้า เลือกไอเทม == 7.0 { bind wfxRad = 115.0; bind wfxDmg = 1.5;  bind wfxCool = 2.2;  bind wsnd = 1300.0; bind freezeT = 2.6 }                                            # Freeze
+                        ถ้า เลือกไอเทม == 8.0 { bind wfxRad = 125.0; bind wfxDmg = 4.0;  bind wfxCool = 1.6;  bind wsnd = 520.0 }                                                                # Nova
+                        ถ้า เลือกไอเทม == 9.0 { bind wfxRad = 150.0; bind wfxDmg = 6.0;  bind wfxCool = 2.4;  bind wsnd = 60.0 }                                                                 # Quake
+                        เสียงเอฟเฟกต์(0,0,0, 1.0, wsnd, 0.6*ปริมาณSFX, 0.5, "saw")
+                    } } }
                 } }
+                # ── เบิร์น: ดาเมจต่อเนื่องรอบตัวขณะ burnT > 0 ──
+                ถ้า burnT > 0.0 { bind burnT = burnT - 0.016;  bind wfxFire = 1.0;  bind wfxType = 6.0;  bind wfxRad = 66.0;  bind wfxDmg = 0.18;  bind wfxX = cx;  bind wfxZ = cz;  ถ้า wfxT < 0.1 { bind wfxT = 0.15 } }
+                # ── ยิงอาวุธ AoE: ทำดาเมจมอนในรัศมี (+ ดรอปบัฟ เหมือนฟันดาบ) ──
+                ถ้า wfxFire == 1.0 {
+                    bind wk = 0
+                    ขณะที่ wk < มอนจำนวน {
+                        ถ้า list_get(มอนเป็น, wk) > 0 {
+                            bind wmp = ตำแหน่งมอน(wk, มอนseed, t, มอนspread, ชนิดมอน(wk, มอนseed), cx, cz)
+                            bind wmx = list_get(wmp,0);  bind wmz = list_get(wmp,1)
+                            ถ้า (cx-wmx)*(cx-wmx) + (cz-wmz)*(cz-wmz) < wfxRad*wfxRad {
+                                bind มอนHP = ตั้งรายการ(มอนHP, wk, list_get(มอนHP, wk) - wfxDmg)
+                                ถ้า list_get(มอนHP, wk) <= 0.0 {
+                                    bind มอนเป็น = ตั้งรายการ(มอนเป็น, wk, 0);  bind คะแนน = คะแนน + 5
+                                    bind wst = สเตตัสมอน(wk, ด่าน);  bind wsi = wk - ปัดลง(wk/8.0)*8.0
+                                    bind ดรอปเป็น = ตั้งรายการ(ดรอปเป็น, wk, 1);  bind ดรอปX = ตั้งรายการ(ดรอปX, wk, wmx);  bind ดรอปZ = ตั้งรายการ(ดรอปZ, wk, wmz)
+                                    bind ดรอปสเตตัส = ตั้งรายการ(ดรอปสเตตัส, wk, wsi);  bind ดรอปค่า = ตั้งรายการ(ดรอปค่า, wk, list_get(wst, wsi))
+                                }
+                            }
+                        }
+                        bind wk = wk + 1
+                    }
+                    # VS เครือข่าย: โดนคู่ต่อสู้ (ball2) ด้วย
+                    ถ้า vsโหมด == 1 { ถ้า (cx-cx2)*(cx-cx2) + (cz-cz2)*(cz-cz2) < wfxRad*wfxRad { bind ตีโดน = ตีโดน + wfxDmg } }
+                    bind wfxFire = 0.0
+                }
+                ถ้า wfxT > 0.0 { bind wfxT = wfxT - 0.016 }
+                ถ้า wfxCool > 0.0 { bind wfxCool = wfxCool - 0.016 }
+                ถ้า freezeT > 0.0 { bind freezeT = freezeT - 0.016 }
                 bind mbDown = mbNow
                 ถ้า slashT > 0.0 { bind slashT = slashT - 0.016 }
                 ถ้า arcFade > 0.0 { bind arcFade = arcFade - 0.016 }
@@ -755,6 +877,7 @@ bind เริ่ม = do {
                 ถ้า บอสโหมด > 0.5 { bind floorH = ความสูงอารีนา(cx, cz) }
                 ถ้า cy > floorH - R {
                     ถ้า vy > 0.05 { bind squash = vy * 0.5;  ถ้า squash > 0.6 { bind squash = 0.6 } }
+                    เสียงชน(เก็บความถี่, เก็บจำนวน, vy, ปริมาณSFX, cx, cy, cz)   # ระฆังกระทบพื้น (จูนเพลง)
                     bind cy = floorH - R
                     bind vy = 0.0 - vy * 0.72
                 }
@@ -773,7 +896,7 @@ bind เริ่ม = do {
                         bind nx = nx/nl;  bind nz = nz/nl
                         bind cx = list_get(hb,1);  bind cz = list_get(hb,2)
                         bind vd = vx*nx + vz*nz
-                        ถ้า vd < 0.0 { bind vx = vx - 1.5*vd*nx;  bind vz = vz - 1.5*vd*nz }
+                        ถ้า vd < 0.0 { bind vx = vx - 1.5*vd*nx;  bind vz = vz - 1.5*vd*nz;  เสียงชน(เก็บความถี่, เก็บจำนวน, 0.0-vd, ปริมาณSFX, cx, cy, cz) }
                     }
                 }
                 # ── ชนสิ่งกีดขวางทรงกระบอก: เสาฮับ (Lv1) / กล่องตัวอักษร (Lv2) ──
@@ -791,13 +914,14 @@ bind เริ่ม = do {
                         bind nx2 = dxp/dp;  bind nz2 = dzp/dp
                         bind cx = ppx + nx2*rrp;  bind cz = ppz + nz2*rrp
                         bind vd2 = vx*nx2 + vz*nz2
-                        ถ้า vd2 < 0.0 { bind vx = vx - 1.5*vd2*nx2;  bind vz = vz - 1.5*vd2*nz2 }
+                        ถ้า vd2 < 0.0 { bind vx = vx - 1.5*vd2*nx2;  bind vz = vz - 1.5*vd2*nz2;  เสียงชน(เก็บความถี่, เก็บจำนวน, 0.0-vd2, ปริมาณSFX, cx, cy, cz) }
                     } }
                     bind pi = pi + 3
                 }
                 # ── ผู้เล่น 2 = ผู้เล่นเครือข่าย: ส่งลูกเรา, รับลูก peer → ball2 ──
                 #   Host เผด็จการ (ส่ง x;y;z;level;score;bits); Join สะท้อนสถานะ Host
                 ถ้า gameMode == 1 {
+                    bind cf = "_";  ถ้า chatSendT > 0.0 { bind cf = chatSend }   # "_" = ไม่มีแชต
                     ถ้า coopRole == 0 {
                         bind bits = ""
                         bind biq = 0
@@ -806,7 +930,7 @@ bind เริ่ม = do {
                             bind bits = bits + to_str(list_get(เก็บแล้ว, biq))
                             bind biq = biq + 1
                         }
-                        เน็ตส่ง(to_str(cx)+";"+to_str(cy)+";"+to_str(cz)+";"+to_str(ด่าน)+";"+to_str(คะแนน)+";"+bits)
+                        เน็ตส่ง(to_str(cx)+";"+to_str(cy)+";"+to_str(cz)+";"+to_str(ด่าน)+";"+to_str(คะแนน)+";"+bits+";"+cf+";"+to_str(ตีโดน))
                         bind rmsg = เน็ตรับ()
                         ถ้า rmsg != "" {
                             bind rp = แยก(rmsg, ";")
@@ -815,10 +939,15 @@ bind เริ่ม = do {
                                 bind cy2 = cy2 + (list_get(rp,1)*1.0 - cy2)*0.4
                                 bind cz2 = cz2 + (list_get(rp,2)*1.0 - cz2)*0.4
                             }
+                            ถ้า ความยาว(rp) >= 5 {
+                                bind pc = list_get(rp, 3)
+                                ถ้า pc != "_" { ถ้า pc != chat2Last { bind chat2Msg = pc;  bind chat2T = 5.0;  bind chat2Last = pc;  bind chatLog = list_push(chatLog, pc) } }
+                                ถ้า vsโหมด == 1 { bind โดนตี = list_get(rp,4)*1.0;  bind ชีวิต = ชีวิตสูงสุด - โดนตี }
+                            }
                         }
                     }
                     มิฉะนั้น {
-                        เน็ตส่ง(to_str(cx)+";"+to_str(cy)+";"+to_str(cz))
+                        เน็ตส่ง(to_str(cx)+";"+to_str(cy)+";"+to_str(cz)+";"+cf+";"+to_str(ตีโดน))
                         bind hmsg = เน็ตรับ()
                         ถ้า hmsg != "" {
                             bind hp = แยก(hmsg, ";")
@@ -839,6 +968,11 @@ bind เริ่ม = do {
                                     ถ้า bj < เก็บจำนวน { bind เก็บแล้ว = ตั้งรายการ(เก็บแล้ว, bj, floor(list_get(bl,bj)*1.0)) }
                                     bind bj = bj + 1
                                 }
+                            }
+                            ถ้า ความยาว(hp) >= 8 {
+                                bind pc = list_get(hp, 6)
+                                ถ้า pc != "_" { ถ้า pc != chat2Last { bind chat2Msg = pc;  bind chat2T = 5.0;  bind chat2Last = pc;  bind chatLog = list_push(chatLog, pc) } }
+                                ถ้า vsโหมด == 1 { bind โดนตี = list_get(hp,7)*1.0;  bind ชีวิต = ชีวิตสูงสุด - โดนตี }
                             }
                         }
                     }
@@ -891,12 +1025,12 @@ bind เริ่ม = do {
                         มิฉะนั้น { ถ้า md < R + 5.0 { ถ้า md > 0.1 {
                             bind vx = vx + (cx-mmx)/md * 0.6
                             bind vz = vz + (cz-mmz)/md * 0.6
-                            ถ้า บาดเจ็บ <= 0.0 {
+                            ถ้า บาดเจ็บ <= 0.0 { ถ้า freezeT <= 0.0 {   # ฟรีซ = มอนทำดาเมจไม่ได้
                                 bind sta = สเตตัสมอน(mj, ด่าน)
                                 bind ชีวิต = ชีวิต - (3.0 + list_get(sta, 0) * 0.5)   # STR
                                 bind บาดเจ็บ = 0.7
                                 เสียงเอฟเฟกต์(0,0,0, 1.0, 110.0, 0.5, 0.2, "saw")
-                            }
+                            } }
                         } } }
                     }
                     bind mj = mj + 1
@@ -906,7 +1040,10 @@ bind เริ่ม = do {
             # ── ดรอปบัฟ: เก็บ → เพิ่มสเตตัสผู้เล่น (Stat +XX) + invuln นับถอย ──
             ถ้า doUpdate == 1 {
                 ถ้า บาดเจ็บ > 0.0 { bind บาดเจ็บ = บาดเจ็บ - 0.016 }
-                ถ้า ชีวิต <= 0.0 { bind รีเซ็ต = 1;  เสียงเอฟเฟกต์(0,0,0, 1.0, 60.0, 0.7, 1.0, "saw");  พิมพ์("  💀 ตาย! เริ่มใหม่") }
+                ถ้า ชีวิต <= 0.0 {
+                    ถ้า vsโหมด == 1 { พิมพ์("  ☠ KO! แพ้แล้ว — กลับเมนู");  bind สถานะ = ST_MENU;  bind sel = 0;  bind gameMode = 0;  bind vsโหมด = 0 }
+                    มิฉะนั้น { bind รีเซ็ต = 1;  เสียงเอฟเฟกต์(0,0,0, 1.0, 60.0, 0.7, 1.0, "saw");  พิมพ์("  💀 ตาย! เริ่มใหม่") }
+                }
                 bind di = 0
                 ขณะที่ di < 12 {
                     ถ้า list_get(ดรอปเป็น, di) > 0 {
@@ -1203,6 +1340,18 @@ bind เริ่ม = do {
             orb_particles(cx, cy, cz, R * 0.92, 240.0, t, pr, pg, pb)
             flush_3d()
 
+            # ── ฟองแชตเหนือหัวผู้เล่น (โลก) ──
+            ถ้า chatMsgT > 0.0 {
+                โหมดผสม(1);  สีดินสอ(230, 235, 255)
+                วาดสตริง(chatMsg, cx, cy - 7.0, cz, 0.8, 1)
+                flush_3d();  โหมดผสม(0)
+            }
+            ถ้า gameMode == 1 { ถ้า chat2T > 0.0 {
+                โหมดผสม(1);  สีดินสอ(180, 230, 255)
+                วาดสตริง(chat2Msg, cx2, cy2 - 7.0, cz2, 0.8, 1)
+                flush_3d();  โหมดผสม(0)
+            } }
+
             # ── ผู้เล่น 2 (co-op): ลูกแก้วฟ้าเรืองแสง + เงา ──
             ถ้า gameMode == 1 {
                 โหมดผสม(2)
@@ -1263,6 +1412,13 @@ bind เริ่ม = do {
                 }
                 flush_3d()
             }
+            # ── เอฟเฟกต์อาวุธ 3-9 (วงจักรขยาย) ──
+            ถ้า wfxT > 0.0 {
+                โหมดผสม(1)
+                วาดเอฟเฟกต์อาวุธ(wfxType, wfxT/0.45, wfxRad, wfxX, GROUND-2.0, wfxZ)
+                flush_3d()
+                โหมดผสม(0)
+            }
 
             bind scp = project_3d(cx, cy, cz)
             ถ้า scp[0.0] > 0.0 - 90000.0 {
@@ -1278,6 +1434,24 @@ bind เริ่ม = do {
             ตั้งระยะห่าง(2.8)
             วาดแถบคะแนน(เก็บแล้ว, เก็บจำนวน, t)
             ถ้า สกิล >= 1.0 { วาดHUDสกิล(สกิล, เลือกไอเทม, t) }
+            # ── แชต: ล็อก (4 บรรทัดล่าสุด) + กล่องพิมพ์ (เมื่อ chatActive) ──
+            bind nlog = ความยาว(chatLog)
+            bind ls = nlog - 4;  ถ้า ls < 0 { bind ls = 0 }
+            bind li = ls
+            ขณะที่ li < nlog {
+                bind ly = 4.6 + (li - ls) * 0.95
+                สีดินสอ(150, 162, 195)
+                วาดสตริง(list_get(chatLog, li), 0.0, ly, 0.0, 0.42, 1)
+                bind li = li + 1
+            }
+            ถ้า chatActive == 1 {
+                สีดินสอ(18, 22, 42)
+                วาดสามเหลี่ยม3มิติ(0.0-14.0, 8.3, 0.0,  14.0, 8.3, 0.0,  14.0, 9.4, 0.0)
+                วาดสามเหลี่ยม3มิติ(0.0-14.0, 8.3, 0.0,  14.0, 9.4, 0.0,  0.0-14.0, 9.4, 0.0)
+                สีดินสอ(255, 255, 200)
+                วาดสตริง(text_get(), 0.0, 8.85, 0.0, 0.5, 1)
+            }
+            flush_3d()
             # ── HUD: เลือดผู้เล่น (ซ้ายบน) + บัฟ 8 ไอคอน ──
             bind hpf = ชีวิต / ชีวิตสูงสุด;  ถ้า hpf < 0.0 { bind hpf = 0.0 }
             สีดินสอ(50, 12, 12)

@@ -1,5 +1,6 @@
 use "music/เพลงชื่อเรื่อง"
 use "music/songs"
+use "music/SoulSymphony_data"
 use "font/Daemon"
 use "font/English"
 use "font/Daemon3D"
