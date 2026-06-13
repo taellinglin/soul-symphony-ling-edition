@@ -4,13 +4,36 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Ling Lin <taellinglin@gmail.com>"]
 description = "Soul Symphony — Ling Edition. A spiritual 3D adventure in the soul realm, powered by ling-lang 2030."
+build = "build.rs"
+
+# Asset folders bundled next to the built binary (target/<profile>/) by build.rs
+# so the .exe runs standalone. Add folders here as the game needs them.
+[package.metadata.assets]
+dirs = ["game", "font", "music"]
 
 [[bin]]
 name = "soul-symphony-ling"
 path = "src/main.rs"
 
 [dependencies]
-ling-lang = { path = "C:/Users/User/Programs/ling" }
+ling-lang = { git = "https://github.com/taellinglin/ling" }
+
+# Build against the local engine clone so game-driven engine features
+# (e.g. right/middle mouse builtins) are available. Keep ../ling present.
+[patch."https://github.com/taellinglin/ling"]
+ling-lang = { path = "../ling" }
+
+# Exe icon (assets/ling.ico — gold ลิง + 灵) embedded by build.rs on Windows,
+# so `lingfu build` / `cargo build` produce a branded soul-symphony-ling.exe.
+[package.metadata.icon]
+path = "assets/ling.ico"
+
+[build-dependencies]
+toml = "1"
+winresource = "0.1"
+
+
+
 
 [profile.release]
 lto = "fat"

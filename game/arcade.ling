@@ -1,0 +1,345 @@
+# ════════════════════════════════════════════════════════════════════════════
+# arcade.ling — โหมดอาร์เคด: ปรับแต่งลูก (สี/สแตมป์/แบนด์/ชื่อ) + ต่อสู้ศัตรู AI
+#   วาดลูกแต่ง = body orb (สีกำหนดเอง) + สแตมป์ขั้วบน/ล่าง + แบนด์รอบเส้นศูนย์สูตร
+#   สแตมป์/แบนด์ = สามเหลี่ยมเติม (fill) + สีดินสอ → คุมสี/รูปทรงได้แม่นยำ
+# ════════════════════════════════════════════════════════════════════════════
+bind STAMP_N = 8
+bind BAND_N  = 8
+
+# ── สว็อตช์สี: สี่เหลี่ยมเติมที่ (x,y) ครึ่งขนาด s ──
+ฟังก์ชัน วาดสว็อตช์(x, y, s, r, g, b) {
+    สีดินสอ(r, g, b)
+    วาดสามเหลี่ยม3มิติ(x-s, y-s, 0.0,  x+s, y-s, 0.0,  x+s, y+s, 0.0)
+    วาดสามเหลี่ยม3มิติ(x-s, y-s, 0.0,  x+s, y+s, 0.0,  x-s, y+s, 0.0)
+}
+
+# ── เฉดสี (0..1) → [r,g,b] สดใส ──
+ฟังก์ชัน สีจากเฉด(h) {
+    bind r = ไซน์(h*6.28319) * 0.5 + 0.5
+    bind g = ไซน์(h*6.28319 + 2.094) * 0.5 + 0.5
+    bind b = ไซน์(h*6.28319 + 4.189) * 0.5 + 0.5
+    คืน [floor(r*200+55), floor(g*200+55), floor(b*200+55)]
+}
+
+# ── สแตมป์: ตราเวกเตอร์เติม (fill) ในระนาบ xz ที่ (ox,oy,oz) ขนาด s, หมุน rot ──
+#   (ตั้งสีดินสอก่อนเรียก)
+ฟังก์ชัน วาดสแตมป์(id, ox, oy, oz, s, rot) {
+    ถ้า id == 0 {                      # ดาว 5 แฉก (พัดจากจุดศูนย์กลาง)
+        bind k = 0
+        ขณะที่ k < 10 {
+            bind a0 = rot + k * 0.62832;  bind a1 = rot + (k + 1) * 0.62832
+            bind r0 = 0.42;  ถ้า k - ปัดลง(k/2.0)*2 == 0 { bind r0 = 1.0 }
+            bind r1 = 0.42;  ถ้า (k + 1) - ปัดลง((k + 1)/2.0)*2 == 0 { bind r1 = 1.0 }
+            วาดสามเหลี่ยม3มิติ(ox, oy, oz,  ox+โคไซน์(a0)*r0*s, oy, oz+ไซน์(a0)*r0*s,  ox+โคไซน์(a1)*r1*s, oy, oz+ไซน์(a1)*r1*s)
+            bind k = k + 1
+        }
+    }
+    ถ้า id == 1 {                      # เฟือง/จักร (พัด รัศมีสลับ = ฟันเฟือง)
+        bind k = 0
+        ขณะที่ k < 16 {
+            bind a0 = rot + k * 0.3927;  bind a1 = rot + (k + 1) * 0.3927
+            bind r0 = 0.66;  ถ้า k - ปัดลง(k/2.0)*2 == 0 { bind r0 = 1.0 }
+            bind r1 = 0.66;  ถ้า (k + 1) - ปัดลง((k + 1)/2.0)*2 == 0 { bind r1 = 1.0 }
+            วาดสามเหลี่ยม3มิติ(ox, oy, oz,  ox+โคไซน์(a0)*r0*s, oy, oz+ไซน์(a0)*r0*s,  ox+โคไซน์(a1)*r1*s, oy, oz+ไซน์(a1)*r1*s)
+            bind k = k + 1
+        }
+    }
+    ถ้า id == 2 {                      # เพชร (ข้าวหลามตัด — 2 สามเหลี่ยม)
+        bind p0x = ox+โคไซน์(rot)*s;          bind p0z = oz+ไซน์(rot)*s
+        bind p1x = ox+โคไซน์(rot+1.5708)*s;   bind p1z = oz+ไซน์(rot+1.5708)*s
+        bind p2x = ox+โคไซน์(rot+3.14159)*s;  bind p2z = oz+ไซน์(rot+3.14159)*s
+        bind p3x = ox+โคไซน์(rot+4.71239)*s;  bind p3z = oz+ไซน์(rot+4.71239)*s
+        วาดสามเหลี่ยม3มิติ(p0x,oy,p0z, p1x,oy,p1z, p2x,oy,p2z)
+        วาดสามเหลี่ยม3มิติ(p0x,oy,p0z, p2x,oy,p2z, p3x,oy,p3z)
+    }
+    ถ้า id == 3 {                      # สามเหลี่ยม (1 ฟิล)
+        bind a0 = rot;  bind a1 = rot + 2.0944;  bind a2 = rot + 4.18879
+        วาดสามเหลี่ยม3มิติ(ox+โคไซน์(a0)*s,oy,oz+ไซน์(a0)*s, ox+โคไซน์(a1)*s,oy,oz+ไซน์(a1)*s, ox+โคไซน์(a2)*s,oy,oz+ไซน์(a2)*s)
+    }
+    ถ้า id == 4 {                      # กากบาท/บวก (2 แท่งเติม = 4 สามเหลี่ยม)
+        bind w = s * 0.32
+        วาดสามเหลี่ยม3มิติ(ox-s,oy,oz-w, ox+s,oy,oz-w, ox+s,oy,oz+w)
+        วาดสามเหลี่ยม3มิติ(ox-s,oy,oz-w, ox+s,oy,oz+w, ox-s,oy,oz+w)
+        วาดสามเหลี่ยม3มิติ(ox-w,oy,oz-s, ox+w,oy,oz-s, ox+w,oy,oz+s)
+        วาดสามเหลี่ยม3มิติ(ox-w,oy,oz-s, ox+w,oy,oz+s, ox-w,oy,oz+s)
+    }
+}
+
+# ── แบนด์: ลายเติม (fill) รอบเส้นศูนย์สูตร (วนรอบไร้รอยต่อ) — ตั้งสีดินสอก่อน ──
+ฟังก์ชัน วาดแบนด์(id, cx, cy, cz, R, t) {
+    bind N = 24
+    bind k = 0
+    ถ้า id == 0 {                      # แท่งตั้งเติม (มีช่องว่างระหว่างแท่ง)
+        ขณะที่ k < N {
+            bind a0 = t*0.3 + k * 6.28319 / N;  bind a1 = t*0.3 + (k + 0.5) * 6.28319 / N
+            bind ax=cx+โคไซน์(a0)*R; bind az=cz+ไซน์(a0)*R
+            bind bx=cx+โคไซน์(a1)*R; bind bz=cz+ไซน์(a1)*R
+            วาดสามเหลี่ยม3มิติ(ax,cy-0.6,az, bx,cy-0.6,bz, bx,cy+0.6,bz)
+            วาดสามเหลี่ยม3มิติ(ax,cy-0.6,az, bx,cy+0.6,bz, ax,cy+0.6,az)
+            bind k = k + 1
+        }
+    }
+    ถ้า id == 1 {                      # ฟันเลื่อย (สามเหลี่ยมยอดขึ้น/ลงสลับ)
+        ขณะที่ k < N {
+            bind a0 = t*0.3 + k * 6.28319 / N;  bind a1 = t*0.3 + (k + 1) * 6.28319 / N
+            bind am = (a0 + a1) * 0.5
+            bind ax=cx+โคไซน์(a0)*R; bind az=cz+ไซน์(a0)*R
+            bind bx=cx+โคไซน์(a1)*R; bind bz=cz+ไซน์(a1)*R
+            bind mx=cx+โคไซน์(am)*R; bind mz=cz+ไซน์(am)*R
+            bind ty = cy - 0.85;  ถ้า k - ปัดลง(k/2.0)*2 == 0 { bind ty = cy + 0.85 }
+            วาดสามเหลี่ยม3มิติ(ax,cy,az, bx,cy,bz, mx,ty,mz)
+            bind k = k + 1
+        }
+    }
+    ถ้า id == 2 {                      # แถบทึบ (วงแหวนตันรอบกลาง)
+        ขณะที่ k < N {
+            bind a0 = t*0.3 + k * 6.28319 / N;  bind a1 = t*0.3 + (k + 1) * 6.28319 / N
+            bind ax=cx+โคไซน์(a0)*R; bind az=cz+ไซน์(a0)*R
+            bind bx=cx+โคไซน์(a1)*R; bind bz=cz+ไซน์(a1)*R
+            วาดสามเหลี่ยม3มิติ(ax,cy-0.7,az, bx,cy-0.7,bz, bx,cy+0.7,bz)
+            วาดสามเหลี่ยม3มิติ(ax,cy-0.7,az, bx,cy+0.7,bz, ax,cy+0.7,az)
+            bind k = k + 1
+        }
+    }
+    ถ้า id == 3 {                      # เพชรเติมเรียงรอบ
+        bind M = 12
+        ขณะที่ k < M {
+            bind a = t*0.3 + k * 6.28319 / M
+            bind px = cx + โคไซน์(a)*R;  bind pz = cz + ไซน์(a)*R
+            bind ox = โคไซน์(a)*0.6;  bind oz = ไซน์(a)*0.6
+            วาดสามเหลี่ยม3มิติ(px,cy-0.8,pz, px+ox,cy,pz+oz, px,cy+0.8,pz)
+            วาดสามเหลี่ยม3มิติ(px,cy-0.8,pz, px,cy+0.8,pz, px-ox,cy,pz-oz)
+            bind k = k + 1
+        }
+    }
+}
+
+# ── วาดเมชจาก blob (pos+idx) แบบเติม + สีสุ่มคงที่ต่อหน้า (hueBase แยกแต่ละเมช) ──
+ฟังก์ชัน วาดเมชสุ่มสี(P, I, ox, oy, oz, scale, hueBase) {
+    bind n = ความยาว(I)
+    bind k = 0;  bind f = 0.0
+    ขณะที่ k + 2 < n {
+        bind a = list_get(I,k)*3;  bind b = list_get(I,k+1)*3;  bind c = list_get(I,k+2)*3
+        bind h = hueBase + f * 0.6
+        สีดินสอ(floor((ไซน์(h)*0.5+0.5)*150+55), floor((ไซน์(h+2.094)*0.5+0.5)*150+55), floor((ไซน์(h+4.189)*0.5+0.5)*150+55))
+        วาดสามเหลี่ยม3มิติ(
+            ox+list_get(P,a)*scale,   oy+list_get(P,a+1)*scale,   oz+list_get(P,a+2)*scale,
+            ox+list_get(P,b)*scale,   oy+list_get(P,b+1)*scale,   oz+list_get(P,b+2)*scale,
+            ox+list_get(P,c)*scale,   oy+list_get(P,c+1)*scale,   oz+list_get(P,c+2)*scale)
+        bind k = k + 3;  bind f = f + 1.0
+    }
+}
+
+# ── อารีนาจาก arena.glb (InnerWalls/Floor/Trough) — สีสุ่มต่อหน้า ──
+ฟังก์ชัน วาดอารีนาโมเดล(ox, oy, oz, scale) {
+    วาดเมช(arena_Cube_pos,     arena_Cube_idx,     ox, oy, oz, scale, 1)   # native batched (ling-gpu)
+    วาดเมช(arena_Cube_001_pos, arena_Cube_001_idx, ox, oy, oz, scale, 1)
+    วาดเมช(arena_Cube_002_pos, arena_Cube_002_idx, ox, oy, oz, scale, 1)
+}
+
+# ── 6 ดาบพิคอัพ (อาร์เคด): item id (พลังพิเศษต่างกัน) + สี + ตราบิลบอร์ด ──
+#   3=Torpedo 5=DualSword 6=Burn 7=Freeze 8=Nova 9=Quake (พลังของแต่ละไอเทม)
+bind ดาบไอดี = [3, 5, 6, 7, 8, 9]
+bind ดาบสี   = [[120,200,255],[210,228,255],[255,120,40],[150,220,255],[220,160,255],[255,200,120]]
+
+# ── สเตตัสดาบ 6 เล่ม: [cooldown, power, range, comboMax, R, G, B] ──
+#   0 Quick · 1 Great · 2 Twin · 3 Flame · 4 Frost · 5 Nova
+bind ดาบสเตตัส = [
+    [0.20, 1.1, 15.0, 3.0, 120,200,255],
+    [0.55, 3.4, 23.0, 1.0, 255,120,70],
+    [0.14, 0.8, 13.0, 4.0, 210,228,255],
+    [0.38, 1.9, 18.0, 2.0, 255,150,40],
+    [0.44, 1.7, 18.0, 2.0, 150,220,255],
+    [0.62, 2.8, 26.0, 1.0, 220,160,255]
+]
+
+# อาร์คเติม: เสี้ยวพระจันทร์เติม (strip ระหว่าง rad-width..rad ตามมุม yaw±span*prog) ที่ y=cy
+ฟังก์ชัน อาร์คเติม(cx, cy, cz, yaw, span, rad, width, prog, r, g, b) {
+    สีดินสอ(r, g, b)
+    bind n = 9;  bind k = 0
+    ขณะที่ k < n {
+        bind a0 = yaw - span + (k / 9.0) * 2.0*span*prog
+        bind a1 = yaw - span + ((k + 1) / 9.0) * 2.0*span*prog
+        bind o0x = cx+ไซน์(a0)*rad;        bind o0z = cz+โคไซน์(a0)*rad
+        bind o1x = cx+ไซน์(a1)*rad;        bind o1z = cz+โคไซน์(a1)*rad
+        bind i0x = cx+ไซน์(a0)*(rad-width); bind i0z = cz+โคไซน์(a0)*(rad-width)
+        bind i1x = cx+ไซน์(a1)*(rad-width); bind i1z = cz+โคไซน์(a1)*(rad-width)
+        วาดสามเหลี่ยม3มิติ(i0x,cy,i0z, o0x,cy,o0z, o1x,cy,o1z)
+        วาดสามเหลี่ยม3มิติ(i0x,cy,i0z, o1x,cy,o1z, i1x,cy,i1z)
+        bind k = k + 1
+    }
+}
+
+# วาดสแลชเติม: เอฟเฟกต์ฟันแบบเติม ต่างกันต่อชนิดดาบ (typ 0..5)
+ฟังก์ชัน วาดสแลชเติม(typ, cx, cy, cz, yaw, prog, rad, r, g, b) {
+    โหมดผสม(1)
+    bind fwx = ไซน์(yaw);  bind fwz = โคไซน์(yaw)
+    ถ้า typ == 0 { อาร์คเติม(cx, cy, cz, yaw, 1.0, rad, 2.5, prog, r,g,b) }
+    ถ้า typ == 1 { อาร์คเติม(cx, cy, cz, yaw, 1.7, rad, 5.0, prog, r,g,b) }
+    ถ้า typ == 2 { อาร์คเติม(cx, cy-1.2, cz, yaw, 1.2, rad, 2.0, prog, r,g,b)  อาร์คเติม(cx, cy+1.2, cz, yaw, 1.2, rad, 2.0, prog, r,g,b) }
+    ถ้า typ == 3 { อาร์คเติม(cx, cy, cz, yaw, 1.3, rad, 3.2, prog, r,g,b)  อนุภาคทรงกลม(cx+fwx*rad*0.8, cy, cz+fwz*rad*0.8, 2.4, 18, prog*4.0, r, g, floor(b*0.3)) }
+    ถ้า typ == 4 {
+        อาร์คเติม(cx, cy, cz, yaw, 1.3, rad, 3.0, prog, r,g,b)
+        bind sk = 0
+        ขณะที่ sk < 4 { bind sa = yaw - 1.0 + sk*0.66
+            วาดสามเหลี่ยม3มิติ(cx+ไซน์(sa)*rad, cy-1.6, cz+โคไซน์(sa)*rad,  cx+ไซน์(sa)*rad*1.12, cy, cz+โคไซน์(sa)*rad*1.12,  cx+ไซน์(sa)*rad, cy+1.6, cz+โคไซน์(sa)*rad)
+            bind sk = sk + 1 }
+    }
+    ถ้า typ == 5 {
+        bind r2 = rad * prog;  bind nk = 0
+        ขณะที่ nk < 16 { bind na0 = nk*0.3927;  bind na1 = (nk+1)*0.3927
+            วาดสามเหลี่ยม3มิติ(cx+ไซน์(na0)*(r2-3.0),cy,cz+โคไซน์(na0)*(r2-3.0), cx+ไซน์(na0)*r2,cy,cz+โคไซน์(na0)*r2, cx+ไซน์(na1)*r2,cy,cz+โคไซน์(na1)*r2)
+            วาดสามเหลี่ยม3มิติ(cx+ไซน์(na0)*(r2-3.0),cy,cz+โคไซน์(na0)*(r2-3.0), cx+ไซน์(na1)*r2,cy,cz+โคไซน์(na1)*r2, cx+ไซน์(na1)*(r2-3.0),cy,cz+โคไซน์(na1)*(r2-3.0))
+            bind nk = nk + 1 }
+    }
+    flush_3d();  โหมดผสม(0)
+}
+
+# เส้นบิลบอร์ด: จุด 2D (ax,ay)->(bx,by) ในระนาบหันกล้อง ที่ฐานโลก (wx,wy,wz); rx,rz = แกนขวา (yaw)
+ฟังก์ชัน เส้นป้าย(wx, wy, wz, ax, ay, bx, by, rx, rz) {
+    วาดเส้น3มิติ(wx + ax*rx, wy - ay, wz + ax*rz,  wx + bx*rx, wy - by, wz + bx*rz)
+}
+
+# ── ดาบพิคอัพ slot 0..5 ที่ (wx,wy,wz) ขนาด s, หันกล้อง, บ๊อบตามเวลา ──
+ฟังก์ชัน วาดดาบพิค(slot, wx, wy, wz, s, camYaw, t) {
+    bind rx = โคไซน์(camYaw);  bind rz = 0.0 - ไซน์(camYaw)
+    bind c = list_get(ดาบสี, slot)
+    bind by = wy + ไซน์(t*2.0 + slot)*0.5
+    โหมดผสม(1)
+    สีดินสอ(list_get(c,0), list_get(c,1), list_get(c,2))
+    อนุภาคทรงกลม(wx, by + s*1.1, wz, 0.8, 12, t*2.0+slot, list_get(c,0), list_get(c,1), list_get(c,2))
+    เส้นป้าย(wx, by, wz,  0.0, 0.0-s,   0.0, s*0.5, rx, rz)            # ใบดาบ
+    เส้นป้าย(wx, by, wz,  0.0-s*0.45, s*0.45,  s*0.45, s*0.45, rx, rz) # ด้ามขวาง
+    ถ้า slot == 0 { เส้นป้าย(wx,by,wz, 0.0,0.0-s, s*0.3,0.0-s*0.55, rx,rz)  เส้นป้าย(wx,by,wz, 0.0,0.0-s, 0.0-s*0.3,0.0-s*0.55, rx,rz) }   # หัวลูกศร
+    ถ้า slot == 1 { เส้นป้าย(wx,by,wz, s*0.3,0.0-s, s*0.3,s*0.5, rx,rz) }                                                              # ใบคู่
+    ถ้า slot == 2 { เส้นป้าย(wx,by,wz, 0.0,0.0-s*0.4, s*0.25,0.0-s*0.05, rx,rz)  เส้นป้าย(wx,by,wz, s*0.25,0.0-s*0.05, 0.0,s*0.25, rx,rz) }  # เปลว
+    ถ้า slot == 3 { เส้นป้าย(wx,by,wz, 0.0,0.0-s*0.45, s*0.3,0.0-s*0.1, rx,rz)  เส้นป้าย(wx,by,wz, s*0.3,0.0-s*0.1, 0.0,s*0.25, rx,rz)  เส้นป้าย(wx,by,wz, 0.0,s*0.25, 0.0-s*0.3,0.0-s*0.1, rx,rz)  เส้นป้าย(wx,by,wz, 0.0-s*0.3,0.0-s*0.1, 0.0,0.0-s*0.45, rx,rz) }  # เพชรน้ำแข็ง
+    ถ้า slot == 4 { bind k = 0  ขณะที่ k < 8 { bind a0 = k*0.7854  bind a1 = (k+1)*0.7854  เส้นป้าย(wx,by,wz, โคไซน์(a0)*s*0.45,0.0-s*0.25+ไซน์(a0)*s*0.45, โคไซน์(a1)*s*0.45,0.0-s*0.25+ไซน์(a1)*s*0.45, rx,rz)  bind k = k+1 } }  # วงโนวา
+    ถ้า slot == 5 { เส้นป้าย(wx,by,wz, 0.0-s*0.45,s*0.2, s*0.45,s*0.2, rx,rz) }                                                         # ด้ามคู่ (quake)
+    flush_3d();  โหมดผสม(0)
+}
+
+# ── ป้ายลอยแบบบิลบอร์ด: หันเข้าหากล้อง (yaw), แนวนอนเสมอ, ขนาดจอคงที่ ──
+#   ชดเชยระยะ: sc ∝ ระยะกล้อง → ไม่ย่อ/ขยายตามใกล้ไกล (zdist เกมเพลย์ 4.6, focal 1080)
+ฟังก์ชัน วาดสตริงป้าย(s, ox, oy, oz, sscale, camYaw) {
+    bind q = ฉาย3มิติ(ox, oy, oz)
+    ถ้า list_get(q,0) <= 0.0 - 99998.0 { คืน 0 }      # หลังกล้อง → ข้าม
+    bind d = list_get(q,2) + 4.6
+    ถ้า d < 1.0 { bind d = 1.0 }
+    bind sc = sscale * d * 0.030
+    bind rx = โคไซน์(camYaw);  bind rz = 0.0 - ไซน์(camYaw)   # แกนขวา (บิลบอร์ด yaw)
+    bind n = ความยาว(s)
+    bind adv = sc * 0.66
+    bind startk = 0.0 - (n - 1) * 0.5
+    bind i = 0
+    ขณะที่ i < n {
+        bind ch = ส่วนสตริง(s, i, 1)
+        bind code = ตัวอักษรเป็นดัชนี(ch)
+        ถ้า code >= 0 {
+            bind off = (startk + i) * adv
+            วาดอักขระEnglish(code, ox + rx*off, oy, oz + rz*off, rx,0,rz, 0,0.0-1.0,0, sc)
+        }
+        bind i = i + 1
+    }
+}
+
+# ── ศัตรู: ตารางชื่อ + คำคัตเอาต์ ──
+bind ศัตรูชื่อ = ["Nyx","Ling","yisen","Zev","Quo","Vox","Jade","Bryn","Cade","Dax","Fynn","Gael","Hal","Ivo","Kael","Mika","Orin","Pax","Rune","Sage","Tynan","Ulla","Wren","Xena","Yael","Zion"]
+bind บอสชื่อ = ["The Warden","Omega","Void King","Apex","Nemesis","The Maw"]
+bind คำเปิด = ["lock in","spin the dice","cut the line","push the pace","break the seal","light the fuse","draw first blood"]
+bind คำตี   = ["nice read","too slow","right there","clean shot","bad move"]
+bind คำเพล  = ["fading fast","can't hold","almost done","no more left","falling apart"]
+bind คำใบ้   = ["watch your flank","don't panic","move now","bait it out"]
+
+ฟังก์ชัน สุ่มในรายการ(lst) { คืน list_get(lst, floor(สุ่ม() * ความยาว(lst))) }
+ฟังก์ชัน ดึงคำเปิด() { คืน สุ่มในรายการ(คำเปิด) }
+ฟังก์ชัน ดึงคำตี()   { คืน สุ่มในรายการ(คำตี) }
+ฟังก์ชัน ดึงคำเพล()  { คืน สุ่มในรายการ(คำเพล) }
+ฟังก์ชัน ดึงคำใบ้()   { คืน สุ่มในรายการ(คำใบ้) }
+
+# สร้างศัตรู: คืน [hpMax, def, res, atk, cool, diff, bodyHue, stampHue, bandHue, stamp, band, name]
+#   สเตตัส/ดิฟ ขึ้นตามรอบ (Smash-style gauntlet)
+ฟังก์ชัน สร้างศัตรู(รอบ) {
+    ถ้า รอบ >= 10.0 {                                   # ── บอสจบ (รอบ 10) ──
+        คืน [620.0, 6.0, 0.45, 15.0, 0.5, 0.95, สุ่ม(), สุ่ม(), สุ่ม(), floor(สุ่ม()*STAMP_N), floor(สุ่ม()*BAND_N), สุ่มในรายการ(บอสชื่อ)]
+    }
+    bind hpMax = 55.0 + รอบ * 16.0
+    bind def = รอบ * 0.6
+    bind res = รอบ * 0.04;  ถ้า res > 0.45 { bind res = 0.45 }
+    bind atk = 4.0 + รอบ * 1.5
+    bind cool = 1.7 - รอบ * 0.08;  ถ้า cool < 0.6 { bind cool = 0.6 }
+    bind diff = รอบ * 0.09;  ถ้า diff > 0.9 { bind diff = 0.9 }
+    คืน [hpMax, def, res, atk, cool, diff, สุ่ม(), สุ่ม(), สุ่ม(), floor(สุ่ม()*STAMP_N), floor(สุ่ม()*BAND_N), สุ่มในรายการ(ศัตรูชื่อ)]
+}
+
+# ── วาดศัตรู: ลูกแต่ง (สีตามฮิว) + แฟลชโดนตี + วงการ์ด + ป้ายชื่อลอย ──
+ฟังก์ชัน วาดศัตรู(fx, fy, fz, R, bh, sh, nh, stamp, band, t, hurt, guard, name, camYaw) {
+    bind cb = สีจากเฉด(bh);  bind cs = สีจากเฉด(sh);  bind cn = สีจากเฉด(nh)
+    bind br = list_get(cb,0);  bind bg = list_get(cb,1);  bind bb = list_get(cb,2)
+    ถ้า hurt > 0.0 { bind br = 255;  bind bg = floor(120 + hurt*400);  bind bb = floor(120 + hurt*400) }
+    วาดลูกแต่ง(fx, fy, fz, R, br,bg,bb,
+        list_get(cs,0),list_get(cs,1),list_get(cs,2),
+        list_get(cn,0),list_get(cn,1),list_get(cn,2),
+        stamp, band, t)
+    ถ้า guard > 0.5 {
+        โหมดผสม(1);  สีดินสอ(255, 210, 90)
+        bind gk = 0
+        ขณะที่ gk < 16 {
+            bind a0 = gk * 0.3927;  bind a1 = (gk + 1) * 0.3927
+            วาดเส้น3มิติ(fx+โคไซน์(a0)*R*1.6, fy, fz+ไซน์(a0)*R*1.6,  fx+โคไซน์(a1)*R*1.6, fy, fz+ไซน์(a1)*R*1.6)
+            bind gk = gk + 1
+        }
+        flush_3d();  โหมดผสม(0)
+    }
+    โหมดผสม(1);  สีดินสอ(255, 235, 190);  วาดสตริงป้าย(name, fx, fy - R - 3.5, fz, 1.0, camYaw);  flush_3d();  โหมดผสม(0)
+}
+
+# ── แถบเลือด HUD (มุมจอ): พื้นเทา + เติมตามอัตราส่วน, ป้ายชื่อ ──
+#   ใช้กล้องโอเวอร์เลย์ 2D (เรียกหลัง ตั้งกล้องมอง overlay) — x,y โลก, w กว้าง
+ฟังก์ชัน แถบHP(x, y, w, frac, r, g, b, name, ชิด) {
+    ถ้า frac < 0.0 { bind frac = 0.0 }
+    สีดินสอ(40, 40, 55)
+    วาดสามเหลี่ยม3มิติ(x, y-0.5, 0.0,  x+w, y-0.5, 0.0,  x+w, y+0.5, 0.0)
+    วาดสามเหลี่ยม3มิติ(x, y-0.5, 0.0,  x+w, y+0.5, 0.0,  x, y+0.5, 0.0)
+    bind fw = w * frac
+    bind fx0 = x;  ถ้า ชิด > 0.5 { bind fx0 = x + w - fw }    # ชิด=1 → เติมจากขวา (ศัตรู)
+    สีดินสอ(r, g, b)
+    วาดสามเหลี่ยม3มิติ(fx0, y-0.5, 0.0,  fx0+fw, y-0.5, 0.0,  fx0+fw, y+0.5, 0.0)
+    วาดสามเหลี่ยม3มิติ(fx0, y-0.5, 0.0,  fx0+fw, y+0.5, 0.0,  fx0, y+0.5, 0.0)
+    โหมดผสม(1);  สีดินสอ(235, 235, 255)
+    bind nx = x;  ถ้า ชิด > 0.5 { bind nx = x + w - ความยาว(name)*0.45 }
+    วาดสตริง(name, nx + 1.5, y - 1.6, 0.0, 0.5, 1)
+    โหมดผสม(0)
+}
+
+# ── ลูกแต่ง: body orb (สี) + โครงทรงกลม + สแตมป์ขั้วบน/ล่าง + แบนด์รอบกลาง ──
+ฟังก์ชัน วาดลูกแต่ง(cx, cy, cz, R, br,bg,bb, sr,sg,sb, ar,ag,ab, stampId, bandId, t) {
+    # body = อนุภาคเรืองแสง (additive)
+    โหมดผสม(1)
+    orb_particles(cx, cy, cz, R*0.95, 700.0, t,         br, bg, bb)
+    orb_particles(cx, cy, cz, R*0.62, 360.0, t*1.4+3.0, floor(br*0.6+90), floor(bg*0.6+90), floor(bb*0.6+90))
+    flush_3d()
+    # โครงทรงกลม (วงละติจูด) ให้เห็นเป็นลูกชัดขึ้น
+    สีดินสอ(floor(br*0.5), floor(bg*0.5), floor(bb*0.5))
+    bind lat = 0
+    ขณะที่ lat < 3 {
+        bind ly = cy + (lat - 1) * R * 0.55
+        bind lr = รากที่สอง(R*R - (ly-cy)*(ly-cy))
+        bind k = 0
+        ขณะที่ k < 20 {
+            bind a0 = k * 0.31416;  bind a1 = (k + 1) * 0.31416
+            วาดเส้น3มิติ(cx+โคไซน์(a0)*lr, ly, cz+ไซน์(a0)*lr,  cx+โคไซน์(a1)*lr, ly, cz+ไซน์(a1)*lr)
+            bind k = k + 1
+        }
+        bind lat = lat + 1
+    }
+    flush_3d()
+    # สแตมป์ + แบนด์ = ฟิลทึบ (normal blend)
+    โหมดผสม(0)
+    สีดินสอ(sr, sg, sb)
+    วาดสแตมป์(stampId, cx, cy - R*1.04, cz, R*0.7, t*0.6)          # ขั้วบน (+y ลง → -R = บน)
+    วาดสแตมป์(stampId, cx, cy + R*1.04, cz, R*0.7, 0.0 - t*0.6)    # ขั้วล่าง
+    สีดินสอ(ar, ag, ab)
+    วาดแบนด์(bandId, cx, cy, cz, R*1.03, t)
+    flush_3d()
+}

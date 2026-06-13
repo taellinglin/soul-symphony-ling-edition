@@ -1612,6 +1612,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ling-animation"
+version = "2030.0.0"
+dependencies = [
+ "glam",
+ "serde",
+]
+
+[[package]]
 name = "ling-ast"
 version = "2030.0.0"
 dependencies = [
@@ -1684,6 +1692,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ling-gpu"
+version = "2030.0.0"
+
+[[package]]
 name = "ling-graphics"
 version = "2030.0.4"
 dependencies = [
@@ -1696,7 +1708,7 @@ dependencies = [
 
 [[package]]
 name = "ling-icon"
-version = "2030.0.0"
+version = "2030.0.1"
 dependencies = [
  "ico",
  "image",
@@ -1706,7 +1718,7 @@ dependencies = [
 
 [[package]]
 name = "ling-lang"
-version = "2030.1.21"
+version = "2030.1.24"
 dependencies = [
  "base64 0.22.1",
  "flate2",
@@ -1714,12 +1726,14 @@ dependencies = [
  "js-sys",
  "lalrpop",
  "ling-ai",
+ "ling-animation",
  "ling-ast",
  "ling-audio",
  "ling-codegen",
  "ling-core",
  "ling-crypto",
  "ling-game",
+ "ling-gpu",
  "ling-graphics",
  "ling-icon",
  "ling-mic",
@@ -1778,6 +1792,7 @@ version = "2030.1.7"
 dependencies = [
  "glam",
  "gltf",
+ "ling-gpu",
 ]
 
 [[package]]
@@ -2864,6 +2879,8 @@ name = "soul-symphony-ling"
 version = "0.1.0"
 dependencies = [
  "ling-lang",
+ "toml",
+ "winresource",
 ]
 
 [[package]]
