@@ -3,3 +3,16 @@ music/Antarctica.wav filter=lfs diff=lfs merge=lfs -text
 music/old/HallofSunrise.ogg filter=lfs diff=lfs merge=lfs -text
 *.wav filter=lfs diff=lfs merge=lfs -text
 *.ogg filter=lfs diff=lfs merge=lfs -text
+*.flac filter=lfs diff=lfs merge=lfs -text
+music/Festival.wav filter=lfs diff=lfs merge=lfs -text
+music/MoonTime.wav filter=lfs diff=lfs merge=lfs -text
+music/Peace[[:space:]]Love[[:space:]]Happiness.wav filter=lfs diff=lfs merge=lfs -text
+music/Soul[[:space:]]Symphony_Colors_Mix_Master.wav filter=lfs diff=lfs merge=lfs -text
+music/Bassline.wav filter=lfs diff=lfs merge=lfs -text
+music/Death.wav filter=lfs diff=lfs merge=lfs -text
+music/Lift.wav filter=lfs diff=lfs merge=lfs -text
+music/Purika.wav filter=lfs diff=lfs merge=lfs -text
+music/Swing.wav filter=lfs diff=lfs merge=lfs -text
+music/Antartica.wav filter=lfs diff=lfs merge=lfs -text
+music/Canopy.wav filter=lfs diff=lfs merge=lfs -text
+music/Death_Master.wav filter=lfs diff=lfs merge=lfs -text
