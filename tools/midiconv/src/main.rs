@@ -1,17 +1,16 @@
-// midiconv — convert a MIDI file into a pre-rasterized ling lookup table.
+// midiconv — convert a MIDI file into the ling song-data format consumed by
+// soul-symphony-ling:
+//   ฟังก์ชัน ข้อมูลเพลง_<Name>()  → [count, [glyphs], [freqs], [xs], [zs]]   (24 collectible lanes)
+//   ฟังก์ชัน เวลาโน้ต_<Name>()   → [t0, t1, ...]   (note-onset timeline, seconds)
+//   ฟังก์ชัน จำนวนโน้ต_<Name>()  → N
 //
-// Emits per-game-frame arrays so the ling player is fully stateless (O(1)):
-//   slot = กรอบ mod song_frames
-//   freq = list_get(song_freq_N, slot)   (0.0 = silence)
-//   key  = list_get(song_key_N,  slot)   (-1  = silence)
+// <Name> is taken from the output filename stem (a trailing "_data" is stripped).
 //
-// Usage:  midiconv <in.mid> <out.ling> [fps]   default fps = 30
+// Usage:  midiconv <in.mid> <out.ling>
 
 use std::collections::HashMap;
 use std::fmt::Write as FmtWrite;
 use midly::{Smf, TrackEventKind, MidiMessage, MetaMessage, Timing};
-
-const LANES: usize = 8;
 
 struct Note { start: f64, end: f64, midi: u8 }
 
@@ -20,10 +19,9 @@ fn freq_of(m: u8) -> f64 { 440.0 * 2f64.powf((m as f64 - 69.0) / 12.0) }
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 3 {
-        eprintln!("usage: midiconv <in.mid> <out.ling> [fps]");
+        eprintln!("usage: midiconv <in.mid> <out.ling>");
         std::process::exit(2);
     }
-    let fps: f64 = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(30.0);
 
     let data = std::fs::read(&args[1]).unwrap_or_else(|e| {
         eprintln!("read {}: {e}", args[1]); std::process::exit(1);
@@ -49,7 +47,7 @@ fn main() {
                 }
                 TrackEventKind::Midi { channel, message } => {
                     let ch = channel.as_int();
-                    if ch == 9 { continue; }
+                    if ch == 9 { continue; }   // skip percussion
                     match message {
                         MidiMessage::NoteOn { key, vel } if vel.as_int() > 0 => {
                             events.push((tick, i, Ev::On(ch, key.as_int())));
@@ -89,70 +87,54 @@ fn main() {
         notes.push(Note { start, end: start + 0.3, midi: key });
     }
     notes.sort_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
-
     if notes.is_empty() { eprintln!("no notes"); std::process::exit(1); }
 
     let song_len = notes.iter().map(|n| n.end).fold(0.0f64, f64::max) + 0.5;
 
-    // Key mapping: spread song's pitch range → 0..255
-    let min_n = notes.iter().map(|n| n.midi).min().unwrap() as f64;
-    let max_n = notes.iter().map(|n| n.midi).max().unwrap() as f64;
-    let span = (max_n - min_n).max(1.0);
-    let key_of = |m: u8| -> i32 {
-        (((m as f64 - min_n) / span) * 255.0).round().clamp(0.0, 255.0) as i32
-    };
+    // ── Song name from the output filename stem (strip trailing "_data") ──
+    let name = std::path::Path::new(&args[2])
+        .file_stem().and_then(|s| s.to_str()).unwrap_or("Song")
+        .trim_end_matches("_data").to_string();
 
-    // Greedy lane assignment
-    let mut lane_end = [f64::NEG_INFINITY; LANES];
-    let mut lanes: Vec<Vec<&Note>> = vec![Vec::new(); LANES];
-    for n in &notes {
-        let mut placed = false;
-        for l in 0..LANES {
-            if lane_end[l] <= n.start + 1e-6 {
-                lanes[l].push(n);
-                lane_end[l] = n.end;
-                placed = true;
-                break;
-            }
-        }
-        if !placed { /* drop */ }
+    // ── 24 collectible "lanes": sample pitches evenly across the song ──
+    const COUNT: usize = 24;
+    let mut glyphs: Vec<i32> = Vec::with_capacity(COUNT);
+    let mut freqs:  Vec<f64> = Vec::with_capacity(COUNT);
+    let mut xs:     Vec<f64> = Vec::with_capacity(COUNT);
+    let mut zs:     Vec<f64> = Vec::with_capacity(COUNT);
+    for k in 0..COUNT {
+        let idx = (k * notes.len() / COUNT).min(notes.len() - 1);
+        let m = notes[idx].midi;
+        glyphs.push((m as i32).rem_euclid(26));          // pitch → a..z glyph
+        freqs.push(freq_of(m));
+        let ang = k as f64 * 2.399963;                   // golden-angle scatter
+        let rad = 6.0 + ((k % 6) as f64) * 4.0;
+        xs.push(ang.cos() * rad);
+        zs.push(ang.sin() * rad);
     }
 
-    // Pre-rasterize at `fps` frames per second
-    let n_frames = (song_len * fps).ceil() as usize;
-    let mut freq_grid: Vec<Vec<f64>> = vec![vec![0.0; n_frames]; LANES];
-    let mut key_grid:  Vec<Vec<i32>> = vec![vec![-1;  n_frames]; LANES];
-
-    for (l, lane) in lanes.iter().enumerate() {
-        for n in lane {
-            let f_start = (n.start * fps).floor() as usize;
-            let f_end   = ((n.end * fps).ceil() as usize).min(n_frames);
-            for fi in f_start..f_end {
-                freq_grid[l][fi] = freq_of(n.midi);
-                key_grid[l][fi]  = key_of(n.midi);
-            }
-        }
+    // ── Onset timeline (subsampled to keep the file modest) ──
+    let mut times: Vec<f64> = notes.iter().map(|n| n.start).collect();
+    times.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    const MAX_T: usize = 1200;
+    if times.len() > MAX_T {
+        let step = times.len() as f64 / MAX_T as f64;
+        times = (0..MAX_T).map(|i| times[(i as f64 * step) as usize]).collect();
     }
 
-    // Emit ling
+    let j_i = |v: &[i32]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",");
+    let j_f = |v: &[f64], p: usize| v.iter().map(|x| format!("{:.*}", p, x)).collect::<Vec<_>>().join(",");
+
+    // ── Emit ling ──
     let mut out = String::new();
-    writeln!(out, "# ── SubsynthWinter_3.ling — pre-rasterised MIDI lookup ({fps} fps) ──").unwrap();
-    writeln!(out, "# Do not edit by hand.  Regenerate with midiconv.").unwrap();
-    writeln!(out, "ผูก song_len = {song_len:.4}").unwrap();
-    writeln!(out, "ผูก song_fps = {fps:.1}").unwrap();
-    writeln!(out, "ผูก song_frames = {n_frames}").unwrap();
-
-    for l in 0..LANES {
-        let freqs: String = freq_grid[l].iter()
-            .map(|f| format!("{f:.2}"))
-            .collect::<Vec<_>>().join(",");
-        let keys: String = key_grid[l].iter()
-            .map(|k| k.to_string())
-            .collect::<Vec<_>>().join(",");
-        writeln!(out, "ผูก song_freq_{l} = [{freqs}]").unwrap();
-        writeln!(out, "ผูก song_key_{l}  = [{keys}]").unwrap();
-    }
+    writeln!(out, "# auto-generated by midiconv — {name} ({song_len:.1}s).  Do not edit.").unwrap();
+    writeln!(out, "ฟังก์ชัน ข้อมูลเพลง_{name}() {{").unwrap();
+    writeln!(out, "    คืน [{COUNT}, [{}], [{}], [{}], [{}]]",
+        j_i(&glyphs), j_f(&freqs, 1), j_f(&xs, 2), j_f(&zs, 2)).unwrap();
+    writeln!(out, "}}").unwrap();
+    writeln!(out, "ฟังก์ชัน เวลาโน้ต_{name}() {{ คืน [{}] }}", j_f(&times, 3)).unwrap();
+    writeln!(out, "ฟังก์ชัน จำนวนโน้ต_{name}() {{ คืน {} }}", times.len()).unwrap();
 
     std::fs::write(&args[2], &out).unwrap();
-    eprintln!("wrote {n_frames} frames × {LANES} lanes  ({song_len:.1}s @ {fps}fps) → {}", args[2]);
+    eprintln!("wrote {COUNT} lanes + {} onsets ({song_len:.1}s) → {}", times.len(), args[2]);
 }

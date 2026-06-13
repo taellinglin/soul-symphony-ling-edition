@@ -64,8 +64,8 @@ bind เริ่ม = do {
     bind cfgp = แยก(cfg, ";")
     bind musicOn = floor(list_get(cfgp, 0))
     bind ภาษา    = floor(list_get(cfgp, 1))
-    bind ปริมาณSFX = 0.9
-    bind ปริมาณBGM = 0.82
+    bind ปริมาณSFX = 0.8
+    bind ปริมาณBGM = 0.1
     ถ้า ความยาว(cfgp) > 2 { bind ปริมาณSFX = list_get(cfgp, 2) * 1.0 }
     ถ้า ความยาว(cfgp) > 3 { bind ปริมาณBGM = list_get(cfgp, 3) * 1.0 }
 
@@ -99,6 +99,9 @@ bind เริ่ม = do {
     bind chatSend = "";  bind chatSendT = 0.0;  bind chat2Msg = "";  bind chat2T = 0.0;  bind chat2Last = ""
     # RPG: บัฟผู้เล่นสะสมข้ามด่าน [STR,AGI,VIT,FOC,DEF,LCK,SPD,PWR]
     bind ผู้เล่นสเตตัส = [0,0,0,0,0,0,0,0]
+    # เลขดาเมจ/ฮีลลอย (อาร์เคด) + ธงตีครั้งเดียวต่อสวิง
+    bind popDmg = 0.0;  bind popDmgT = 0.0;  bind popDmgCrit = 0.0;  bind popHurt = 0.0;  bind popHurtT = 0.0;  bind popHeal = 0.0;  bind popHealT = 0.0;  bind slashHit = 0.0
+    bind foeSleep = 0.0;  bind foeSlow = 0.0;  bind bombType = 0.0;  bind buffCD = [0.0,0.0,0.0]   # สถานะศัตรู + ชนิดระเบิดที่ถือ + คูลดาวน์บัฟอารีนา
     bind บอสโหมด = 0
     bind อาร์เคดโหมด = 0
     # ── ปรับแต่งลูก (อาร์เคด): 3 เฉดสี + สแตมป์ + แบนด์ + ฟิลด์ที่เลือก + รอบ ──
@@ -111,6 +114,7 @@ bind เริ่ม = do {
     bind foeBodyHue = 0.0;  bind foeStampHue = 0.0;  bind foeBandHue = 0.0;  bind foeStamp = 0.0;  bind foeBand = 0.0
     bind foeDef = 0.0;  bind foeRes = 0.0;  bind foeAtk = 5.0;  bind foeCool = 1.5;  bind foeCoolT = 0.0;  bind foeDiff = 0.0
     bind foeName = "foe";  bind foeHurt = 0.0;  bind foeLunge = 0.0;  bind foeGuard = 0.0
+    bind foeAgi = 0.4;  bind foeTech = 0.3;  bind foeAtt = 0.3;  bind foeSlashT = 0.0;  bind foeCombo = 0.0   # AI: agility/technique/attention (9 ระดับ) + ฟันดาบ
     bind callT = 0.0;  bind callMsg = "";  bind tauntT = 0.0;  bind ผู้ชนะรอบ = 0.0
     bind อาร์เคดไลฟ์ = 3.0;  bind อาร์เคดแต้ม = 0.0;  bind อาร์เคดชนะ = 0.0;  bind ผลพิมพ์ = 0.0
     bind pickCD = [0.0,0.0,0.0,0.0,0.0,0.0]   # คูลดาวน์ดาบพิคอัพ 6 จุด (0 = พร้อม)
@@ -771,6 +775,11 @@ bind เริ่ม = do {
                     bind foeStamp = list_get(fd,9);  bind foeBand = list_get(fd,10);  bind foeName = list_get(fd,11)
                     bind foeX = 35.0;  bind foeZ = 0.0;  bind foeVX = 0.0;  bind foeVZ = 0.0
                     bind foeCoolT = foeCool;  bind foeGuard = 0.0;  bind foeHurt = 0.0;  bind foeLunge = 0.0;  bind ผู้ชนะรอบ = 0.0
+                    bind flv = รอบ - 1.0;  ถ้า flv > 8.0 { bind flv = 8.0 }   # 9 ระดับ AI (0..8)
+                    bind foeAgi  = 0.22 + (flv/8.0)*0.72   # ความคล่อง: ความเร็ว/หลบ
+                    bind foeTech = 0.18 + (flv/8.0)*0.78   # เทคนิค: คอมโบ/คูลดาวน์ฟัน
+                    bind foeAtt  = 0.12 + (flv/8.0)*0.82   # สมาธิ: การ์ด/หลบแบบโต้ตอบ
+                    bind foeSlashT = 0.0;  bind foeCombo = 0.0
                     bind callT = 2.8;  bind callMsg = ดึงคำเปิด();  bind tauntT = 6.0
                     bind pickCD = [0.0,0.0,0.0,0.0,0.0,0.0];  bind swordType = 0.0;  bind weaponT = 0.0;  bind slashCD = 0.0;  bind สกิล = 1.0;  bind ดาบ = 1.0;  bind เลือกไอเทม = 1.0
                 }
@@ -876,7 +885,7 @@ bind เริ่ม = do {
                     ถ้า เลือกไอเทม == 1.0 { ถ้า สกิล >= 1.0 { ถ้า slashCD <= 0.0 {
                         bind sCmbMax = 2.5
                         ถ้า อาร์เคดโหมด > 0.5 { bind sstA = list_get(ดาบสเตตัส, swordType);  bind slashCD = list_get(sstA,0);  bind sCmbMax = list_get(sstA,3) - 0.5 }
-                        bind slashT = 0.16
+                        bind slashT = 0.16;  bind slashHit = 0.0
                         bind combo = combo + 1.0;  ถ้า combo > sCmbMax { bind combo = 0.0 }
                         bind arcType = combo;  bind arcYaw = camYaw;  bind arcFade = 0.5
                         bind slashNote = slashNote + 1.0
@@ -885,6 +894,10 @@ bind เริ่ม = do {
                         bind smul = 1.0
                         ถ้า combo == 1.0 { bind smul = 1.5 }
                         ถ้า combo == 2.0 { bind smul = 2.0 }
+                        # ── สวูชดาบ: จูนกับโน้ตเพลง + นอยส์ ที่ปลายดาบ ──
+                        bind swtx = cx + ไซน์(camYaw)*8.5;  bind swtz = cz + โคไซน์(camYaw)*8.5
+                        เสียงเอฟเฟกต์(swtx, cy, swtz, 1.0, sfreq*smul*1.2, 0.32*ปริมาณSFX, 0.15, "saw")
+                        เสียงเอฟเฟกต์(swtx, cy, swtz, 1.0, sfreq*smul*2.6, 0.16*ปริมาณSFX, 0.11, "noise")
                         # ── เสียงฟันตามผล: โดนเต็ม / โดนการ์ด / พลาด — เล่นที่จุดปะทะ ──
                         bind hx = cx + ไซน์(camYaw)*9.0;  bind hz = cz + โคไซน์(camYaw)*9.0
                         bind hitFound = 0.0;  bind hitGuard = 0.0
@@ -920,6 +933,12 @@ bind เริ่ม = do {
                             }
                             bind bk = bk + 1
                         }
+                        # อาร์เคด: ระเบิดสตัน — หลับ + ช้า (เฉพาะศัตรู) + ดาเมจ ถ้าอยู่ในรัศมี
+                        ถ้า อาร์เคดโหมด > 0.5 { ถ้า (cx-foeX)*(cx-foeX) + (cz-foeZ)*(cz-foeZ) < 8100.0 {
+                            bind foeSleep = 1.8;  bind foeSlow = 3.5;  bind foeHP = foeHP - 6.0;  bind foeHurt = 0.3
+                            bind popDmg = 6.0;  bind popDmgT = 0.75;  bind popDmgCrit = 0.0
+                            เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, 60.0, 0.6*ปริมาณSFX, 0.5, "noise")
+                        } }
                         พิมพ์แดง("  💥 HyperBomb!")
                     } } }
                     # ── ไอเทม 3-9 = อาวุธ AoE (รัศมี/ดาเมจ/คูลดาวน์/วิช่วล ต่างกัน) ──
@@ -1251,37 +1270,80 @@ bind เริ่ม = do {
                 bind fdx = cx - foeX;  bind fdz = cz - foeZ
                 bind fdist = รากที่สอง(fdx*fdx + fdz*fdz) + 0.001
                 bind fnx = fdx/fdist;  bind fnz = fdz/fdist
-                bind fspeed = 0.16 + foeDiff*0.22
+                # ── เคลื่อนที่: คล่อง(agility) คุมความเร็ว; ไล่ล่า + รักษาระยะ ──
+                # ── สถานะ: หลับ (หยุดนิ่ง) / ช้า (เวลาช้าเฉพาะศัตรู, ผู้เล่นปกติ) ──
+                bind slowK = 1.0;  ถ้า foeSlow > 0.0 { bind foeSlow = foeSlow - 0.016;  bind slowK = 0.4 }
+                bind foeAct = 1.0;  ถ้า foeSleep > 0.0 { bind foeSleep = foeSleep - 0.016;  bind slowK = 0.0;  bind foeAct = 0.0 }
+                bind fspeed = (0.13 + foeAgi*0.30) * slowK
                 ถ้า fdist > 13.0 { bind foeVX = foeVX + fnx*fspeed;  bind foeVZ = foeVZ + fnz*fspeed }
-                มิฉะนั้น { bind foeVX = foeVX - fnx*fspeed*0.6;  bind foeVZ = foeVZ - fnz*fspeed*0.6 }
-                bind foeVX = foeVX + (0.0-fnz)*fspeed*0.45*ไซน์(t*1.2 + foeX*0.2)
-                bind foeVZ = foeVZ + fnx*fspeed*0.45*ไซน์(t*1.2 + foeX*0.2)
-                bind foeVX = foeVX * 0.86;  bind foeVZ = foeVZ * 0.86
+                ถ้า fdist < 9.0 { bind foeVX = foeVX - fnx*fspeed*0.7;  bind foeVZ = foeVZ - fnz*fspeed*0.7 }
+                bind foeVX = foeVX + (0.0-fnz)*fspeed*0.5*ไซน์(t*1.3 + foeX*0.2)
+                bind foeVZ = foeVZ + fnx*fspeed*0.5*ไซน์(t*1.3 + foeX*0.2)
+                # ── หลบ(evade): ผู้เล่นฟัน+ใกล้ → แดชข้าง (โอกาส ∝ สมาธิ, แรง ∝ คล่อง) ──
+                bind plAtk = 0.0;  ถ้า slashT > 0.05 { bind plAtk = 1.0 }
+                ถ้า plAtk > 0.5 { ถ้า fdist < 19.0 { ถ้า สุ่ม() < foeAtt*0.5 {
+                    bind dside = 1.0;  ถ้า ไซน์(t*5.3 + foeZ*0.7) < 0.0 { bind dside = 0.0 - 1.0 }
+                    bind dmag = 2.4 + foeAgi*4.2
+                    bind foeVX = foeVX + (0.0-fnz)*dmag*dside;  bind foeVZ = foeVZ + fnx*dmag*dside
+                    เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, 340.0, 0.26*ปริมาณSFX, 0.1, "noise")
+                } } }
+                bind foeVX = foeVX * 0.85;  bind foeVZ = foeVZ * 0.85
                 bind foeX = foeX + foeVX;  bind foeZ = foeZ + foeVZ
                 bind fbnd = หากล่องอารีนา(foeX, foeZ, R)
                 ถ้า list_get(fbnd,0) > 0.0 { bind foeX = list_get(fbnd,1);  bind foeZ = list_get(fbnd,2);  bind foeVX = 0.0;  bind foeVZ = 0.0 }
+                # ── การ์ดโต้ตอบ(attention): ผู้เล่นฟัน+ในระยะ → กัน (โอกาส ∝ สมาธิ) ──
                 bind foeGuard = 0.0
-                ถ้า foeDiff > 0.25 { ถ้า ไซน์(t*0.8 + foeX*0.3) > (0.85 - foeDiff*0.5) { bind foeGuard = 1.0 } }
-                bind foeCoolT = foeCoolT - 0.016
+                ถ้า plAtk > 0.5 { bind sstG = list_get(ดาบสเตตัส, swordType);  ถ้า fdist < list_get(sstG,2) + 3.0 { ถ้า สุ่ม() < foeAtt*0.85 { bind foeGuard = 1.0 } } }
+                ถ้า foeHP < foeHPMax*0.3 { ถ้า สุ่ม() < foeAtt*0.2 { bind foeGuard = 1.0 } }
+                # ── โจมตีดาบ(technique): คูลดาวน์/คอมโบ ∝ เทคนิค ──
+                bind foeCoolT = foeCoolT - 0.016*slowK
+                bind foeSlashT = foeSlashT - 0.016
                 bind foeLunge = foeLunge - 0.016
-                ถ้า foeCoolT <= 0.0 { ถ้า fdist < 20.0 {
-                    bind foeLunge = 0.3;  bind foeCoolT = foeCool;  bind foeGuard = 0.0
-                    bind foeVX = foeVX + fnx*2.6;  bind foeVZ = foeVZ + fnz*2.6
-                    เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, 200.0, 0.45*ปริมาณSFX, 0.18, "saw")
-                } }
-                ถ้า foeLunge > 0.0 { ถ้า fdist < R + 6.0 { ถ้า บาดเจ็บ <= 0.0 {
-                    bind ชีวิต = ชีวิต - foeAtk * (1.0 - guarding*0.8)
-                    bind บาดเจ็บ = 0.55;  bind foeLunge = 0.0
-                    ถ้า guarding > 0.5 { เสียงเอฟเฟกต์(cx, cy, cz, 1.0, 210.0, 0.5*ปริมาณSFX, 0.18, "square") }
-                    มิฉะนั้น { เสียงเอฟเฟกต์(cx, cy, cz, 1.0, 105.0, 0.5*ปริมาณSFX, 0.22, "saw");  bind callT = 1.6;  bind callMsg = ดึงคำตี() }
+                ถ้า foeAct > 0.5 { ถ้า foeCoolT <= 0.0 { ถ้า fdist < 15.0 { ถ้า foeSlashT <= 0.0 {
+                    bind foeSlashT = 0.32;  bind foeGuard = 0.0
+                    bind foeCombo = foeCombo + 1.0
+                    ถ้า foeCombo > (1.0 + foeTech*3.0) { bind foeCombo = 0.0;  bind foeCoolT = foeCool * (1.25 - foeTech*0.55) }
+                    มิฉะนั้น { bind foeCoolT = 0.16 }
+                    bind foeVX = foeVX + fnx*(1.3 + foeAgi*1.7);  bind foeVZ = foeVZ + fnz*(1.3 + foeAgi*1.7)
+                    bind fni = slashNote - ปัดลง(slashNote/เก็บจำนวน)*เก็บจำนวน;  bind ffreq = list_get(เก็บความถี่, fni);  bind slashNote = slashNote + 1.0
+                    เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, ffreq*1.6, 0.36*ปริมาณSFX, 0.16, "saw")
+                    เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, ffreq*3.2, 0.2*ปริมาณSFX, 0.11, "noise")
+                } } } }
+                # ── ฟันโดนผู้เล่น: ดาเมจ + เสียง guard/hit ที่จุดปะทะกลางดาบ ──
+                ถ้า foeSlashT > 0.16 { ถ้า fdist < R + 9.0 { ถ้า บาดเจ็บ <= 0.0 {
+                    bind hmx = (cx+foeX)*0.5;  bind hmy = (cy+foeY)*0.5;  bind hmz = (cz+foeZ)*0.5
+                    bind dmgPl = foeAtk * (1.0 - guarding*0.85)
+                    bind ชีวิต = ชีวิต - dmgPl
+                    bind บาดเจ็บ = 0.5;  bind foeSlashT = 0.0
+                    bind popHurt = dmgPl;  bind popHurtT = 0.75
+                    bind forceF = 0.7 + foeAtk*0.22 + foeAgi*1.2;  ถ้า guarding > 0.5 { bind forceF = forceF*0.4 }   # เด้ง: แรง ∝ พลัง+คล่อง (โค้ง)
+                    ถ้า สุ่ม() < forceF*0.5 { bind kbF = forceF*(0.5 + forceF*0.22);  bind vx = vx + fnx*kbF;  bind vz = vz + fnz*kbF }
+                    ถ้า guarding > 0.5 { เสียงเอฟเฟกต์(hmx, hmy, hmz, 1.0, 205.0, 0.6*ปริมาณSFX, 0.16, "square");  เสียงเอฟเฟกต์(hmx, hmy, hmz, 1.0, 90.0, 0.3*ปริมาณSFX, 0.13, "noise") }
+                    มิฉะนั้น { เสียงเอฟเฟกต์(hmx, hmy, hmz, 1.0, 115.0, 0.62*ปริมาณSFX, 0.22, "saw");  เสียงเอฟเฟกต์(hmx, hmy, hmz, 1.0, 250.0, 0.34*ปริมาณSFX, 0.14, "noise");  bind callT = 1.6;  bind callMsg = ดึงคำตี() }
                 } } }
-                ถ้า slashT > 0.0 { bind sstF = list_get(ดาบสเตตัส, swordType);  ถ้า fdist < list_get(sstF,2) { ถ้า fdx*ไซน์(camYaw) + fdz*โคไซน์(camYaw) > 0.0 - 4.0 {
+                ถ้า slashT > 0.0 { ถ้า slashHit < 0.5 { bind sstF = list_get(ดาบสเตตัส, swordType);  ถ้า fdist < list_get(sstF,2) { ถ้า fdx*ไซน์(camYaw) + fdz*โคไซน์(camYaw) > 0.0 - 4.0 {
+                    bind slashHit = 1.0
                     bind dmgFoe = (1.6 + list_get(ผู้เล่นสเตตัส,7)*0.25) * list_get(sstF,1) * (1.0 - foeRes) - foeDef*0.15
                     ถ้า dmgFoe < 0.3 { bind dmgFoe = 0.3 }
-                    ถ้า foeGuard > 0.5 { bind dmgFoe = dmgFoe * 0.2 }
+                    # คริติคอล: โอกาส ∝ โชค (LCK สเตตัส 5) → ดาเมจ ×2.2
+                    bind crit = 0.0;  ถ้า สุ่ม() < 0.05 + list_get(ผู้เล่นสเตตัส,5)*0.02 { bind crit = 1.0;  bind dmgFoe = dmgFoe * 2.2 }
+                    bind hitG = 0.0;  ถ้า foeGuard > 0.5 { bind dmgFoe = dmgFoe * 0.2;  bind hitG = 1.0 }
                     bind foeHP = foeHP - dmgFoe;  bind foeHurt = 0.3
-                } } }
+                    bind popDmg = dmgFoe;  bind popDmgT = 0.75;  bind popDmgCrit = crit
+                    # เด้งถอย: โอกาส+แรง ∝ แรงปะทะ (โค้ง — แรงมาก เด้งแน่+ไกลขึ้นเร็ว)
+                    bind forceP = 1.0 + list_get(sstF,1)*0.9;  ถ้า crit > 0.5 { bind forceP = forceP*1.6 }  ถ้า hitG > 0.5 { bind forceP = forceP*0.4 }
+                    ถ้า สุ่ม() < forceP*0.4 { bind kbM = forceP*(0.5 + forceP*0.22);  bind foeVX = foeVX - fnx*kbM;  bind foeVZ = foeVZ - fnz*kbM }
+                    # ── ดาบแวมไพร์ (Nova 5): ดูดพลังจากสิ่งที่ฟัน → ฟื้นผู้ถือ ──
+                    ถ้า swordType == 5.0 { bind hl = floor(dmgFoe*0.4);  ถ้า hl > 0.0 { bind ชีวิต = ชีวิต + hl;  ถ้า ชีวิต > ชีวิตสูงสุด { bind ชีวิต = ชีวิตสูงสุด }  bind popHeal = hl;  bind popHealT = 0.75;  เสียงเอฟเฟกต์(cx, cy, cz, 1.0, 520.0, 0.4*ปริมาณSFX, 0.2, "sine") } }
+                    bind hfi = slashNote - ปัดลง(slashNote/เก็บจำนวน)*เก็บจำนวน;  bind hfr = list_get(เก็บความถี่, hfi)
+                    ถ้า hitG > 0.5 { เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, 210.0, 0.55*ปริมาณSFX, 0.16, "square");  เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, 95.0, 0.3*ปริมาณSFX, 0.13, "noise") }
+                    มิฉะนั้น { เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, hfr*2.0, 0.6*ปริมาณSFX, 0.15, "sine");  เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, 150.0, 0.34*ปริมาณSFX, 0.16, "noise") }
+                    ถ้า crit > 0.5 { เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, 1250.0, 0.42*ปริมาณSFX, 0.12, "square") }
+                } } } }
                 ถ้า foeHurt > 0.0 { bind foeHurt = foeHurt - 0.016 }
+                ถ้า popDmgT > 0.0 { bind popDmgT = popDmgT - 0.016 }
+                ถ้า popHurtT > 0.0 { bind popHurtT = popHurtT - 0.016 }
+                ถ้า popHealT > 0.0 { bind popHealT = popHealT - 0.016 }
                 ถ้า foeHP < foeHPMax*0.28 { ถ้า callT <= 0.0 { bind callT = 1.8;  bind callMsg = ดึงคำเพล() } }
                 bind tauntT = tauntT - 0.016
                 ถ้า tauntT <= 0.0 { bind tauntT = 7.0 + สุ่ม()*5.0;  ถ้า callT <= 0.0 { bind callT = 1.6;  bind callMsg = ดึงคำใบ้() } }
@@ -1301,6 +1363,23 @@ bind เริ่ม = do {
                     }
                     มิฉะนั้น { bind pickCD = ตั้งรายการ(pickCD, sw_i, list_get(pickCD, sw_i) - 0.016) }
                     bind sw_i = sw_i + 1
+                }
+                # ── บัฟพาวเวอร์อัพ 3 จุด (วงใน r=12): 0,1 = ฮีล +25; 2 = LCK +1 (คริต) ──
+                bind bf_i = 0
+                ขณะที่ bf_i < 3 {
+                    ถ้า list_get(buffCD, bf_i) <= 0.0 {
+                        bind bfa = bf_i * 2.0944;  bind bfx = โคไซน์(bfa)*12.0;  bind bfz = ไซน์(bfa)*12.0
+                        ถ้า (cx-bfx)*(cx-bfx) + (cz-bfz)*(cz-bfz) < 26.0 {
+                            ถ้า bf_i < 2.0 {
+                                bind ชีวิต = ชีวิต + 25.0;  ถ้า ชีวิต > ชีวิตสูงสุด { bind ชีวิต = ชีวิตสูงสุด }
+                                bind popHeal = 25.0;  bind popHealT = 0.75;  เสียงเอฟเฟกต์(bfx, cy, bfz, 1.0, 720.0, 0.5*ปริมาณSFX, 0.3, "sine")
+                            }
+                            มิฉะนั้น { bind ผู้เล่นสเตตัส = ตั้งรายการ(ผู้เล่นสเตตัส, 5, list_get(ผู้เล่นสเตตัส,5) + 1.0);  เสียงเอฟเฟกต์(bfx, cy, bfz, 1.0, 980.0, 0.5*ปริมาณSFX, 0.3, "sine");  พิมพ์เหลือง("  ✦ LCK +1 (คริต)") }
+                            bind buffCD = ตั้งรายการ(buffCD, bf_i, 16.0)
+                        }
+                    }
+                    มิฉะนั้น { bind buffCD = ตั้งรายการ(buffCD, bf_i, list_get(buffCD, bf_i) - 0.016) }
+                    bind bf_i = bf_i + 1
                 }
                 # ── หมดเวลาดาบ → กลับไปดาบพื้นฐาน ──
                 ถ้า weaponT > 0.0 {
@@ -1543,6 +1622,31 @@ bind เริ่ม = do {
                 วาดอารีนา(t, ด่าน)
                 flush_3d()
                 วาดศัตรู(foeX, foeY, foeZ, R, foeBodyHue, foeStampHue, foeBandHue, floor(foeStamp), floor(foeBand), t, foeHurt, foeGuard, foeName, camYaw)
+                # ── ฟันดาบของศัตรู (อาร์คเติม หันเข้าหาผู้เล่น) ──
+                ถ้า foeSlashT > 0.0 {
+                    bind fyaw = atan2(cx - foeX, cz - foeZ)
+                    bind fprog = 1.0 - foeSlashT / 0.32
+                    bind fcol = สีจากเฉด(foeBandHue)
+                    วาดสแลชเติม(1.0, foeX, foeY + 0.5, foeZ, fyaw, fprog, 11.0, list_get(fcol,0), list_get(fcol,1), list_get(fcol,2))
+                    flush_3d()
+                }
+                # ── เลขดาเมจ/ฮีลลอยเหนือหัว (อาร์เคด) ──
+                โหมดผสม(1)
+                ถ้า popDmgT > 0.0 {
+                    bind pdr = (0.75 - popDmgT) * 5.0
+                    bind pds = 1.6;  bind pcr = 255;  bind pcg = 120;  bind pcb = 120
+                    ถ้า popDmgCrit > 0.5 { bind pds = 2.6;  bind pcr = 255;  bind pcg = 230;  bind pcb = 60 }
+                    วาดเลขป้าย(popDmg, foeX, foeY - R - pdr, foeZ, pds, camYaw, pcr, pcg, pcb)
+                }
+                ถ้า popHurtT > 0.0 {
+                    bind phr = (0.75 - popHurtT) * 5.0
+                    วาดเลขป้าย(popHurt, cx, cy - R - phr, cz, 1.6, camYaw, 255, 80, 80)
+                }
+                ถ้า popHealT > 0.0 {
+                    bind pgr = (0.75 - popHealT) * 5.0
+                    วาดเลขป้าย(popHeal, cx, cy - R - 2.0 - pgr, cz, 1.5, camYaw, 90, 255, 130)
+                }
+                flush_3d();  โหมดผสม(0)
                 ถ้า callT > 0.0 {
                     โหมดผสม(1);  สีดินสอ(255, 240, 180)
                     วาดสตริงป้าย(callMsg, foeX, foeY - R - 5.5, foeZ, 1.5, camYaw)
@@ -1559,6 +1663,20 @@ bind เริ่ม = do {
                     }
                     bind sd_i = sd_i + 1
                 }
+                # ── บัฟพาวเวอร์อัพ (วงใน): ฮีล=เขียว, LCK=ทอง ──
+                โหมดผสม(1)
+                bind bd_i = 0
+                ขณะที่ bd_i < 3 {
+                    ถ้า list_get(buffCD, bd_i) <= 0.0 {
+                        bind bda = bd_i * 2.0944;  bind bdx = โคไซน์(bda)*12.0;  bind bdz = ไซน์(bda)*12.0
+                        bind bdy = ความสูงอารีนา(bdx, bdz) - 3.0 + ไซน์(t*2.0 + bd_i)*0.5
+                        bind bcr = 90;  bind bcg = 255;  bind bcb = 130
+                        ถ้า bd_i == 2.0 { bind bcr = 255;  bind bcg = 215;  bind bcb = 60 }
+                        อนุภาคทรงกลม(bdx, bdy, bdz, 1.3, 14, t*2.0+bd_i, bcr, bcg, bcb)
+                    }
+                    bind bd_i = bd_i + 1
+                }
+                flush_3d();  โหมดผสม(0)
             }
             # พื้น vector texture + สถาปัตยกรรมเลเวล (เฉพาะนอกบอส/อาร์เคด)
             ถ้า บอสโหมด < 0.5 { ถ้า อาร์เคดโหมด < 0.5 {
@@ -1643,12 +1761,12 @@ bind เริ่ม = do {
                         bind gx = rcx + gx*1.5;  bind gz = rcz + gz*1.5
                     }
                     ถ้า (gx-cx)*(gx-cx) + (gz-cz)*(gz-cz) < 90000.0 {
-                        ถ้า มองเห็น(camX, camZ, gx, gz, vis2) > 0.5 {   # ไม่อยู่หลังผนัง
+                        ถ้า มองเห็น(camX, camZ, gx, gz, vis2) > 0.5 { ถ้า อาร์เคดโหมด < 0.5 { ถ้า บอสโหมด < 0.5 {   # ไม่วาดอักษรในอารีนาอาร์เคด/บอส
                             bind sp = t * 2.0 + ci
                             bind hh = t * 1.5 + ci * 0.5
                             สีดินสอ(floor((ไซน์(hh)*0.5+0.5)*185+70), floor((ไซน์(hh+2.094)*0.5+0.5)*185+70), floor((ไซน์(hh+4.189)*0.5+0.5)*185+70))
                             วาดกลิฟ3มิติ(list_get(เก็บไกลฟ, ci), gx, GROUND-2.2, gz, sp, 2.2)
-                        }
+                        } } }
                     }
                 }
                 bind ci = ci + 1
@@ -1780,7 +1898,7 @@ bind เริ่ม = do {
             # ── UI: แถบคะแนน + HUD ไอเทม (เลข/ล้อเลือก) ──
             ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)
             ตั้งระยะห่าง(2.8)
-            วาดแถบคะแนน(เก็บแล้ว, เก็บจำนวน, t)
+            ถ้า อาร์เคดโหมด < 0.5 { วาดแถบคะแนน(เก็บแล้ว, เก็บจำนวน, t) }   # อาร์เคด: ใช้ HUD เลือด MvC แทนช่องอักษร
             ถ้า สกิล >= 1.0 { วาดHUDสกิล(สกิล, เลือกไอเทม, t) }
             # ── แชต: ล็อก (4 บรรทัดล่าสุด) + กล่องพิมพ์ (เมื่อ chatActive) ──
             bind nlog = ความยาว(chatLog)

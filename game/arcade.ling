@@ -200,6 +200,39 @@ bind ดาบสเตตัส = [
     วาดเส้น3มิติ(wx + ax*rx, wy - ay, wz + ax*rz,  wx + bx*rx, wy - by, wz + bx*rz)
 }
 
+# ── ตัวเลขลอยแบบ 7-ส่วน (บิลบอร์ด) — ฟอนต์เวกเตอร์ไม่มีเลข เลยวาดเอง ──
+ฟังก์ชัน บิตมี(mask, bit) { คืน floor(mask/bit) - floor(mask/(bit*2.0))*2.0 }
+
+ฟังก์ชัน เลข7ส่วน(dg, wx, wy, wz, dx, w, h, rx, rz) {
+    bind masks = [63,6,91,79,102,109,125,7,127,111]   # a=1,b=2,c=4,d=8,e=16,f=32,g=64
+    bind m = list_get(masks, floor(dg));  bind h2 = h*0.5
+    ถ้า บิตมี(m,1)  > 0.5 { เส้นป้าย(wx,wy,wz, dx,h, dx+w,h, rx,rz) }
+    ถ้า บิตมี(m,2)  > 0.5 { เส้นป้าย(wx,wy,wz, dx+w,h, dx+w,h2, rx,rz) }
+    ถ้า บิตมี(m,4)  > 0.5 { เส้นป้าย(wx,wy,wz, dx+w,h2, dx+w,0.0, rx,rz) }
+    ถ้า บิตมี(m,8)  > 0.5 { เส้นป้าย(wx,wy,wz, dx,0.0, dx+w,0.0, rx,rz) }
+    ถ้า บิตมี(m,16) > 0.5 { เส้นป้าย(wx,wy,wz, dx,h2, dx,0.0, rx,rz) }
+    ถ้า บิตมี(m,32) > 0.5 { เส้นป้าย(wx,wy,wz, dx,h, dx,h2, rx,rz) }
+    ถ้า บิตมี(m,64) > 0.5 { เส้นป้าย(wx,wy,wz, dx,h2, dx+w,h2, rx,rz) }
+}
+
+# n (จำนวนเต็ม 0..999) ลอยที่ (wx,wy,wz) สูง s, หันกล้อง camYaw, สี r,g,b
+ฟังก์ชัน วาดเลขป้าย(n, wx, wy, wz, s, camYaw, r, g, b) {
+    bind rx = โคไซน์(camYaw);  bind rz = 0.0 - ไซน์(camYaw)
+    สีดินสอ(r, g, b)
+    bind nn = floor(n);  ถ้า nn < 0.0 { bind nn = 0.0 }
+    bind nd = 1;  ถ้า nn >= 10.0 { bind nd = 2 }  ถ้า nn >= 100.0 { bind nd = 3 }
+    bind w = s*0.6;  bind gap = s*0.34
+    bind startx = 0.0 - (nd*w + (nd-1)*gap)*0.5
+    bind p = 0
+    ขณะที่ p < nd {
+        bind pw = nd - 1 - p;  bind divv = 1.0
+        bind q = 0;  ขณะที่ q < pw { bind divv = divv*10.0;  bind q = q+1 }
+        bind dg = floor(nn/divv) - floor(nn/(divv*10.0))*10.0
+        เลข7ส่วน(dg, wx, wy, wz, startx + p*(w+gap), w, s, rx, rz)
+        bind p = p+1
+    }
+}
+
 # ── ดาบพิคอัพ slot 0..5 ที่ (wx,wy,wz) ขนาด s, หันกล้อง, บ๊อบตามเวลา ──
 ฟังก์ชัน วาดดาบพิค(slot, wx, wy, wz, s, camYaw, t) {
     bind rx = โคไซน์(camYaw);  bind rz = 0.0 - ไซน์(camYaw)

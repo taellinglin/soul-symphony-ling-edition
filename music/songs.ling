@@ -9,8 +9,9 @@
 ใช้ "Purika_data"
 ใช้ "PeaceLoveHappiness_data"
 ใช้ "Swing_data"
+ใช้ "MoonTime_data"
 
-bind จำนวนเพลง = 9
+bind จำนวนเพลง = 10
 
 # ข้อมูล MIDI (โน้ต/ตำแหน่งของเก็บ) ของเพลงดัชนี i — คู่กับ WAV ดัชนีเดียวกัน
 ฟังก์ชัน ข้อมูลเพลงดัชนี(i) {
@@ -22,6 +23,7 @@ bind จำนวนเพลง = 9
     ถ้า i == 6 { คืน ข้อมูลเพลง_Purika() }
     ถ้า i == 7 { คืน ข้อมูลเพลง_PeaceLoveHappiness() }
     ถ้า i == 8 { คืน ข้อมูลเพลง_Swing() }
+    ถ้า i == 9 { คืน ข้อมูลเพลง_MoonTime() }
     คืน ข้อมูลเพลง_Antartica()
 }
 
@@ -35,5 +37,6 @@ bind จำนวนเพลง = 9
     ถ้า i == 6 { คืน "music/Purika.wav" }
     ถ้า i == 7 { คืน "music/Peace Love Happiness.wav" }
     ถ้า i == 8 { คืน "music/Swing.wav" }
+    ถ้า i == 9 { คืน "music/MoonTime.wav" }
     คืน "music/Antartica.wav"
 }
