@@ -31,6 +31,7 @@ bind ST_LEVELSEL = 10
 bind ST_LOBBY = 11
 bind ST_ARCADE = 12
 bind ST_ARCRESULT = 13
+bind ST_HISCORE = 14
 
 bind เริ่ม = do {
     # ── เต็มจอจริง: ไม่มีขอบ/แถบชื่อ, ใช้ความละเอียด+FPS ของจอจริง ──
@@ -82,6 +83,21 @@ bind เริ่ม = do {
     bind slot0Data = list_get(savp, 0)
     bind slot1Data = list_get(savp, 1)
     bind slot2Data = list_get(savp, 2)
+
+    # ── ไฮสกอร์ (highscores.dat = "name,score;name,score;...") ──
+    bind hsNames = [];  bind hsScores = []
+    bind hsEnt = แยก(อ่านไฟล์("highscores.dat"), ";")
+    bind hi0 = 0
+    ขณะที่ hi0 < ความยาว(hsEnt) {
+        bind hpair = แยก(list_get(hsEnt, hi0), ",")
+        ถ้า ความยาว(hpair) >= 2 {
+            bind hsNames = list_push(hsNames, list_get(hpair, 0))
+            bind hsScores = list_push(hsScores, list_get(hpair, 1) * 1.0)
+        }
+        bind hi0 = hi0 + 1
+    }
+    bind menuIdleT = 0.0;  bind hsInserted = 0.0   # ตัวจับเวลาไอเดิลเมนู + ธงแทรกคะแนนแล้ว
+    bind ลูกชื่อ = "player"   # ค่าเริ่มชื่อลูก (เผื่อข้ามหน้าปรับแต่ง)
 
     พิมพ์เหลือง("══════════════════════════════════════════════")
     พิมพ์เหลือง("   Soul Symphony Ling — Made in Ling Country")
@@ -282,8 +298,10 @@ bind เริ่ม = do {
 
         # ── MENU ──────────────────────────────────────────────────────────────
         ถ้า สถานะ == ST_MENU {
-            ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 7 } }
-            ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 7 { bind sel = 0 } }
+            bind menuIdleT = menuIdleT + 0.016
+            ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 7 };  bind menuIdleT = 0.0 }
+            ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 7 { bind sel = 0 };  bind menuIdleT = 0.0 }
+            ถ้า menuIdleT > 16.0 { bind menuIdleT = 0.0;  bind สถานะ = ST_HISCORE }   # ไอเดิล → โชว์ไฮสกอร์
             วาดพื้นหลังเมนู(กรอบ)
             วาดเมนูภาษา(idsหลัก, sel, ภาษา, 0.0-7.0, 2.0, 0.85, t)
             แสดงผล()
@@ -391,8 +409,31 @@ bind เริ่ม = do {
             สีดินสอ(150, 160, 200);  วาดสตริง("press enter for points", 0.0, 6.5, 0.0, 0.55, 1)
             flush_3d();  โหมดผสม(0)
             แสดงผล()
-            ถ้า กดปุ่ม("enter")  { bind อาร์เคดโหมด = 0;  bind ผลพิมพ์ = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
+            ถ้า กดปุ่ม("enter")  {
+                ถ้า hsInserted < 0.5 {
+                    bind hnm = ลูกชื่อ;  ถ้า hnm == "" { bind hnm = "player" }
+                    bind hres = แทรกไฮสกอร์(hsNames, hsScores, hnm, floor(อาร์เคดแต้ม))
+                    bind hsNames = list_get(hres, 0);  bind hsScores = list_get(hres, 1)
+                    บันทึกไฮสกอร์(hsNames, hsScores);  bind hsInserted = 1.0
+                }
+                bind ผลพิมพ์ = 0.0;  bind สถานะ = ST_HISCORE
+            }
             ถ้า กดปุ่ม("escape") { bind อาร์เคดโหมด = 0;  bind ผลพิมพ์ = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
+        }
+
+        # ── HIGH SCORES (หลัง game over + ไอเดิลเมนู) ──
+        ถ้า สถานะ == ST_HISCORE {
+            วาดพื้นหลังเมนู(กรอบ)
+            ตั้งแสงรอบข้าง(1.0)
+            ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)
+            ตั้งระยะห่าง(2.8)
+            วาดไฮสกอร์(hsNames, hsScores, t)
+            โหมดผสม(1);  สีดินสอ(150, 160, 200);  วาดสตริง("press enter", 0.0, 7.4, 0.0, 0.5, 1);  flush_3d();  โหมดผสม(0)
+            แสดงผล()
+            ถ้า กดปุ่ม("enter")  { bind อาร์เคดโหมด = 0;  bind hsInserted = 0.0;  bind menuIdleT = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
+            ถ้า กดปุ่ม("escape") { bind อาร์เคดโหมด = 0;  bind hsInserted = 0.0;  bind menuIdleT = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
+            ถ้า กดปุ่ม("up")     { bind menuIdleT = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
+            ถ้า กดปุ่ม("down")   { bind menuIdleT = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
         }
 
         # ── LEVEL SELECT ────────────────────────────────────────────────────────

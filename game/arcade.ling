@@ -263,6 +263,47 @@ bind ดาบสเตตัส = [
     }
 }
 
+# ── ไฮสกอร์: แทรกแบบเรียงมาก→น้อย, ตัดเหลือ 10 → คืน [names, scores] ──
+ฟังก์ชัน แทรกไฮสกอร์(names, scores, nm, sc) {
+    bind nN = [];  bind nS = [];  bind placed = 0.0;  bind i = 0
+    ขณะที่ i < ความยาว(scores) {
+        ถ้า placed < 0.5 { ถ้า sc > list_get(scores, i) { bind nN = list_push(nN, nm);  bind nS = list_push(nS, sc);  bind placed = 1.0 } }
+        bind nN = list_push(nN, list_get(names, i));  bind nS = list_push(nS, list_get(scores, i))
+        bind i = i + 1
+    }
+    ถ้า placed < 0.5 { bind nN = list_push(nN, nm);  bind nS = list_push(nS, sc) }
+    bind cN = [];  bind cS = [];  bind j = 0
+    ขณะที่ j < ความยาว(nS) { ถ้า j < 10 { bind cN = list_push(cN, list_get(nN, j));  bind cS = list_push(cS, list_get(nS, j)) }  bind j = j + 1 }
+    คืน [cN, cS]
+}
+
+# ── บันทึกไฮสกอร์ → highscores.dat ("name,score;...") ──
+ฟังก์ชัน บันทึกไฮสกอร์(names, scores) {
+    bind out = "";  bind i = 0
+    ขณะที่ i < ความยาว(scores) {
+        ถ้า i > 0 { bind out = out + ";" }
+        bind out = out + list_get(names, i) + "," + to_str(floor(list_get(scores, i)))
+        bind i = i + 1
+    }
+    เขียนไฟล์("highscores.dat", out)
+    คืน 0
+}
+
+# ── วาดตารางไฮสกอร์ (ชื่อ a-z + คะแนน 7-ส่วน) ──
+ฟังก์ชัน วาดไฮสกอร์(names, scores, t) {
+    โหมดผสม(1)
+    สีดินสอ(255, 220, 90);  วาดสตริง("high scores", 0.0, 0.0-7.2, 0.0, 1.1, 1)
+    bind n = ความยาว(scores);  ถ้า n > 8 { bind n = 8 }
+    bind i = 0
+    ขณะที่ i < n {
+        bind yy = 0.0-4.5 + i*1.5;  bind c = 245 - i*16
+        สีดินสอ(c, c, 210);  วาดสตริง(list_get(names, i), 0.0-5.5, yy, 0.0, 0.6, 1)
+        วาดเลขป้าย(list_get(scores, i), 6.5, yy + 0.35, 0.0, 0.8, 0.0, 255, 225, 110)
+        bind i = i + 1
+    }
+    flush_3d();  โหมดผสม(0)
+}
+
 # ── ดาบพิคอัพ slot 0..5 ที่ (wx,wy,wz) ขนาด s, หันกล้อง, บ๊อบตามเวลา ──
 ฟังก์ชัน วาดดาบพิค(slot, wx, wy, wz, s, camYaw, t) {
     bind rx = โคไซน์(camYaw);  bind rz = 0.0 - ไซน์(camYaw)

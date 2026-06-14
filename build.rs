@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::{env, fs};
 
 const ASSET_DIRS: &[&str] = &["game", "font", "music"];
-const ASSET_FILES: &[&str] = &["options.cfg", "net.cfg", "saves.dat"];
+const ASSET_FILES: &[&str] = &["options.cfg", "net.cfg", "saves.dat", "highscores.dat"];
 const ICON: &str = "assets/ling.ico";
 
 fn main() {
