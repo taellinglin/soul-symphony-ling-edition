@@ -105,6 +105,7 @@ bind เริ่ม = do {
         bind hi0 = hi0 + 1
     }
     bind menuIdleT = 0.0;  bind hsInserted = 0.0   # ตัวจับเวลาไอเดิลเมนู + ธงแทรกคะแนนแล้ว
+    bind gpNavT = 0.0;  bind gpAp = 0.0   # จอย: ดีเลย์เลื่อนเมนู + ขอบปุ่ม A
     bind ลูกชื่อ = "player"   # ค่าเริ่มชื่อลูก (เผื่อข้ามหน้าปรับแต่ง)
 
     พิมพ์เหลือง("══════════════════════════════════════════════")
@@ -225,6 +226,7 @@ bind เริ่ม = do {
     # ════════════════════════════════════════════════════════════════════════
     ขณะที่ หน้าต่างเปิดอยู่() && ออกเกม == 0 {
         bind t = เวลาปัจจุบัน()
+        จอยโพล()                           # อัปเดตจอยทุกเฟรม
         ตั้งหมอก(0, 0, 0, 0.0, 0.0)        # หมอกปิดเริ่มต้น (เกมเพลย์เปิดเอง)
 
         # ── BOOT ──────────────────────────────────────────────────────────────
@@ -309,11 +311,24 @@ bind เริ่ม = do {
             bind menuIdleT = menuIdleT + 0.016
             ถ้า กดปุ่ม("up")   { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 7 };  bind menuIdleT = 0.0 }
             ถ้า กดปุ่ม("down") { bind sel = sel + 1;  ถ้า sel > 7 { bind sel = 0 };  bind menuIdleT = 0.0 }
+            # ── จอย: D-pad/สติ๊ก เลื่อนเมนู (ดีบาวซ์) ──
+            ถ้า gpNavT > 0.0 { bind gpNavT = gpNavT - 0.016 }
+            ถ้า gpNavT <= 0.0 {
+                bind gUp = 0.0;  ถ้า จอยปุ่ม("dup") { bind gUp = 1.0 }  ถ้า จอยแกน("ly") > 0.6 { bind gUp = 1.0 }
+                bind gDn = 0.0;  ถ้า จอยปุ่ม("ddown") { bind gDn = 1.0 }  ถ้า จอยแกน("ly") < 0.0-0.6 { bind gDn = 1.0 }
+                ถ้า gUp > 0.5 { bind sel = sel - 1;  ถ้า sel < 0 { bind sel = 7 };  bind gpNavT = 0.18;  bind menuIdleT = 0.0 }
+                ถ้า gDn > 0.5 { bind sel = sel + 1;  ถ้า sel > 7 { bind sel = 0 };  bind gpNavT = 0.18;  bind menuIdleT = 0.0 }
+            }
             ถ้า menuIdleT > 16.0 { bind menuIdleT = 0.0;  bind สถานะ = ST_HISCORE }   # ไอเดิล → โชว์ไฮสกอร์
             วาดพื้นหลังเมนู(กรอบ)
             วาดเมนูภาษา(idsหลัก, sel, ภาษา, 0.0-7.0, 2.0, 0.85, t)
             แสดงผล()
-            ถ้า กดปุ่ม("enter") {
+            bind gpA = จอยปุ่ม("a");  bind menuGo = 0.0
+            ถ้า กดปุ่ม("enter") { bind menuGo = 1.0 }
+            ถ้า gpA > 0.5 { ถ้า gpAp < 0.5 { bind menuGo = 1.0 } }
+            bind gpAp = gpA
+            ถ้า menuGo > 0.5 {
+                จอยสั่น(0.0, 0.25, 45)   # จอย: เลือกเมนู
                 ถ้า sel == 0 { bind สถานะ = ST_LOAD;  bind sel = 0 }
                 ถ้า sel == 1 { bind ด่าน = 0;  bind สกิลเริ่ม = 0.0;  bind สถานะ = ST_CINE;  bind cineStart = เวลาปัจจุบัน();  bind prevLine = 0.0 - 1.0;  bind flashAmt = 0.0;  bind purified = 0;  ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) } }
                 ถ้า sel == 2 { bind สถานะ = ST_ARCADE;  bind sel = 0;  text_clear() }
@@ -1022,19 +1037,23 @@ bind เริ่ม = do {
                 # ── เมาส์ = หมุนกล้องโคจร (yaw) + เงย/ก้ม (pitch) ──
                 bind camYaw = camYaw + เมาส์X() * 0.005
                 bind camPitch = camPitch + เมาส์Y() * 0.004
+                bind grx = จอยแกน("rx");  bind gry = จอยแกน("ry")   # จอย: สติ๊กขวา = มองกล้อง
+                ถ้า grx*grx + gry*gry > 0.04 { bind camYaw = camYaw + grx*0.045;  bind camPitch = camPitch + gry*0.035 }
                 ถ้า camPitch < 0.0-0.45 { bind camPitch = 0.0-0.45 }
                 ถ้า camPitch > 1.15 { bind camPitch = 1.15 }
                 # ── การ์ด: คลิกขวา = ตั้งการ์ด (ลดดาเมจ 80%); หลุดเมื่อโจมตี หรือครบ 6 วิ ──
-                ถ้า เมาส์ขวา() {
+                bind gGuard = 0.0;  ถ้า เมาส์ขวา() { bind gGuard = 1.0 }  ถ้า จอยปุ่ม("l1") { bind gGuard = 1.0 }   # L1 = การ์ด
+                ถ้า gGuard > 0.5 {
                     ถ้า guardHeld < 0.5 { bind guardT = 0.0 }       # เพิ่งกด → รีเซ็ตจับเวลา
                     bind guardHeld = 1.0
                     bind guardT = guardT + 0.016
                     ถ้า guardT < 6.0 { bind guarding = 1.0 }  มิฉะนั้น { bind guarding = 0.0 }
                 }
                 มิฉะนั้น { bind guardHeld = 0.0;  bind guarding = 0.0;  bind guardT = 0.0 }
-                # ── ดาบ: คลิกซ้าย = ฟันเร็ว + คอมโบ (h/v/แทง) + ทิ้งรอยอาร์ค ──
+                # ── ดาบ: คลิกซ้าย / R1 = ฟันเร็ว + คอมโบ (h/v/แทง) + ทิ้งรอยอาร์ค ──
                 bind mbNow = 0.0
                 ถ้า mouse_down() { bind mbNow = 1.0 }
+                ถ้า จอยปุ่ม("r1") { bind mbNow = 1.0 }   # R1 = ฟัน
                 ถ้า mbNow > 0.5 { ถ้า mbDown < 0.5 {
                     bind guarding = 0.0;  bind guardT = 6.0          # โจมตี → การ์ดหลุด (จนปล่อยคลิกขวา)
                     # ── ไอเทม 1 = ดาบ: ฟันคอมโบ จูนกับโน้ต MIDI ──
@@ -1217,6 +1236,9 @@ bind เริ่ม = do {
                 ถ้า กดค้าง("a") { bind mvx = mvx - rgx;  bind mvz = mvz - rgz }
                 ถ้า กดค้าง("e") { bind mvx = mvx + rgx;  bind mvz = mvz + rgz }
                 ถ้า กดค้าง("q") { bind mvx = mvx - rgx;  bind mvz = mvz - rgz }
+                # ── จอย: สติ๊กซ้าย = เดิน (สัมพัทธ์กล้อง) ──
+                bind glx = จอยแกน("lx");  bind gly = จอยแกน("ly")
+                ถ้า glx*glx + gly*gly > 0.04 { bind mvx = mvx + fx*gly + rgx*glx;  bind mvz = mvz + fz*gly + rgz*glx }
                 bind ml = รากที่สอง(mvx*mvx + mvz*mvz)
                 ถ้า ml > 0.01 {
                     bind vx = vx + (mvx/ml) * 0.045
@@ -1230,6 +1252,7 @@ bind เริ่ม = do {
                 # ── charge jump: กดค้าง Space ตอนแตะพื้นเพื่อชาร์จ, ปล่อย → กระโดด ──
                 bind spNow = 0.0
                 ถ้า กดค้าง("space") { bind spNow = 1.0 }
+                ถ้า จอยปุ่ม("a") { bind spNow = 1.0 }   # จอย: A = กระโดด
                 ถ้า spNow > 0.5 {
                     ถ้า grounded > 0.5 {
                         bind charge = charge + 0.085
@@ -1239,6 +1262,7 @@ bind เริ่ม = do {
                 มิฉะนั้น {
                     ถ้า spDown > 0.5 { ถ้า charge > 0.01 {
                         bind vy = vy - (0.9 + charge)
+                        จอยสั่น(0.12, 0.28 + charge*0.1, 55)   # จอย: กระโดด (แรงตามชาร์จ)
                     } }
                     bind charge = charge * 0.4
                 }
@@ -1259,6 +1283,7 @@ bind เริ่ม = do {
                     ถ้า vy > 0.35 {                                              # กระแทกแรงพอ → เด้ง + ระฆัง
                         bind squash = vy * 0.5;  ถ้า squash > 0.6 { bind squash = 0.6 }
                         เสียงชน(เก็บความถี่, เก็บจำนวน, vy, ปริมาณSFX, cx, cy, cz)   # ระฆังกระทบพื้น (จูนเพลง)
+                        จอยสั่น(0.2, 0.45, 70)   # จอย: เด้งพื้น
                         bind vy = 0.0 - vy * 0.72
                     }
                     มิฉะนั้น { bind vy = 0.0 }                                    # กระแทกเบา → วางนิ่งบนพื้น (เลิกเด้งจิ๋ว)
@@ -1472,6 +1497,7 @@ bind เริ่ม = do {
                     bind dmgPl = foeAtk * (1.0 - guarding*0.85)
                     bind ชีวิต = ชีวิต - dmgPl
                     bind บาดเจ็บ = 0.5;  bind foeSlashT = 0.0
+                    ถ้า guarding > 0.5 { จอยสั่น(0.4, 0.6, 90) }  มิฉะนั้น { จอยสั่น(0.85, 0.85, 220) }   # จอย: กันโดน / โดนเต็ม
                     bind popHurt = dmgPl;  bind popHurtT = 0.75
                     bind forceF = 0.7 + foeAtk*0.22 + foeAgi*1.2;  ถ้า guarding > 0.5 { bind forceF = forceF*0.4 }   # เด้ง: แรง ∝ พลัง+คล่อง (โค้ง)
                     ถ้า สุ่ม() < forceF*0.5 { bind kbF = forceF*(0.5 + forceF*0.22);  bind vx = vx + fnx*kbF;  bind vz = vz + fnz*kbF }
@@ -1486,6 +1512,7 @@ bind เริ่ม = do {
                     bind crit = 0.0;  ถ้า สุ่ม() < 0.05 + list_get(ผู้เล่นสเตตัส,5)*0.02 { bind crit = 1.0;  bind dmgFoe = dmgFoe * 2.2 }
                     bind hitG = 0.0;  ถ้า foeGuard > 0.5 { bind dmgFoe = dmgFoe * 0.2;  bind hitG = 1.0 }
                     bind foeHP = foeHP - dmgFoe;  bind foeHurt = 0.3
+                    ถ้า hitG > 0.5 { จอยสั่น(0.5, 0.7, 90) }  มิฉะนั้น { จอยสั่น(0.3, 0.55, 100) }   # จอย: โดนการ์ด / ตีโดน
                     bind popDmg = dmgFoe;  bind popDmgT = 0.75;  bind popDmgCrit = crit
                     # เด้งถอย: โอกาส+แรง ∝ แรงปะทะ (โค้ง — แรงมาก เด้งแน่+ไกลขึ้นเร็ว)
                     bind forceP = 1.0 + list_get(sstF,1)*0.9;  ถ้า crit > 0.5 { bind forceP = forceP*1.6 }  ถ้า hitG > 0.5 { bind forceP = forceP*0.4 }
