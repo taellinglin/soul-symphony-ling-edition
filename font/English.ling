@@ -28,6 +28,28 @@
 ใช้ "English/x"
 ใช้ "English/y"
 ใช้ "English/z"
+ใช้ "English/d0"
+ใช้ "English/d1"
+ใช้ "English/d2"
+ใช้ "English/d3"
+ใช้ "English/d4"
+ใช้ "English/d5"
+ใช้ "English/d6"
+ใช้ "English/d7"
+ใช้ "English/d8"
+ใช้ "English/d9"
+ใช้ "English/dot"
+ใช้ "English/comma"
+ใช้ "English/bang"
+ใช้ "English/ques"
+ใช้ "English/apos"
+ใช้ "English/dash"
+ใช้ "English/colon"
+ใช้ "English/semi"
+ใช้ "English/lparen"
+ใช้ "English/rparen"
+ใช้ "English/slash"
+ใช้ "English/plus"
 
 ฟังก์ชัน วาดอักขระEnglish(ดัชนี, ox,oy,oz, rx,ry,rz, ux,uy,uz, s) {
     ถ้า ดัชนี == 0 { อักขระ_English_a(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
@@ -56,4 +78,26 @@
     ถ้า ดัชนี == 23 { อักขระ_English_x(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
     ถ้า ดัชนี == 24 { อักขระ_English_y(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
     ถ้า ดัชนี == 25 { อักขระ_English_z(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 26 { อักขระ_English_d0(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 27 { อักขระ_English_d1(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 28 { อักขระ_English_d2(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 29 { อักขระ_English_d3(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 30 { อักขระ_English_d4(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 31 { อักขระ_English_d5(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 32 { อักขระ_English_d6(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 33 { อักขระ_English_d7(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 34 { อักขระ_English_d8(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 35 { อักขระ_English_d9(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 36 { อักขระ_English_dot(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 37 { อักขระ_English_comma(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 38 { อักขระ_English_bang(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 39 { อักขระ_English_ques(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 40 { อักขระ_English_apos(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 41 { อักขระ_English_dash(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 42 { อักขระ_English_colon(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 43 { อักขระ_English_semi(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 44 { อักขระ_English_lparen(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 45 { อักขระ_English_rparen(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 46 { อักขระ_English_slash(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
+    ถ้า ดัชนี == 47 { อักขระ_English_plus(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }
 }

@@ -52,6 +52,18 @@ struct Rect {
     y1: usize, // [y0, y1)  exclusive, bottom
 }
 
+// Characters baked, in dispatch-index order (a–z keep 0–25 for back-compat).
+// Each entry is (char, safe_name) — the name is used for filenames/function ids
+// since punctuation can't appear in those. Keep in sync with ตัวอักษรเป็นดัชนี.
+const CHARSET: &[(char, &str)] = &[
+    ('a',"a"),('b',"b"),('c',"c"),('d',"d"),('e',"e"),('f',"f"),('g',"g"),('h',"h"),('i',"i"),
+    ('j',"j"),('k',"k"),('l',"l"),('m',"m"),('n',"n"),('o',"o"),('p',"p"),('q',"q"),('r',"r"),
+    ('s',"s"),('t',"t"),('u',"u"),('v',"v"),('w',"w"),('x',"x"),('y',"y"),('z',"z"),
+    ('0',"d0"),('1',"d1"),('2',"d2"),('3',"d3"),('4',"d4"),('5',"d5"),('6',"d6"),('7',"d7"),('8',"d8"),('9',"d9"),
+    ('.',"dot"),(',',"comma"),('!',"bang"),('?',"ques"),('\'',"apos"),('-',"dash"),
+    (':',"colon"),(';',"semi"),('(',"lparen"),(')',"rparen"),('/',"slash"),('+',"plus"),
+];
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 4 {
@@ -75,16 +87,20 @@ fn main() {
     let glyph_dir = Path::new(out_root).join(font_name);
     fs::create_dir_all(&glyph_dir).unwrap();
 
-    let mut present: Vec<char> = Vec::new();
+    let mut present: Vec<(usize, &'static str)> = Vec::new();
 
-    for letter in b'a'..=b'z' {
-        let ch = letter as char;
+    for (idx, &(ch, name)) in CHARSET.iter().enumerate() {
         let (metrics, bitmap) = font.rasterize(ch, PX);
         let w = metrics.width;
         let h = metrics.height;
 
         if w == 0 || h == 0 || bitmap.iter().all(|&c| c < THRESH) {
-            // blank glyph — skip entirely
+            // blank glyph (e.g. space) — emit an empty glyph so the index is kept
+            fs::write(
+                glyph_dir.join(format!("{name}.ling")),
+                format!("ฟังก์ชัน อักขระ_{font_name}_{name}(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) {{\n}}\n"),
+            ).unwrap();
+            present.push((idx, name));
             continue;
         }
 
@@ -159,7 +175,7 @@ fn main() {
         .unwrap();
         writeln!(
             body,
-            "ฟังก์ชัน อักขระ_{font_name}_{ch}(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) {{"
+            "ฟังก์ชัน อักขระ_{font_name}_{name}(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) {{"
         )
         .unwrap();
 
@@ -188,9 +204,9 @@ fn main() {
 
         writeln!(body, "}}").unwrap();
 
-        let file = glyph_dir.join(format!("{ch}.ling"));
+        let file = glyph_dir.join(format!("{name}.ling"));
         fs::write(&file, body).unwrap();
-        present.push(ch);
+        present.push((idx, name));
         eprintln!("  {ch}: {} rects", rects.len());
     }
 
@@ -216,8 +232,8 @@ fn main() {
         "# ───────────────────────────────────────────────────────────────"
     )
     .unwrap();
-    for ch in &present {
-        writeln!(agg, "ใช้ \"{font_name}/{ch}\"").unwrap();
+    for (_, name) in &present {
+        writeln!(agg, "ใช้ \"{font_name}/{name}\"").unwrap();
     }
     writeln!(agg).unwrap();
     writeln!(
@@ -225,11 +241,10 @@ fn main() {
         "ฟังก์ชัน วาดอักขระ{font_name}(ดัชนี, ox,oy,oz, rx,ry,rz, ux,uy,uz, s) {{"
     )
     .unwrap();
-    for ch in &present {
-        let idx = (*ch as u8 - b'a') as usize;
+    for (idx, name) in &present {
         writeln!(
             agg,
-            "    ถ้า ดัชนี == {idx} {{ อักขระ_{font_name}_{ch}(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }}"
+            "    ถ้า ดัชนี == {idx} {{ อักขระ_{font_name}_{name}(ox,oy,oz, rx,ry,rz, ux,uy,uz, s) }}"
         )
         .unwrap();
     }
