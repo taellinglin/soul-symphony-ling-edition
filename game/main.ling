@@ -32,6 +32,7 @@ bind ST_LOBBY = 11
 bind ST_ARCADE = 12
 bind ST_ARCRESULT = 13
 bind ST_HISCORE = 14
+bind ST_JOINLIST = 15
 
 bind เริ่ม = do {
     # ── เต็มจอจริง: ไม่มีขอบ/แถบชื่อ, ใช้ความละเอียด+FPS ของจอจริง ──
@@ -75,7 +76,9 @@ bind เริ่ม = do {
     bind netP   = แยก(netCfg, ";")
     bind netIP   = list_get(netP, 0)
     bind netPort = floor(list_get(netP, 1) * 1.0)
+    bind discPort = netPort + 1   # พอร์ตค้นหาลอบบี้ LAN (UDP broadcast)
     bind netReady = 0
+    bind srvSel = 0;  bind srvIPs = [];  bind srvInfos = []   # รายการเซิร์ฟเวอร์ที่เจอ
 
     # ── โหลดช่องเซฟ (saves.dat = "slot0;slot1;slot2") ───────────────────────
     bind sav  = อ่านไฟล์("saves.dat")
@@ -541,11 +544,59 @@ bind เริ่ม = do {
             แสดงผล()
             ถ้า กดปุ่ม("enter") {
                 bind coopRole = sel
-                ถ้า sel == 0 { เน็ตโฮสต์(netPort) }    # Host: เปิดพอร์ตรอผู้เล่น
-                มิฉะนั้น { เน็ตจอย(netIP, netPort) }    # Join: ต่อไปยัง IP ใน net.cfg
-                bind สถานะ = ST_LOBBY
+                ถ้า sel == 0 {
+                    เน็ตโฮสต์(netPort)                                                  # Host: เปิดพอร์ตรอผู้เล่น
+                    bind hMode = "coop";  ถ้า vsโหมด == 1 { bind hMode = "vs" }
+                    เน็ตประกาศ(discPort, ลูกชื่อ + "|" + hMode + "|arena|0")            # ประกาศลอบบี้ LAN (ชื่อ|โหมด|สเตจ|ส่วนตัว)
+                    bind สถานะ = ST_LOBBY
+                }
+                มิฉะนั้น { bind srvSel = 0;  bind สถานะ = ST_JOINLIST }                  # Join: เปิดรายการเซิร์ฟเวอร์
             }
             ถ้า กดปุ่ม("escape") { bind สถานะ = ST_MENU;  bind sel = 4 }
+        }
+
+        # ── JOIN LOBBY: รายการเซิร์ฟเวอร์ LAN ที่เจอ (UDP discovery) ──
+        ถ้า สถานะ == ST_JOINLIST {
+            bind dlist = เน็ตค้นหา(discPort)            # "ip|name|mode|stage|private\n..."
+            bind dlines = แยก(dlist, "\n")
+            bind srvIPs = [];  bind srvInfos = []
+            bind di = 0
+            ขณะที่ di < ความยาว(dlines) {
+                bind dl = list_get(dlines, di)
+                ถ้า ความยาว(dl) > 2 {
+                    bind df = แยก(dl, "|")
+                    ถ้า ความยาว(df) >= 2 {
+                        bind srvIPs = list_push(srvIPs, list_get(df, 0))
+                        bind srvInfos = list_push(srvInfos, df)
+                    }
+                }
+                bind di = di + 1
+            }
+            bind nsrv = ความยาว(srvIPs)
+            ถ้า กดปุ่ม("up")   { bind srvSel = srvSel - 1;  ถ้า srvSel < 0 { bind srvSel = nsrv - 1 } }
+            ถ้า กดปุ่ม("down") { bind srvSel = srvSel + 1;  ถ้า srvSel > nsrv - 1 { bind srvSel = 0 } }
+            ถ้า srvSel < 0 { bind srvSel = 0 }
+            วาดพื้นหลังเมนู(กรอบ)
+            ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0);  ตั้งระยะห่าง(2.8)
+            โหมดผสม(1)
+            สีดินสอ(120, 200, 255);  วาดสตริง("open games", 0.0, 0.0-7.0, 0.0, 1.0, 1)
+            ถ้า nsrv < 1 { สีดินสอ(150, 160, 200);  วาดสตริง("searching lan", 0.0, 0.0-1.0, 0.0, 0.6, 1) }
+            bind sj = 0
+            ขณะที่ sj < nsrv { ถ้า sj < 8 {
+                bind info = list_get(srvInfos, sj)
+                bind nm = list_get(info, 1);  bind md = "coop";  ถ้า ความยาว(info) >= 3 { bind md = list_get(info, 2) }
+                bind yy = 0.0-4.5 + sj*1.5
+                ถ้า sj == srvSel { สีดินสอ(255, 230, 120) }  มิฉะนั้น { สีดินสอ(170, 185, 220) }
+                วาดสตริง(nm + " " + md, 0.0, yy, 0.0, 0.6, 1)
+                bind sj = sj + 1
+            }  มิฉะนั้น { bind sj = nsrv } }
+            สีดินสอ(110, 125, 160);  วาดสตริง("enter join · esc back", 0.0, 7.3, 0.0, 0.46, 1)
+            flush_3d();  โหมดผสม(0)
+            แสดงผล()
+            ถ้า กดปุ่ม("enter") { ถ้า nsrv > 0 {
+                bind coopRole = 1;  เน็ตจอย(list_get(srvIPs, srvSel), netPort);  bind สถานะ = ST_LOBBY
+            } }
+            ถ้า กดปุ่ม("escape") { bind สถานะ = ST_MP;  bind sel = 1 }
         }
 
         # ── LOBBY: รอการเชื่อมต่อเครือข่าย → เริ่ม co-op เมื่อ status==2 ──────────
