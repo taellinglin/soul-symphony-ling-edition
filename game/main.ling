@@ -1733,6 +1733,7 @@ bind เริ่ม = do {
             bind shf = GROUND
             ถ้า ด่าน > 0.5 { bind shf = ความสูงพื้น2(cx, cz) }
             ถ้า บอสโหมด > 0.5 { bind shf = ความสูงอารีนา(cx, cz) }
+            ถ้า อาร์เคดโหมด > 0.5 { bind shf = ความสูงอารีนา(cx, cz) }   # อารีนา: เงาเกาะพื้นอารีนา (ไม่ใช่ GROUND)
             bind shs = R * 1.4 + (shf - cy) * 0.05
             ถ้า shs > R * 4.0 { bind shs = R * 4.0 }
             bind shy = shf - 0.3
