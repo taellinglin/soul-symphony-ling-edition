@@ -227,6 +227,23 @@ bind เริ่ม = do {
     ขณะที่ หน้าต่างเปิดอยู่() && ออกเกม == 0 {
         bind t = เวลาปัจจุบัน()
         จอยโพล()                           # อัปเดตจอยทุกเฟรม
+        # ── F12: สกรีนช็อต PNG → ./screenshots/ (ติดเวลา + โหมด) ──
+        ถ้า กดปุ่ม("f12") {
+            bind mdn = "game"
+            ถ้า สถานะ == ST_BOOT { bind mdn = "boot" }
+            ถ้า สถานะ == ST_TITLE { bind mdn = "title" }
+            ถ้า สถานะ == ST_MENU { bind mdn = "mainmenu" }
+            ถ้า สถานะ == ST_CINE { bind mdn = "intro" }
+            ถ้า สถานะ == ST_ARCADE { bind mdn = "customize" }
+            ถ้า สถานะ == ST_HISCORE { bind mdn = "highscores" }
+            ถ้า สถานะ == ST_PLAY {
+                bind mdn = "story"
+                ถ้า อาร์เคดโหมด > 0.5 { bind mdn = "arcade" }
+                ถ้า บอสโหมด > 0.5 { bind mdn = "boss" }
+                ถ้า vsโหมด == 1 { bind mdn = "versus" }
+            }
+            บันทึกภาพ(mdn)
+        }
         ตั้งหมอก(0, 0, 0, 0.0, 0.0)        # หมอกปิดเริ่มต้น (เกมเพลย์เปิดเอง)
 
         # ── BOOT ──────────────────────────────────────────────────────────────
