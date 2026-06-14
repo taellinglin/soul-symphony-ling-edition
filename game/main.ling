@@ -3,6 +3,7 @@
 ใช้ "../music/songs"
 ใช้ "../music/SoulSymphony_data"
 ใช้ "../game/arena"
+ใช้ "../game/boss"
 ใช้ "../game/proc_gen_level"
 ใช้ "../game/arcade"
 ใช้ "../font/Daemon"
