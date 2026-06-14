@@ -1693,7 +1693,7 @@ dependencies = [
 
 [[package]]
 name = "ling-gpu"
-version = "2030.0.0"
+version = "2030.0.1"
 
 [[package]]
 name = "ling-graphics"
@@ -1718,7 +1718,7 @@ dependencies = [
 
 [[package]]
 name = "ling-lang"
-version = "2030.1.24"
+version = "2030.1.25"
 dependencies = [
  "base64 0.22.1",
  "flate2",
@@ -2879,7 +2879,6 @@ name = "soul-symphony-ling"
 version = "0.1.0"
 dependencies = [
  "ling-lang",
- "toml",
  "winresource",
 ]
 

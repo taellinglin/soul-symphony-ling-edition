@@ -1,21 +1,23 @@
-// build.rs — bundle runtime assets next to the binary + embed the exe icon.
+// build.rs — bundle runtime assets next to the binary + embed the exe icon, so
+// the built .exe runs standalone (it runs with CWD = target/<profile>/).
 //
-// Reads Cargo.toml metadata:
-//   [package.metadata.assets] dirs = [...]   → copied (incrementally) into
-//                                              target/<profile>/<dir> so the
-//                                              .exe runs standalone.
-//   [package.metadata.icon]   path = "..."   → embedded as the Windows exe icon.
+//   ASSET_DIRS  → copied (incrementally) into target/<profile>/<dir>.
+//   ASSET_FILES → copied only if absent at the destination, so the exe's
+//                 runtime-saved configs (options.cfg / net.cfg) survive rebuilds.
+//   ICON        → embedded as the Windows exe icon.
 //
-// The music/ folder is ~1 GB, so copying is incremental (size + mtime check).
+// (These mirror [package.metadata.assets] / [package.metadata.icon] in Cargo.toml,
+// kept as plain constants here to avoid a TOML-parser build dependency.)
 
 use std::path::{Path, PathBuf};
 use std::{env, fs};
 
+const ASSET_DIRS: &[&str] = &["game", "font", "music"];
+const ASSET_FILES: &[&str] = &["options.cfg", "net.cfg", "saves.dat"];
+const ICON: &str = "assets/ling.ico";
+
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).unwrap_or_default();
-    let parsed: toml::Value = cargo_toml.parse().unwrap_or(toml::Value::Table(Default::default()));
-    let meta = parsed.get("package").and_then(|p| p.get("metadata"));
 
     // target/<profile> (where the binary lands): OUT_DIR is
     // target/<profile>/build/<crate-hash>/out → 3 levels up.
@@ -30,36 +32,31 @@ fn main() {
                 .join(env::var("PROFILE").unwrap_or_else(|_| "debug".into()))
         });
 
-    if let Some(dirs) = meta
-        .and_then(|m| m.get("assets"))
-        .and_then(|a| a.get("dirs"))
-        .and_then(|d| d.as_array())
-    {
-        for d in dirs {
-            if let Some(name) = d.as_str() {
-                let src = manifest_dir.join(name);
-                if src.is_dir() {
-                    copy_dir_incremental(&src, &profile_dir.join(name));
-                }
-                println!("cargo:rerun-if-changed={}", src.display());
-            }
+    for name in ASSET_DIRS {
+        let src = manifest_dir.join(name);
+        if src.is_dir() {
+            copy_dir_incremental(&src, &profile_dir.join(name));
         }
+        println!("cargo:rerun-if-changed={}", src.display());
+    }
+
+    for name in ASSET_FILES {
+        let src = manifest_dir.join(name);
+        let dst = profile_dir.join(name);
+        if src.is_file() && !dst.exists() {
+            let _ = fs::copy(&src, &dst);
+        }
+        println!("cargo:rerun-if-changed={}", src.display());
     }
 
     #[cfg(windows)]
     {
-        if let Some(icon) = meta
-            .and_then(|m| m.get("icon"))
-            .and_then(|i| i.get("path"))
-            .and_then(|p| p.as_str())
-        {
-            let full = manifest_dir.join(icon);
-            if full.exists() {
-                let mut res = winresource::WindowsResource::new();
-                res.set_icon(full.to_str().unwrap());
-                let _ = res.compile();
-                println!("cargo:rerun-if-changed={}", full.display());
-            }
+        let icon = manifest_dir.join(ICON);
+        if icon.exists() {
+            let mut res = winresource::WindowsResource::new();
+            res.set_icon(icon.to_str().unwrap());
+            let _ = res.compile();
+            println!("cargo:rerun-if-changed={}", icon.display());
         }
     }
 
