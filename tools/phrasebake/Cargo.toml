@@ -1,0 +1,15 @@
+[package]
+name = "phrasebake"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "phrasebake"
+path = "src/main.rs"
+
+[dependencies]
+fontdue = "0.9"
+rustybuzz = "0.13"
+
+[profile.release]
+opt-level = 2
