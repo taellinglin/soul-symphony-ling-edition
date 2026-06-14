@@ -82,6 +82,7 @@ bind เริ่ม = do {
     bind netReady = 0
     bind srvSel = 0;  bind srvIPs = [];  bind srvInfos = []   # รายการเซิร์ฟเวอร์ที่เจอ
     bind hostPass = "";  bind joinPass = "";  bind joinPriv = 0.0;  bind wantPriv = 0.0;  bind authSent = 0.0   # รหัสผ่านเซิร์ฟส่วนตัว (ling-crypto)
+    bind directJoin = 0.0   # ต่อตรงด้วย IP จาก net.cfg (เล่นข้ามเน็ต/ระบุเอง)
 
     # ── โหลดช่องเซฟ (saves.dat = "slot0;slot1;slot2") ───────────────────────
     bind sav  = อ่านไฟล์("saves.dat")
@@ -599,7 +600,9 @@ bind เริ่ม = do {
             แสดงผล()
             ถ้า กดปุ่ม("enter") {
                 bind joinPass = text_get();  bind authSent = 0.0;  text_clear()
-                bind coopRole = 1;  เน็ตจอย(list_get(srvIPs, srvSel), netPort);  bind สถานะ = ST_LOBBY
+                bind tgtIP = netIP                                        # ต่อตรง = IP จาก net.cfg
+                ถ้า directJoin < 0.5 { bind tgtIP = list_get(srvIPs, srvSel) }
+                bind coopRole = 1;  เน็ตจอย(tgtIP, netPort);  bind สถานะ = ST_LOBBY
             }
             ถ้า กดปุ่ม("escape") { text_clear();  bind สถานะ = ST_JOINLIST }
         }
@@ -639,15 +642,16 @@ bind เริ่ม = do {
                 วาดสตริง(nm + " " + md, 0.0, yy, 0.0, 0.6, 1)
                 bind sj = sj + 1
             }  มิฉะนั้น { bind sj = nsrv } }
-            สีดินสอ(110, 125, 160);  วาดสตริง("enter join · esc back", 0.0, 7.3, 0.0, 0.46, 1)
+            สีดินสอ(110, 125, 160);  วาดสตริง("enter join · d direct · esc back", 0.0, 7.3, 0.0, 0.44, 1)
             flush_3d();  โหมดผสม(0)
             แสดงผล()
             ถ้า กดปุ่ม("enter") { ถ้า nsrv > 0 {
-                bind sinfo = list_get(srvInfos, srvSel);  bind spriv = "0"
+                bind directJoin = 0.0;  bind sinfo = list_get(srvInfos, srvSel);  bind spriv = "0"
                 ถ้า ความยาว(sinfo) >= 5 { bind spriv = list_get(sinfo, 4) }
                 ถ้า spriv == "1" { bind joinPriv = 1.0;  text_clear();  bind สถานะ = ST_JOINPW }   # ส่วนตัว → ถามรหัส
                 มิฉะนั้น { bind joinPriv = 0.0;  bind joinPass = "";  bind authSent = 0.0;  bind coopRole = 1;  เน็ตจอย(list_get(srvIPs, srvSel), netPort);  bind สถานะ = ST_LOBBY }
             } }
+            ถ้า กดปุ่ม("d") { bind directJoin = 1.0;  text_clear();  bind สถานะ = ST_JOINPW }   # ต่อตรง IP จาก net.cfg (ข้ามเน็ต)
             ถ้า กดปุ่ม("escape") { bind สถานะ = ST_MP;  bind sel = 1 }
         }
 
