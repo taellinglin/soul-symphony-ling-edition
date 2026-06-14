@@ -102,6 +102,7 @@ bind เริ่ม = do {
     # เลขดาเมจ/ฮีลลอย (อาร์เคด) + ธงตีครั้งเดียวต่อสวิง
     bind popDmg = 0.0;  bind popDmgT = 0.0;  bind popDmgCrit = 0.0;  bind popHurt = 0.0;  bind popHurtT = 0.0;  bind popHeal = 0.0;  bind popHealT = 0.0;  bind slashHit = 0.0
     bind foeSleep = 0.0;  bind foeSlow = 0.0;  bind bombType = 0.0;  bind buffCD = [0.0,0.0,0.0]   # สถานะศัตรู + ชนิดระเบิดที่ถือ + คูลดาวน์บัฟอารีนา
+    bind slashDir = 0.0   # ทิศฟัน 0..7 (นอน, ↘, ตั้ง, ↙, นอนกลับ, ↖, ตั้งกลับ, ↗) — วนทุกครั้งที่ฟัน
     bind บอสโหมด = 0
     bind อาร์เคดโหมด = 0
     # ── ปรับแต่งลูก (อาร์เคด): 3 เฉดสี + สแตมป์ + แบนด์ + ฟิลด์ที่เลือก + รอบ ──
@@ -886,6 +887,7 @@ bind เริ่ม = do {
                         bind sCmbMax = 2.5
                         ถ้า อาร์เคดโหมด > 0.5 { bind sstA = list_get(ดาบสเตตัส, swordType);  bind slashCD = list_get(sstA,0);  bind sCmbMax = list_get(sstA,3) - 0.5 }
                         bind slashT = 0.16;  bind slashHit = 0.0
+                        bind slashDir = slashDir + 1.0;  ถ้า slashDir > 7.5 { bind slashDir = 0.0 }   # วนทิศฟัน
                         bind combo = combo + 1.0;  ถ้า combo > sCmbMax { bind combo = 0.0 }
                         bind arcType = combo;  bind arcYaw = camYaw;  bind arcFade = 0.5
                         bind slashNote = slashNote + 1.0
@@ -1627,7 +1629,7 @@ bind เริ่ม = do {
                     bind fyaw = atan2(cx - foeX, cz - foeZ)
                     bind fprog = 1.0 - foeSlashT / 0.32
                     bind fcol = สีจากเฉด(foeBandHue)
-                    วาดสแลชเติม(1.0, foeX, foeY + 0.5, foeZ, fyaw, fprog, 11.0, list_get(fcol,0), list_get(fcol,1), list_get(fcol,2))
+                    วาดสแลชทิศ(foeX, foeY + 0.5, foeZ, camYaw, foeCombo*0.7854, fprog, 8.0, list_get(fcol,0), list_get(fcol,1), list_get(fcol,2))
                     flush_3d()
                 }
                 # ── เลขดาเมจ/ฮีลลอยเหนือหัว (อาร์เคด) ──
@@ -1857,7 +1859,7 @@ bind เริ่ม = do {
                 bind prog = 1.0 - slashT / 0.16
                 ถ้า อาร์เคดโหมด > 0.5 {
                     bind ssv = list_get(ดาบสเตตัส, swordType)
-                    วาดสแลชเติม(swordType, cx, cy + 0.5, cz, arcYaw, prog, list_get(ssv,2)*0.9, list_get(ssv,4), list_get(ssv,5), list_get(ssv,6))
+                    วาดสแลชทิศ(cx, cy + 0.5, cz, camYaw, slashDir*0.7854, prog, list_get(ssv,2)*0.55, list_get(ssv,4), list_get(ssv,5), list_get(ssv,6))
                 }
                 มิฉะนั้น { วาดสแลช(cx, cy + 0.5, cz, arcYaw, arcType, prog, 1.0, R * 4.6) }
                 flush_3d()

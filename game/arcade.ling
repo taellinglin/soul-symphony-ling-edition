@@ -200,6 +200,36 @@ bind ดาบสเตตัส = [
     วาดเส้น3มิติ(wx + ax*rx, wy - ay, wz + ax*rz,  wx + bx*rx, wy - by, wz + bx*rz)
 }
 
+# สามเหลี่ยมเติมจาก 3 จุด 2D (a=แนวขวากล้อง, b=แนวตั้ง/ขึ้น) ในระนาบหันกล้อง
+ฟังก์ชัน สามเหลี่ยมป้าย(cx, cy, cz, a0, b0, a1, b1, a2, b2, rx, rz) {
+    วาดสามเหลี่ยม3มิติ(cx+a0*rx, cy-b0, cz+a0*rz,  cx+a1*rx, cy-b1, cz+a1*rz,  cx+a2*rx, cy-b2, cz+a2*rz)
+}
+
+# ── สแลชทิศทาง: ฟันโค้งเติม ตามมุม dirAngle (0=นอน, ทวน 45° ต่อทิศ), กวาดตาม prog ──
+ฟังก์ชัน วาดสแลชทิศ(cx, cy, cz, camYaw, dirAngle, prog, len, r, g, b) {
+    โหมดผสม(1)
+    bind rx = โคไซน์(camYaw);  bind rz = 0.0 - ไซน์(camYaw)
+    bind ca = โคไซน์(dirAngle);  bind sa = ไซน์(dirAngle)   # แกนหลักใบมีด (2D)
+    bind px = 0.0 - sa;  bind py = ca                        # แกนตั้งฉาก (ความหนา)
+    สีดินสอ(r, g, b)
+    bind sweep = 0.0 - 1.0 + prog*2.0
+    bind k = 0
+    ขณะที่ k < 10 {
+        bind t0 = 0.0 - 1.0 + (k/10.0)*2.0
+        bind t1 = 0.0 - 1.0 + ((k+1)/10.0)*2.0
+        ถ้า t0 < sweep {
+            bind w0 = (1.0 - t0*t0)*len*0.3
+            bind w1 = (1.0 - t1*t1)*len*0.3
+            bind c0a = ca*t0*len;  bind c0b = sa*t0*len
+            bind c1a = ca*t1*len;  bind c1b = sa*t1*len
+            สามเหลี่ยมป้าย(cx,cy,cz,  c0a+px*w0, c0b+py*w0,  c0a-px*w0, c0b-py*w0,  c1a+px*w1, c1b+py*w1, rx, rz)
+            สามเหลี่ยมป้าย(cx,cy,cz,  c0a-px*w0, c0b-py*w0,  c1a-px*w1, c1b-py*w1,  c1a+px*w1, c1b+py*w1, rx, rz)
+        }
+        bind k = k + 1
+    }
+    flush_3d();  โหมดผสม(0)
+}
+
 # ── ตัวเลขลอยแบบ 7-ส่วน (บิลบอร์ด) — ฟอนต์เวกเตอร์ไม่มีเลข เลยวาดเอง ──
 ฟังก์ชัน บิตมี(mask, bit) { คืน floor(mask/bit) - floor(mask/(bit*2.0))*2.0 }
 
