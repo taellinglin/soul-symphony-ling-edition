@@ -1,0 +1,28 @@
+# ── gong.ling — a metallic, inharmonic gong instrument ───────────────────────
+# เล่นฆ้อง(x,y,z, f0, amp): a struck gong at world (x,y,z), fundamental f0 Hz,
+# loudness amp (already scaled by your SFX volume). Built from a broadband
+# noise strike + inharmonic partials with long, staggered decays + a detuned
+# "shimmer" pair for the characteristic beating wash.
+#
+#   ใช้ "../instruments/gong"
+#   เล่นฆ้อง(0,0,0, 98.0, 0.8 * ปริมาณSFX)
+
+ฟังก์ชัน เล่นฆ้อง(x, y, z, f0, amp) {
+    # ── strike: short broadband metallic clang ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*4.0,  amp*0.55, 0.20, "noise")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*7.3,  amp*0.32, 0.11, "noise")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*2.0,  amp*0.40, 0.16, "square")
+
+    # ── inharmonic partials (non-integer ratios) — the blooming body ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*1.00, amp*0.95, 3.4, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*1.48, amp*0.70, 3.0, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*1.97, amp*0.62, 2.6, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*2.74, amp*0.46, 2.2, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*3.76, amp*0.32, 1.8, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*5.12, amp*0.22, 1.4, "sine")
+
+    # ── detuned shimmer pair → slow beating wash ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*2.03, amp*0.40, 2.6, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*3.81, amp*0.20, 1.8, "sine")
+    คืน 0
+}
