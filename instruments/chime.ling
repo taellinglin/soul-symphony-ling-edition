@@ -1,0 +1,26 @@
+# ── chime.ling — a big bright bell/chime swell ───────────────────────────────
+# เล่นไชม์ใหญ่(x,y,z, f0, amp): a luminous bell at world (x,y,z), fundamental f0,
+# loudness amp. Bright harmonic partials + a slightly-inharmonic shimmer + a
+# soft triangle strike + a detuned octave for a long shimmering ring. Distinct
+# from the metallic gong — this one rings clear and bright.
+#
+#   ใช้ "../instruments/chime"
+#   เล่นไชม์ใหญ่(0,0,0, 523.25, 0.9 * ปริมาณSFX)
+
+ฟังก์ชัน เล่นไชม์ใหญ่(x, y, z, f0, amp) {
+    # ── soft bright strike (triangle, not noise → clean, not metallic) ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*8.0,  amp*0.26, 0.24, "triangle")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*4.0,  amp*0.30, 0.18, "triangle")
+
+    # ── bright bell partials (mostly harmonic → clear pitch) ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*1.00, amp*0.95, 3.2, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*2.00, amp*0.62, 2.8, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*3.00, amp*0.42, 2.4, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*4.20, amp*0.28, 2.0, "sine")   # slight inharmonic shimmer
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*5.40, amp*0.18, 1.6, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*6.80, amp*0.12, 1.2, "sine")
+
+    # ── detuned octave → slow shimmering beat ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*2.01, amp*0.34, 2.6, "sine")
+    คืน 0
+}

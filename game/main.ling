@@ -5,6 +5,7 @@
 ใช้ "../game/arena"
 ใช้ "../game/boss"
 ใช้ "../instruments/gong"
+ใช้ "../instruments/chime"
 ใช้ "../game/proc_gen_level"
 ใช้ "../game/arcade"
 ใช้ "../font/Daemon"
@@ -155,6 +156,7 @@ bind เริ่ม = do {
     bind กรอบ      = 0.0
     bind bootStart = เวลาปัจจุบัน()
     bind chimeStep = 0.0
+    bind flashChimePlayed = 0.0   # ไชม์ใหญ่ตอนแฟลชขาว (เล่นครั้งเดียว)
     bind เลเวลก่อน = 0.0 - 1.0   # ตรวจเปลี่ยนเลเวล → พรีโหลด
     # ── เบิร์สต์ไตเติล: ตารางเวลาโน้ต Soul Symphony (จาก MIDI) ──
     bind โน้ตเวลา  = เวลาโน้ต_SoulSymphony()
@@ -261,6 +263,7 @@ bind เริ่ม = do {
             ถ้า prog > 0.8 { bind fade = (1.0 - prog) / 0.2 }
             ถ้า fade < 0.0 { bind fade = 0.0 }
             bind lfo = 0.0                   # ไม่มีโมดูเลชัน — แพดคอร์ดนิ่ง
+            ถ้า prog > 0.82 { ถ้า flashChimePlayed < 0.5 { เล่นไชม์ใหญ่(0,0,0, 523.25, 0.95*ปริมาณSFX);  bind flashChimePlayed = 1.0 } }   # ไชม์ใหญ่ตอนแฟลชขาว
             bind a = 0.22 * fade
             เสียงโทน(0, 0,0,0, 1.0, 261.63, a,      lfo,      0.45*fade)
             เสียงโทน(1, 0,0,0, 1.0, 329.63, a*0.85, lfo*0.9,  0.45*fade)
