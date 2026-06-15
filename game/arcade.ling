@@ -397,7 +397,7 @@ bind คำใบ้   = ["watch your flank","don't panic","move now","bait it o
     วาดลูกแต่ง(fx, fy, fz, R, br,bg,bb,
         list_get(cs,0),list_get(cs,1),list_get(cs,2),
         list_get(cn,0),list_get(cn,1),list_get(cn,2),
-        stamp, band, t)
+        stamp, band, t, 0.0)
     ถ้า guard > 0.5 {
         โหมดผสม(1);  สีดินสอ(255, 210, 90)
         bind gk = 0
@@ -430,12 +430,16 @@ bind คำใบ้   = ["watch your flank","don't panic","move now","bait it o
 }
 
 # ── ลูกแต่ง: body orb (สี) + โครงทรงกลม + สแตมป์ขั้วบน/ล่าง + แบนด์รอบกลาง ──
-ฟังก์ชัน วาดลูกแต่ง(cx, cy, cz, R, br,bg,bb, sr,sg,sb, ar,ag,ab, stampId, bandId, t) {
+ฟังก์ชัน วาดลูกแต่ง(cx, cy, cz, R, br,bg,bb, sr,sg,sb, ar,ag,ab, stampId, bandId, t, fxId) {
+    bind tb = t;  bind tc = t*0.6;  bind Rs = R;  bind bandCy = cy   # เอฟเฟกต์ (fx 0 = นิ่ง)
+    ถ้า fxId == 1.0 { bind tb = t*3.0;  bind tc = t*2.2 }                          # spin: หมุนเร็ว
+    ถ้า fxId == 2.0 { bind Rs = R * (1.0 + 0.09*ไซน์(t*3.0)) }                      # pulse: เต้น
+    ถ้า fxId == 3.0 { bind tb = t*2.6;  bind bandCy = cy + ไซน์(t*1.6)*R*0.45 }      # orbit: แบนด์บ๊อบ+หมุน
     # body = อนุภาคเรืองแสง (additive)
     โหมดผสม(1)
-    orb_particles(cx, cy, cz, R*0.95, 600.0, t,         br, bg, bb)        # ของเหลว: สีลำตัว (ชั้นนอก)
-    orb_particles(cx, cy, cz, R*0.68, 340.0, t*1.3+2.0, sr, sg, sb)        # สีสแตมป์ (ชั้นกลาง)
-    orb_particles(cx, cy, cz, R*0.42, 200.0, t*1.7+4.0, ar, ag, ab)        # สีแบนด์ (ชั้นใน)
+    orb_particles(cx, cy, cz, Rs*0.95, 600.0, t,         br, bg, bb)       # ของเหลว: สีลำตัว (ชั้นนอก)
+    orb_particles(cx, cy, cz, Rs*0.68, 340.0, t*1.3+2.0, sr, sg, sb)       # สีสแตมป์ (ชั้นกลาง)
+    orb_particles(cx, cy, cz, Rs*0.42, 200.0, t*1.7+4.0, ar, ag, ab)       # สีแบนด์ (ชั้นใน)
     flush_3d()
     # โครงทรงกลม (วงละติจูด) ให้เห็นเป็นลูกชัดขึ้น
     สีดินสอ(floor(br*0.5), floor(bg*0.5), floor(bb*0.5))
@@ -455,12 +459,12 @@ bind คำใบ้   = ["watch your flank","don't panic","move now","bait it o
     # สแตมป์ + แบนด์ = ฟิลทึบ (normal blend)
     โหมดผสม(0)
     สีดินสอ(sr, sg, sb)
-    วาดสแตมป์(stampId, cx, cy - R*1.0, cz, R*0.5, t*0.6)           # ขั้วบน (เล็กลง)
-    วาดสแตมป์(stampId, cx, cy + R*1.0, cz, R*0.5, 0.0 - t*0.6)     # ขั้วล่าง
+    วาดสแตมป์(stampId, cx, cy - Rs*1.0, cz, Rs*0.5, tc)            # ขั้วบน (เล็กลง)
+    วาดสแตมป์(stampId, cx, cy + Rs*1.0, cz, Rs*0.5, 0.0 - tc)      # ขั้วล่าง
     สีดินสอ(ar, ag, ab)                                            # ลายเล็กในแกน (สีแบนด์) — สองโทน หมุนสวน
-    วาดสแตมป์(stampId, cx, cy - R*1.0, cz, R*0.26, 0.0 - t*0.9)
-    วาดสแตมป์(stampId, cx, cy + R*1.0, cz, R*0.26, t*0.9)
+    วาดสแตมป์(stampId, cx, cy - Rs*1.0, cz, Rs*0.26, 0.0 - tc*1.5)
+    วาดสแตมป์(stampId, cx, cy + Rs*1.0, cz, Rs*0.26, tc*1.5)
     สีดินสอ(ar, ag, ab)
-    วาดแบนด์(bandId, cx, cy, cz, R*1.03, t)
+    วาดแบนด์(bandId, cx, bandCy, cz, Rs*1.03, tb)
     flush_3d()
 }

@@ -138,7 +138,7 @@ bind เริ่ม = do {
     bind อาร์เคดโหมด = 0
     # ── ปรับแต่งลูก (อาร์เคด): 3 เฉดสี + สแตมป์ + แบนด์ + ฟิลด์ที่เลือก + รอบ ──
     bind ฮิวBody = 0.55;  bind ฮิวStamp = 0.12;  bind ฮิวBand = 0.85
-    bind ปรับStamp = 0.0;  bind ปรับBand = 1.0;  bind ปรับField = 0.0
+    bind ปรับStamp = 0.0;  bind ปรับBand = 1.0;  bind ปรับField = 0.0;  bind ปรับFX = 0.0   # ปรับFX: เอฟเฟกต์ (0 none/1 spin/2 pulse/3 orbit)
     bind รอบ = 1.0
     # ── ศัตรูอาร์เคด (สถานะ mutable) ──
     bind foeX = 35.0;  bind foeZ = 0.0;  bind foeY = 0.0;  bind foeVX = 0.0;  bind foeVZ = 0.0
@@ -378,14 +378,15 @@ bind เริ่ม = do {
         # ── ARCADE: ปรับแต่งลูก (3 สี/สแตมป์/แบนด์/ชื่อ) → สู้กอนต์เลต ──
         ถ้า สถานะ == ST_ARCADE {
             text_poll()                                  # รับการพิมพ์ชื่อ
-            ถ้า กดปุ่ม("up")   { bind ปรับField = ปรับField - 1.0;  ถ้า ปรับField < 0.0 { bind ปรับField = 5.0 } }
-            ถ้า กดปุ่ม("down") { bind ปรับField = ปรับField + 1.0;  ถ้า ปรับField > 5.0 { bind ปรับField = 0.0 } }
+            ถ้า กดปุ่ม("up")   { bind ปรับField = ปรับField - 1.0;  ถ้า ปรับField < 0.0 { bind ปรับField = 6.0 } }
+            ถ้า กดปุ่ม("down") { bind ปรับField = ปรับField + 1.0;  ถ้า ปรับField > 6.0 { bind ปรับField = 0.0 } }
             ถ้า กดปุ่ม("left") {
                 ถ้า ปรับField == 0.0 { bind ฮิวBody  = ฮิวBody - 0.04;   ถ้า ฮิวBody < 0.0 { bind ฮิวBody = ฮิวBody + 1.0 } }
                 ถ้า ปรับField == 1.0 { bind ฮิวStamp = ฮิวStamp - 0.04;  ถ้า ฮิวStamp < 0.0 { bind ฮิวStamp = ฮิวStamp + 1.0 } }
                 ถ้า ปรับField == 2.0 { bind ฮิวBand  = ฮิวBand - 0.04;   ถ้า ฮิวBand < 0.0 { bind ฮิวBand = ฮิวBand + 1.0 } }
                 ถ้า ปรับField == 3.0 { bind ปรับStamp = ปรับStamp - 1.0;  ถ้า ปรับStamp < 0.0 { bind ปรับStamp = STAMP_N - 1.0 } }
                 ถ้า ปรับField == 4.0 { bind ปรับBand = ปรับBand - 1.0;   ถ้า ปรับBand < 0.0 { bind ปรับBand = BAND_N - 1.0 } }
+                ถ้า ปรับField == 6.0 { bind ปรับFX = ปรับFX - 1.0;  ถ้า ปรับFX < 0.0 { bind ปรับFX = 3.0 } }
             }
             ถ้า กดปุ่ม("right") {
                 ถ้า ปรับField == 0.0 { bind ฮิวBody  = ฮิวBody + 0.04;   ถ้า ฮิวBody > 1.0 { bind ฮิวBody = ฮิวBody - 1.0 } }
@@ -393,6 +394,7 @@ bind เริ่ม = do {
                 ถ้า ปรับField == 2.0 { bind ฮิวBand  = ฮิวBand + 0.04;   ถ้า ฮิวBand > 1.0 { bind ฮิวBand = ฮิวBand - 1.0 } }
                 ถ้า ปรับField == 3.0 { bind ปรับStamp = ปรับStamp + 1.0;  ถ้า ปรับStamp > STAMP_N - 1.0 { bind ปรับStamp = 0.0 } }
                 ถ้า ปรับField == 4.0 { bind ปรับBand = ปรับBand + 1.0;   ถ้า ปรับBand > BAND_N - 1.0 { bind ปรับBand = 0.0 } }
+                ถ้า ปรับField == 6.0 { bind ปรับFX = ปรับFX + 1.0;  ถ้า ปรับFX > 3.0 { bind ปรับFX = 0.0 } }
             }
             bind ลูกชื่อ = text_get()
             ถ้า ความยาว(ลูกชื่อ) < 1 { bind ลูกชื่อ = "player" }
@@ -406,7 +408,7 @@ bind เริ่ม = do {
                 list_get(cbody,0),list_get(cbody,1),list_get(cbody,2),
                 list_get(cstamp,0),list_get(cstamp,1),list_get(cstamp,2),
                 list_get(cband,0),list_get(cband,1),list_get(cband,2),
-                floor(ปรับStamp), floor(ปรับBand), t)
+                floor(ปรับStamp), floor(ปรับBand), t, floor(ปรับFX))
             โหมดผสม(1)
             สีดินสอ(230, 230, 255);  วาดสตริง("customize", 0.0-8.5, 0.0-8.5, 0.0, 0.85, 1)
             bind r0 = 0.0 - 4.5
@@ -426,7 +428,12 @@ bind เริ่ม = do {
             ถ้า ปรับField == 5.0 { สีดินสอ(255,255,150) }  มิฉะนั้น { สีดินสอ(140,140,170) }
             วาดสตริง("name", 0.0-13.5, r0+8.0, 0.0, 0.6, 1)
             สีดินสอ(220,235,255);  วาดสตริง(ลูกชื่อ, 0.0-8.5, r0+8.0, 0.0, 0.6, 1)
-            สีดินสอ(120,140,180);  วาดสตริง("enter to fight", 0.0-8.5, 9.0, 0.0, 0.55, 1)
+            ถ้า ปรับField == 6.0 { สีดินสอ(255,255,150) }  มิฉะนั้น { สีดินสอ(140,140,170) }
+            วาดสตริง("effect", 0.0-13.5, r0+9.6, 0.0, 0.6, 1)
+            bind fxnm = "none"
+            ถ้า ปรับFX == 1.0 { bind fxnm = "spin" }  ถ้า ปรับFX == 2.0 { bind fxnm = "pulse" }  ถ้า ปรับFX == 3.0 { bind fxnm = "orbit" }
+            สีดินสอ(200,235,255);  วาดสตริง(fxnm, 0.0-8.5, r0+9.6, 0.0, 0.6, 1)
+            สีดินสอ(120,140,180);  วาดสตริง("enter to fight", 0.0-8.5, 10.2, 0.0, 0.55, 1)
             flush_3d();  โหมดผสม(0)
             แสดงผล()
 
@@ -2007,7 +2014,7 @@ bind เริ่ม = do {
                     list_get(pcb,0),list_get(pcb,1),list_get(pcb,2),
                     list_get(pcs,0),list_get(pcs,1),list_get(pcs,2),
                     list_get(pcn,0),list_get(pcn,1),list_get(pcn,2),
-                    floor(ปรับStamp), floor(ปรับBand), t)
+                    floor(ปรับStamp), floor(ปรับBand), t, floor(ปรับFX))
             }
             มิฉะนั้น {
                 liquid_draw_surface(liq, 1.0, cx, cy, cz, R * (1.0 + def*0.4), R)
