@@ -232,10 +232,16 @@ bind ดาบสเตตัส = [
 
 # ── ริบบิ้นสแลช: ระนาบแบนที่โค้งตามการเหวี่ยง (เหวี่ยงรอบแกนเล็ง, เอียงตามเส้นฟัน) ──
 #   aimYaw = ทิศเหวี่ยง · roll = เอียงเส้นฟัน (0=นอน, π/2=ตั้ง) · prog 0..1 · reach = ระยะใบมีด
-ฟังก์ชัน วาดริบบิ้นสแลช(cx, cy, cz, aimYaw, roll, prog, reach, r, g, b) {
+ฟังก์ชัน วาดริบบิ้นสแลช(cx, cy, cz, aimYaw, roll, prog, reach, r, g, b, sat, spin) {
     โหมดผสม(1)
+    bind roll = roll + spin                                  # หมุนระนาบตามอินพุตไมค์
     bind fade = 1.0 - prog                                   # จางออก
-    สีดินสอ(floor(r*fade), floor(g*fade), floor(b*fade))
+    bind lum = r*0.30 + g*0.59 + b*0.11                      # ปรับอิ่มสีตาม FFT เพลง
+    bind sr = lum + (r-lum)*sat;  bind sg = lum + (g-lum)*sat;  bind sb = lum + (b-lum)*sat
+    ถ้า sr < 0.0 { bind sr = 0.0 }  ถ้า sr > 255.0 { bind sr = 255.0 }
+    ถ้า sg < 0.0 { bind sg = 0.0 }  ถ้า sg > 255.0 { bind sg = 255.0 }
+    ถ้า sb < 0.0 { bind sb = 0.0 }  ถ้า sb > 255.0 { bind sb = 255.0 }
+    สีดินสอ(floor(sr*fade), floor(sg*fade), floor(sb*fade))
     bind fwx = ไซน์(aimYaw);  bind fwz = โคไซน์(aimYaw)        # แกนเล็ง (หน้า)
     bind ppx = ไซน์(aimYaw + 1.5708);  bind ppz = โคไซน์(aimYaw + 1.5708)   # แกนตั้งฉากแนวนอน
     bind cr = โคไซน์(roll);  bind srl = ไซน์(roll)
@@ -255,6 +261,114 @@ bind ดาบสเตตัส = [
             วาดสามเหลี่ยม3มิติ(cx+d0x*rIn,cy+d0y*rIn,cz+d0z*rIn,  cx+d1x*rOut,cy+d1y*rOut,cz+d1z*rOut,  cx+d1x*rIn,cy+d1y*rIn,cz+d1z*rIn)
         }
         bind k = k + 1
+    }
+    flush_3d();  โหมดผสม(0)
+}
+
+# ── ดาบเหวี่ยง: ใบมีดที่กวาดตามส่วนโค้งเดียวกับสแลช (นอน/ตั้ง/ทแยง/กลับ) ──
+ฟังก์ชัน วาดดาบเหวี่ยง(cx, cy, cz, aimYaw, roll, prog, reach, r, g, b) {
+    โหมดผสม(0)
+    bind span = 1.45
+    bind a = 0.0 - span + prog*2.0*span                      # มุมเหวี่ยงปัจจุบัน (ขอบนำ)
+    bind fwx = ไซน์(aimYaw);  bind fwz = โคไซน์(aimYaw)
+    bind ppx = ไซน์(aimYaw + 1.5708);  bind ppz = โคไซน์(aimYaw + 1.5708)
+    bind cr = โคไซน์(roll);  bind srl = ไซน์(roll)
+    bind sdx = ppx*cr;  bind sdy = 0.0 - srl;  bind sdz = ppz*cr             # แกนเหวี่ยง (เอียงตามทิศฟัน)
+    bind c = โคไซน์(a);  bind s = ไซน์(a)
+    bind dx = fwx*c + sdx*s;  bind dy = sdy*s;  bind dz = fwz*c + sdz*s      # ทิศใบมีด
+    bind ta = a + 1.5708;  bind tc = โคไซน์(ta);  bind ts = ไซน์(ta)
+    bind tx = fwx*tc + sdx*ts;  bind ty = sdy*ts;  bind tz = fwz*tc + sdz*ts  # tangent (ความหนา)
+    bind rH = reach*0.18;  bind rT = reach*1.15;  bind w = reach*0.06
+    bind hax = cx+dx*rH+tx*w;  bind hay = cy+dy*rH+ty*w;  bind haz = cz+dz*rH+tz*w
+    bind hbx = cx+dx*rH-tx*w;  bind hby = cy+dy*rH-ty*w;  bind hbz = cz+dz*rH-tz*w
+    bind tpx = cx+dx*rT;  bind tpy = cy+dy*rT;  bind tpz = cz+dz*rT
+    สีดินสอ(228, 232, 248)                                    # ใบมีดเงิน (สามเหลี่ยมเรียว)
+    วาดสามเหลี่ยม3มิติ(hax,hay,haz, hbx,hby,hbz, tpx,tpy,tpz)
+    สีดินสอ(r, g, b)                                          # การ์ด (สีดาบ)
+    วาดเส้น3มิติ(cx+dx*rH+tx*w*2.6, cy+dy*rH+ty*w*2.6, cz+dz*rH+tz*w*2.6,  cx+dx*rH-tx*w*2.6, cy+dy*rH-ty*w*2.6, cz+dz*rH-tz*w*2.6)
+    flush_3d()
+}
+
+# ── เทรลแหวน: ลิสต์แบนของ N ตัวอย่าง × 6 ช่อง (px,py,pz, vx,vy,vz) ──
+ฟังก์ชัน รายการศูนย์(n) {
+    bind L = [];  bind i = 0
+    ขณะที่ i < n { bind L = list_push(L, 0.0);  bind i = i + 1 }
+    คืน L
+}
+
+# เขียนตัวอย่างใหม่ลงหัวบัฟเฟอร์ (ตำแหน่ง+ความเร็ว) → คืนบัฟใหม่
+ฟังก์ชัน เขียนเทรล(buf, head, px, py, pz, vx, vy, vz) {
+    bind b = floor(head)*6
+    bind buf = ตั้งรายการ(buf, b, px)
+    bind buf = ตั้งรายการ(buf, b+1, py)
+    bind buf = ตั้งรายการ(buf, b+2, pz)
+    bind buf = ตั้งรายการ(buf, b+3, vx)
+    bind buf = ตั้งรายการ(buf, b+4, vy)
+    bind buf = ตั้งรายการ(buf, b+5, vz)
+    คืน buf
+}
+
+# วาดเทรลแหวน: แหวนโซนิคบูม (เก่า=ใหญ่+จาง, ใหม่=เล็ก+สว่าง) ตั้งฉากกับทิศวิ่ง
+# + แกนหนาเรียวลอดผ่านศูนย์กลางแหวน จางหายไปด้านท้าย
+# สี: ผสมพาเลตลูก (br,bg,bb) + สีดาบ (sr,sg,sb), ปรับอิ่มสีด้วย sat (จาก FFT เพลง)
+# spin = หมุนแหวน/แกนรอบทิศวิ่ง (จากไมค์) ; แกนเรียวกลับทาง (เก่า=หนา)
+ฟังก์ชัน วาดเทรลแหวน(buf, head, N, br, bg, bb, sr, sg, sb, sat, spin) {
+    โหมดผสม(1)                                  # บวกแสง (เรืองแสง)
+    bind seg = 9.0
+    bind bcr = (br + sr)*0.5;  bind bcg = (bg + sg)*0.5;  bind bcb = (bb + sb)*0.5   # ผสมพาเลต+ดาบ
+    bind lum = bcr*0.30 + bcg*0.59 + bcb*0.11
+    bind cr = lum + (bcr - lum)*sat;  bind cg = lum + (bcg - lum)*sat;  bind cb = lum + (bcb - lum)*sat
+    ถ้า cr < 0.0 { bind cr = 0.0 }  ถ้า cr > 255.0 { bind cr = 255.0 }
+    ถ้า cg < 0.0 { bind cg = 0.0 }  ถ้า cg > 255.0 { bind cg = 255.0 }
+    ถ้า cb < 0.0 { bind cb = 0.0 }  ถ้า cb > 255.0 { bind cb = 255.0 }
+    bind csp = โคไซน์(spin);  bind ssp = ไซน์(spin)
+    bind havePrev = 0.0
+    bind pcx = 0.0;  bind pcy = 0.0;  bind pcz = 0.0
+    bind pux = 0.0;  bind puy = 0.0;  bind puz = 0.0;  bind page = 0.0
+    bind i = 0.0
+    ขณะที่ i < N {
+        bind idx = floor((head + i) % N)        # i=0 เก่าสุด … i=N-1 ใหม่สุด
+        bind b = idx*6
+        bind px = list_get(buf, b);    bind py = list_get(buf, b+1);  bind pz = list_get(buf, b+2)
+        bind vx = list_get(buf, b+3);  bind vy = list_get(buf, b+4);  bind vz = list_get(buf, b+5)
+        bind sp = รากที่สอง(vx*vx + vy*vy + vz*vz)
+        ถ้า sp > 0.012 {
+            bind age = (N - 1.0 - i) / N          # ใหม่สุด≈0 … เก่าสุด≈1
+            bind fade = 1.0 - age                 # ใหม่=สว่าง, เก่า=จาง
+            bind rad = (0.25 + sp*3.6) * (0.4 + age*1.4)   # ขนาดแปรตามความเร็ว; เก่า=ขยาย (โซนิคบูม)
+            bind inv = 1.0 / sp
+            bind dxn = vx*inv;  bind dyn = vy*inv;  bind dzn = vz*inv
+            bind ux = 0.0 - dzn;  bind uz = dxn               # u = cross(d, up).xz
+            bind ul = รากที่สอง(ux*ux + uz*uz)
+            ถ้า ul < 0.0001 { bind ux = 1.0;  bind uz = 0.0;  bind ul = 1.0 }
+            bind u0x = ux/ul;  bind u0y = 0.0;  bind u0z = uz/ul
+            bind w0x = dyn*u0z - dzn*u0y;  bind w0y = dzn*u0x - dxn*u0z;  bind w0z = dxn*u0y - dyn*u0x   # w = cross(d,u)
+            # หมุน (u,w) รอบทิศวิ่ง d ตามอินพุตไมค์
+            bind uix = u0x*csp + w0x*ssp;  bind uiy = u0y*csp + w0y*ssp;  bind uiz = u0z*csp + w0z*ssp
+            bind wx = w0x*csp - u0x*ssp;   bind wy = w0y*csp - u0y*ssp;   bind wz = w0z*csp - u0z*ssp
+            สีดินสอ(cr*fade, cg*fade, cb*fade)
+            bind k = 0.0
+            ขณะที่ k < seg {
+                bind a0 = (k / seg) * 6.2832;  bind a1 = ((k+1.0) / seg) * 6.2832
+                bind c0 = โคไซน์(a0);  bind s0 = ไซน์(a0);  bind c1 = โคไซน์(a1);  bind s1 = ไซน์(a1)
+                วาดเส้น3มิติ(px + (uix*c0 + wx*s0)*rad, py + (uiy*c0 + wy*s0)*rad, pz + (uiz*c0 + wz*s0)*rad,  px + (uix*c1 + wx*s1)*rad, py + (uiy*c1 + wy*s1)*rad, pz + (uiz*c1 + wz*s1)*rad)
+                bind k = k + 1.0
+            }
+            ถ้า havePrev > 0.5 {
+                bind wN = 0.1 + age*0.6;  bind wP = 0.1 + page*0.6     # แกนเรียวกลับทาง (เก่า=หนา)
+                bind ax = pcx + pux*wP;  bind ay = pcy + puy*wP;  bind az = pcz + puz*wP
+                bind bx = pcx - pux*wP;  bind by = pcy - puy*wP;  bind bz = pcz - puz*wP
+                bind cx2 = px + uix*wN;  bind cy2 = py + uiy*wN;  bind cz2 = pz + uiz*wN
+                bind dx2 = px - uix*wN;  bind dy2 = py - uiy*wN;  bind dz2 = pz - uiz*wN
+                สีดินสอ((cr+255.0)*0.5*fade, (cg+255.0)*0.5*fade, (cb+255.0)*0.5*fade)   # แกนสว่างกว่าแหวน
+                วาดสามเหลี่ยม3มิติ(ax,ay,az, bx,by,bz, dx2,dy2,dz2)
+                วาดสามเหลี่ยม3มิติ(ax,ay,az, dx2,dy2,dz2, cx2,cy2,cz2)
+            }
+            bind pcx = px;  bind pcy = py;  bind pcz = pz
+            bind pux = uix;  bind puy = uiy;  bind puz = uiz;  bind page = age
+            bind havePrev = 1.0
+        }
+        bind i = i + 1.0
     }
     flush_3d();  โหมดผสม(0)
 }
@@ -288,13 +402,20 @@ bind ดาบสเตตัส = [
 }
 
 # n (จำนวนเต็ม 0..999) ลอยที่ (wx,wy,wz) สูง s, หันกล้อง camYaw, สี r,g,b
-ฟังก์ชัน วาดเลขป้าย(n, wx, wy, wz, s, camYaw, r, g, b) {
+ฟังก์ชัน วาดเลขป้าย(n, sign, wx, wy, wz, s, camYaw, r, g, b) {
     bind rx = โคไซน์(camYaw);  bind rz = 0.0 - ไซน์(camYaw)
     สีดินสอ(r, g, b)
     bind nn = floor(n);  ถ้า nn < 0.0 { bind nn = 0.0 }
     bind nd = 1;  ถ้า nn >= 10.0 { bind nd = 2 }  ถ้า nn >= 100.0 { bind nd = 3 }
     bind w = s*0.6;  bind gap = s*0.34
-    bind startx = 0.0 - (nd*w + (nd-1)*gap)*0.5
+    bind sw = 0.0;  ถ้า sign != 0.0 { bind sw = w + gap }                  # ช่องเครื่องหมาย +/-
+    bind startx = 0.0 - (nd*w + (nd-1)*gap + sw)*0.5
+    bind h2 = s*0.5
+    ถ้า sign != 0.0 {
+        เส้นป้าย(wx,wy,wz, startx, h2, startx+w, h2, rx,rz)                                       # ขีดนอน (−)
+        ถ้า sign > 0.0 { เส้นป้าย(wx,wy,wz, startx+w*0.5, h2-w*0.55, startx+w*0.5, h2+w*0.55, rx,rz) }   # ขีดตั้ง → (+)
+        bind startx = startx + sw
+    }
     bind p = 0
     ขณะที่ p < nd {
         bind pw = nd - 1 - p;  bind divv = 1.0

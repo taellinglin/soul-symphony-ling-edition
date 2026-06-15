@@ -153,6 +153,11 @@ bind เริ่ม = do {
     bind อาร์เคดไลฟ์ = 3.0;  bind อาร์เคดแต้ม = 0.0;  bind อาร์เคดชนะ = 0.0;  bind ผลพิมพ์ = 0.0
     bind pickCD = [0.0,0.0,0.0,0.0,0.0,0.0]   # คูลดาวน์ดาบพิคอัพ 6 จุด (0 = พร้อม)
     bind swordType = 0.0;  bind weaponT = 0.0;  bind slashCD = 0.0   # ดาบที่ใช้ (0..5) + ตัวจับเวลา + คูลดาวน์ฟัน — อาร์เคด
+    bind trailN = 26.0;  bind trailInit = 0.0                          # เทรลแหวนผู้เล่น/ศัตรู
+    bind trailBuf = [];  bind trailHead = 0.0
+    bind foeTrailBuf = [];  bind foeTrailHead = 0.0
+    bind critT = 0.0;  bind critX = 0.0;  bind critZ = 0.0             # เอฟเฟกต์ "Critical!"
+    bind fxSat = 1.0;  bind fxSpin = 0.0;  bind micOpened = 0.0         # อิ่มสี (FFT เพลง) + หมุน (ไมค์) สำหรับเทรล/ริบบิ้น
     bind BOSS_Y = 0.0 - 55.0
     bind กรอบ      = 0.0
     bind bootStart = เวลาปัจจุบัน()
@@ -1110,7 +1115,7 @@ bind เริ่ม = do {
                     # ── ไอเทม 1 = ดาบ: ฟันคอมโบ จูนกับโน้ต MIDI ──
                     ถ้า เลือกไอเทม == 1.0 { ถ้า สกิล >= 1.0 { ถ้า slashCD <= 0.0 {
                         bind sCmbMax = 2.5
-                        ถ้า อาร์เคดโหมด > 0.5 { bind sstA = list_get(ดาบสเตตัส, swordType);  bind slashCD = list_get(sstA,0);  bind sCmbMax = list_get(sstA,3) - 0.5 }
+                        bind sstA = list_get(ดาบสเตตัส, floor(swordType));  bind slashCD = list_get(sstA,0);  bind sCmbMax = list_get(sstA,3) - 0.5   # ดาบเท่ 6 แบบ — ทั้งสตอรี่+อาร์เคด
                         bind slashT = 0.16;  bind slashHit = 0.0
                         bind slashDir = slashDir + 1.0;  ถ้า slashDir > 7.5 { bind slashDir = 0.0 }   # วนทิศฟัน
                         bind combo = combo + 1.0;  ถ้า combo > sCmbMax { bind combo = 0.0 }
@@ -1233,6 +1238,7 @@ bind เริ่ม = do {
                 ถ้า กดปุ่ม("4") { bind เลือกไอเทม = 4.0 }
                 ถ้า กดปุ่ม("5") { bind เลือกไอเทม = 5.0 }
                 ถ้า กดปุ่ม("6") { bind เลือกไอเทม = 6.0 }
+                ถ้า อาร์เคดโหมด < 0.5 { ถ้า กดปุ่ม("f") { bind swordType = swordType + 1.0;  ถ้า swordType > 5.5 { bind swordType = 0.0 };  เสียงเอฟเฟกต์(cx,cy,cz, 1.0, 520.0+swordType*40.0, 0.4*ปริมาณSFX, 0.12, "sine") } }   # สตอรี่: สลับดาบเท่ (1 ใน 6)
                 ถ้า กดปุ่ม("7") { bind เลือกไอเทม = 7.0 }
                 ถ้า กดปุ่ม("8") { bind เลือกไอเทม = 8.0 }
                 ถ้า กดปุ่ม("9") { bind เลือกไอเทม = 9.0 }
@@ -1444,6 +1450,22 @@ bind เริ่ม = do {
 
             bind speed = รากที่สอง(vx*vx + vy*vy + vz*vz)
 
+            # ── ออดิโอ-รีแอกทีฟ: อิ่มสีตาม FFT เพลง + หมุนตามไมค์ (เทรล+ริบบิ้น) ──
+            ถ้า micOpened < 0.5 { เปิดไมค์();  bind micOpened = 1.0 }
+            bind fxBands = สเปกตรัมเพลง(เพลงเล่น, 8)
+            bind fxEnergy = list_get(fxBands,1) + list_get(fxBands,2) + list_get(fxBands,3)
+            bind fxSat = 0.7 + fxEnergy*0.55;  ถ้า fxSat > 1.6 { bind fxSat = 1.6 }
+            bind fxSpin = fxSpin + เสียงRMS()*0.6                      # สะสมมุมหมุนจากไมค์
+
+            # ── เทรลแหวน: บันทึกตำแหน่ง+ความเร็วทุกเฟรม (อาร์เคด) ──
+            ถ้า อาร์เคดโหมด > 0.5 {
+                ถ้า trailInit < 0.5 { bind trailBuf = รายการศูนย์(floor(trailN)*6);  bind foeTrailBuf = รายการศูนย์(floor(trailN)*6);  bind trailInit = 1.0 }
+                bind trailBuf = เขียนเทรล(trailBuf, trailHead, cx, cy, cz, vx, vy, vz)
+                bind trailHead = (trailHead + 1.0) % trailN
+                bind foeTrailBuf = เขียนเทรล(foeTrailBuf, foeTrailHead, foeX, foeY + 0.5, foeZ, foeVX, 0.0, foeVZ)
+                bind foeTrailHead = (foeTrailHead + 1.0) % trailN
+            }
+
             # (ไม่จำกัดความเร็ว — momentum เต็มที่; การหน่วงมาจาก soft-body damping 0.98)
 
             # ── เก็บไอเทมดาบ (อยู่ที่ (0, 40) ในฮับ) → ปลดล็อกการฟัน ──
@@ -1522,6 +1544,7 @@ bind เริ่ม = do {
                     bind foeVX = foeVX - fnx*0.6;  bind foeVZ = foeVZ - fnz*0.6
                 }
                 ถ้า impactT > 0.0 { bind impactT = impactT - 0.016 }
+                ถ้า critT > 0.0 { bind critT = critT - 0.016 }
                 # ── เคลื่อนที่: คล่อง(agility) คุมความเร็ว; ไล่ล่า + รักษาระยะ ──
                 # ── สถานะ: หลับ (หยุดนิ่ง) / ช้า (เวลาช้าเฉพาะศัตรู, ผู้เล่นปกติ) ──
                 bind slowK = 1.0;  ถ้า foeSlow > 0.0 { bind foeSlow = foeSlow - 0.016;  bind slowK = 0.4 }
@@ -1579,7 +1602,7 @@ bind เริ่ม = do {
                     bind dmgFoe = (1.6 + list_get(ผู้เล่นสเตตัส,7)*0.25) * list_get(sstF,1) * (1.0 - foeRes) - foeDef*0.15
                     ถ้า dmgFoe < 0.3 { bind dmgFoe = 0.3 }
                     # คริติคอล: โอกาส ∝ โชค (LCK สเตตัส 5) → ดาเมจ ×2.2
-                    bind crit = 0.0;  ถ้า สุ่ม() < 0.05 + list_get(ผู้เล่นสเตตัส,5)*0.02 { bind crit = 1.0;  bind dmgFoe = dmgFoe * 2.2 }
+                    bind crit = 0.0;  ถ้า สุ่ม() < 0.05 + list_get(ผู้เล่นสเตตัส,5)*0.02 { bind crit = 1.0;  bind dmgFoe = dmgFoe * 2.2;  bind critT = 0.9;  bind critX = foeX;  bind critZ = foeZ;  เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, 880.0, 0.5*ปริมาณSFX, 0.18, "square");  เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, 1320.0, 0.4*ปริมาณSFX, 0.22, "sine") }
                     bind hitG = 0.0;  ถ้า foeGuard > 0.5 { bind dmgFoe = dmgFoe * 0.2;  bind hitG = 1.0 }
                     bind foeHP = foeHP - dmgFoe;  bind foeHurt = 0.3
                     ถ้า hitG > 0.5 { จอยสั่น(0.5, 0.7, 90) }  มิฉะนั้น { จอยสั่น(0.3, 0.55, 100) }   # จอย: โดนการ์ด / ตีโดน
@@ -1875,13 +1898,15 @@ bind เริ่ม = do {
             ถ้า อาร์เคดโหมด > 0.5 {
                 วาดอารีนา(t, ด่าน)
                 flush_3d()
+                ถ้า trailInit > 0.5 { bind ftr = (ไซน์(foeBodyHue)*0.5+0.5)*185.0+70.0;  bind ftg = (ไซน์(foeBodyHue+2.094)*0.5+0.5)*185.0+70.0;  bind ftb = (ไซน์(foeBodyHue+4.189)*0.5+0.5)*185.0+70.0;  วาดเทรลแหวน(foeTrailBuf, foeTrailHead, trailN, ftr, ftg, ftb, ftr, ftg, ftb, fxSat, fxSpin) }
                 วาดศัตรู(foeX, foeY, foeZ, R, foeBodyHue, foeStampHue, foeBandHue, floor(foeStamp), floor(foeBand), t, foeHurt, foeGuard, foeName, camYaw)
                 # ── ฟันดาบของศัตรู (อาร์คเติม หันเข้าหาผู้เล่น) ──
                 ถ้า foeSlashT > 0.0 {
                     bind fyaw = atan2(cx - foeX, cz - foeZ)
                     bind fprog = 1.0 - foeSlashT / 0.32
                     bind fcol = สีจากเฉด(foeBandHue)
-                    วาดริบบิ้นสแลช(foeX, foeY + 0.5, foeZ, fyaw, foeCombo*0.7854, fprog, 7.0, list_get(fcol,0), list_get(fcol,1), list_get(fcol,2))
+                    วาดริบบิ้นสแลช(foeX, foeY + 0.5, foeZ, fyaw, foeCombo*0.7854, fprog, 7.0, list_get(fcol,0), list_get(fcol,1), list_get(fcol,2), fxSat, fxSpin)
+                    วาดดาบเหวี่ยง(foeX, foeY + 0.5, foeZ, fyaw, foeCombo*0.7854, fprog, 7.0, list_get(fcol,0), list_get(fcol,1), list_get(fcol,2))
                     flush_3d()
                 }
                 # ── กราฟิกอิมแพ็คปะทะลูก (วงแหวนพุ่ง + ประกาย) ──
@@ -1909,17 +1934,36 @@ bind เริ่ม = do {
                     bind pdr = (0.75 - popDmgT) * 5.0
                     bind pds = 1.6;  bind pcr = 255;  bind pcg = 120;  bind pcb = 120
                     ถ้า popDmgCrit > 0.5 { bind pds = 2.6;  bind pcr = 255;  bind pcg = 230;  bind pcb = 60 }
-                    วาดเลขป้าย(popDmg, foeX, foeY - R - pdr, foeZ, pds, camYaw, pcr, pcg, pcb)
+                    วาดเลขป้าย(popDmg, 0.0-1.0, foeX, foeY - R - pdr, foeZ, pds, camYaw, pcr, pcg, pcb)
                 }
                 ถ้า popHurtT > 0.0 {
                     bind phr = (0.75 - popHurtT) * 5.0
-                    วาดเลขป้าย(popHurt, cx, cy - R - phr, cz, 1.6, camYaw, 255, 80, 80)
+                    วาดเลขป้าย(popHurt, 0.0-1.0, cx, cy - R - phr, cz, 1.6, camYaw, 255, 80, 80)
                 }
                 ถ้า popHealT > 0.0 {
                     bind pgr = (0.75 - popHealT) * 5.0
-                    วาดเลขป้าย(popHeal, cx, cy - R - 2.0 - pgr, cz, 1.5, camYaw, 90, 255, 130)
+                    วาดเลขป้าย(popHeal, 1.0, cx, cy - R - 2.0 - pgr, cz, 1.5, camYaw, 90, 255, 130)
                 }
                 flush_3d();  โหมดผสม(0)
+                # ── เอฟเฟกต์ "critical!" : ดาวทองกระจาย + ข้อความสั่นลอยขึ้น ──
+                ถ้า critT > 0.0 {
+                    โหมดผสม(1)
+                    bind cpr = (0.9 - critT) / 0.9               # 0→1 (ความคืบหน้า)
+                    bind crz = critT / 0.9                        # 1→0 (จาง)
+                    bind cyz = foeY - R - 3.0 - cpr*6.0           # ลอยขึ้น
+                    สีดินสอ(floor(255*crz), floor(220*crz), floor(45*crz))
+                    bind ck = 0
+                    ขณะที่ ck < 11 {
+                        bind ca = ck*0.5712 + critT*5.0
+                        bind clen = (0.35 + cpr*1.7) * 7.5
+                        วาดเส้น3มิติ(critX, cyz, critZ,  critX+โคไซน์(ca)*clen, cyz, critZ+ไซน์(ca)*clen)
+                        bind ck = ck + 1
+                    }
+                    อนุภาคทรงกลม(critX, cyz, critZ, (0.5+cpr)*3.2, 14, critT*6.0, 255, 235, 95)
+                    สีดินสอ(255, 225, 70)
+                    วาดสตริงป้าย("critical!", critX, cyz - 2.4, critZ, 2.2 + ไซน์(critT*32.0)*0.3, camYaw)
+                    flush_3d();  โหมดผสม(0)
+                }
                 ถ้า callT > 0.0 {
                     โหมดผสม(1);  สีดินสอ(255, 240, 180)
                     วาดสตริงป้าย(callMsg, foeX, foeY - R - 5.5, foeZ, 1.5, camYaw)
@@ -2049,6 +2093,7 @@ bind เริ่ม = do {
 
             ถ้า อาร์เคดโหมด > 0.5 {
                 bind pcb = สีจากเฉด(ฮิวBody);  bind pcs = สีจากเฉด(ฮิวStamp);  bind pcn = สีจากเฉด(ฮิวBand)
+                ถ้า trailInit > 0.5 { bind psc = list_get(ดาบสี, floor(swordType));  วาดเทรลแหวน(trailBuf, trailHead, trailN, list_get(pcb,0), list_get(pcb,1), list_get(pcb,2), list_get(psc,0), list_get(psc,1), list_get(psc,2), fxSat, fxSpin) }
                 วาดลูกแต่ง(cx, cy, cz, R,
                     list_get(pcb,0),list_get(pcb,1),list_get(pcb,2),
                     list_get(pcs,0),list_get(pcs,1),list_get(pcs,2),
@@ -2128,24 +2173,19 @@ bind เริ่ม = do {
             # ── ฟันดาบ active (เร็ว) — อาร์คตามคอมโบ (h/v/แทง) ──
             ถ้า slashT > 0.0 {
                 bind prog = 1.0 - slashT / 0.16
-                ถ้า อาร์เคดโหมด > 0.5 {
-                    bind ssv = list_get(ดาบสเตตัส, swordType)
-                    bind vslen = list_get(ssv,2)*0.5;  ถ้า vslen > 9.0 { bind vslen = 9.0 }
-                    # ริบบิ้นโค้งจากลูก ตามทิศเล็ง (arcYaw) เอียงตามทิศฟัน (slashDir) — โค้ง+โต+จาง
-                    วาดริบบิ้นสแลช(cx, cy + 0.5, cz, arcYaw, slashDir*0.7854, prog, vslen, list_get(ssv,4), list_get(ssv,5), list_get(ssv,6))
-                    bind vahx = cx + ไซน์(arcYaw)*vslen;  bind vahz = cz + โคไซน์(arcYaw)*vslen
-                    ถ้า debugHit > 0.5 { วาดฮิตบ็อกซ์(cx + ไซน์(arcYaw)*vslen*0.8, cy + 0.5, cz + โคไซน์(arcYaw)*vslen*0.8, vslen*0.8 + R) }   # ดีบักฮิตบ็อกซ์ (กด H)
+                # ดาบเท่ 6 แบบ — ใช้ทั้งสตอรี่+อาร์เคด (เลิกใช้ดาบขาวเก่า วาดสแลช)
+                bind ssv = list_get(ดาบสเตตัส, floor(swordType))
+                bind vslen = list_get(ssv,2)*0.5;  ถ้า vslen > 9.0 { bind vslen = 9.0 }
+                # ริบบิ้นโค้งจากลูก ตามทิศเล็ง (arcYaw) เอียงตามทิศฟัน (slashDir) — โค้ง+โต+จาง
+                วาดริบบิ้นสแลช(cx, cy + 0.5, cz, arcYaw, slashDir*0.7854, prog, vslen, list_get(ssv,4), list_get(ssv,5), list_get(ssv,6), fxSat, fxSpin)
+                วาดดาบเหวี่ยง(cx, cy + 0.5, cz, arcYaw, slashDir*0.7854, prog, vslen, list_get(ssv,4), list_get(ssv,5), list_get(ssv,6))
+                ถ้า debugHit > 0.5 {   # ดีบักฮิตบ็อกซ์ (กด H) — ตรงกับการตรวจดาเมจจริง บนดาบหนา
+                    bind dbgLen = list_get(ssv,2)*0.4;  ถ้า dbgLen > 7.0 { bind dbgLen = 7.0 }
+                    วาดฮิตบ็อกซ์(cx + ไซน์(arcYaw)*dbgLen, cy + 0.5, cz + โคไซน์(arcYaw)*dbgLen, dbgLen + R)
                 }
-                มิฉะนั้น { วาดสแลช(cx, cy + 0.5, cz, arcYaw, arcType, prog, 1.0, R * 4.6) }
                 flush_3d()
             }
-            # ── รอยอาร์คค้างในอากาศ จางหาย (double arc) ──
-            ถ้า arcFade > 0.0 {
-                bind br = arcFade / 0.5
-                วาดสแลช(cx, cy + 0.5, cz, arcYaw, arcType, 1.0, br * 0.75, R * 4.3)
-                วาดสแลช(cx, cy + 0.5, cz, arcYaw, arcType, 1.0, br * 0.45, R * 5.1)
-                flush_3d()
-            }
+            # ── (เลิกใช้รอยอาร์คขาวเก่า — ริบบิ้นสแลช + เทรลแหวนแทนแล้ว) ──
             # ── HyperBomb: คลื่นกระแทกขยายวง ──
             ถ้า bombT > 0.0 {
                 bind be = (0.55 - bombT) / 0.55
