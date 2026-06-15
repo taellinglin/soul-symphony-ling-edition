@@ -1,19 +1,30 @@
-name: Release (Windows)
+name: Build & Release
 
-# Builds the game with the Ling toolchain and publishes a zipped Windows build.
-# Trigger: push a tag like v1.2.3, or run manually from the Actions tab.
+# Builds the game on Windows, Linux and macOS with the Ling toolchain.
+#   • every push to master → updates a rolling "latest" prerelease
+#   • a tag like v1.2.3     → publishes a versioned release
 on:
   push:
+    branches: [master]
     tags: ['v*']
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Release tag (e.g. v0.1.0) — required for manual runs"
-        required: false
+
+permissions:
+  contents: write
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: soul-symphony-ling-windows.zip
+          - os: ubuntu-latest
+            asset: soul-symphony-ling-linux.tar.gz
+          - os: macos-latest
+            asset: soul-symphony-ling-macos.tar.gz
+    runs-on: ${{ matrix.os }}
     steps:
       # The game's Cargo.toml has [patch] ling-lang = { path = "../ling" }, so the
       # Ling source must sit next to the game checkout as ../ling.
@@ -28,6 +39,13 @@ jobs:
         with:
           repository: taellinglin/ling
           path: ling
+
+      - name: Linux system deps (minifb / gilrs / ALSA)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libasound2-dev libudev-dev \
+            libxkbcommon-dev libwayland-dev libx11-dev libxcb1-dev
 
       - name: Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -48,27 +66,54 @@ jobs:
         working-directory: soul-symphony-ling
         run: lingfu build --release
 
-      - name: Package standalone build
+      - name: Package
         working-directory: soul-symphony-ling
-        shell: pwsh
+        shell: bash
         run: |
-          $out = "soul-symphony-ling-windows"
-          New-Item -ItemType Directory -Force -Path $out | Out-Null
-          Copy-Item target/release/soul-symphony-ling.exe $out/
-          foreach ($d in 'game','font','music') {
-            if (Test-Path "target/release/$d") { Copy-Item -Recurse "target/release/$d" "$out/$d" }
-          }
-          Get-ChildItem target/release -Filter *.cfg | Copy-Item -Destination $out/ -ErrorAction SilentlyContinue
-          Get-ChildItem target/release -Filter *.dat | Copy-Item -Destination $out/ -ErrorAction SilentlyContinue
-          Compress-Archive -Path "$out/*" -DestinationPath soul-symphony-ling-windows.zip -Force
-          "Zipped: $((Get-Item soul-symphony-ling-windows.zip).Length / 1MB) MB"
+          EXE=soul-symphony-ling
+          [ "$RUNNER_OS" = "Windows" ] && EXE=soul-symphony-ling.exe
+          DIR=soul-symphony-ling
+          mkdir -p dist/$DIR
+          cp "target/release/$EXE" "dist/$DIR/"
+          for d in game font music; do [ -d "target/release/$d" ] && cp -r "target/release/$d" "dist/$DIR/"; done
+          cp target/release/*.cfg target/release/*.dat "dist/$DIR/" 2>/dev/null || true
+          cd dist
+          case "$RUNNER_OS" in
+            Windows) 7z a "../${{ matrix.asset }}" "$DIR" ;;
+            *)       tar czf "../${{ matrix.asset }}" "$DIR" ;;
+          esac
 
-      - name: Publish GitHub Release
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: soul-symphony-ling/${{ matrix.asset }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish versioned release (tags)
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
-          name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
-          files: soul-symphony-ling/soul-symphony-ling-windows.zip
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: artifacts/*
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update rolling "latest" prerelease (master pushes)
+        if: github.ref_type == 'branch' && github.ref_name == 'master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest (master)
+          prerelease: true
+          files: artifacts/*
+          body: "Auto-built from the latest master commit (${{ github.sha }})."
