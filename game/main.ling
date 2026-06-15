@@ -109,6 +109,7 @@ bind เริ่ม = do {
     bind menuIdleT = 0.0;  bind hsInserted = 0.0   # ตัวจับเวลาไอเดิลเมนู + ธงแทรกคะแนนแล้ว
     bind gpNavT = 0.0;  bind gpAp = 0.0   # จอย: ดีเลย์เลื่อนเมนู + ขอบปุ่ม A
     bind debugHit = 0.0   # H: สลับแสดงดีบักฮิตบ็อกซ์ดาบ
+    bind impactT = 0.0;  bind impactX = 0.0;  bind impactZ = 0.0   # กราฟิกอิมแพ็คปะทะลูก
     bind ลูกชื่อ = "player"   # ค่าเริ่มชื่อลูก (เผื่อข้ามหน้าปรับแต่ง)
     # ── วินิจฉัยจอย: แสดงสิ่งที่ gilrs ตรวจพบ (สำหรับคอนโทรลเลอร์ที่ระบุแปลก ๆ) ──
     จอยโพล()
@@ -1505,6 +1506,14 @@ bind เริ่ม = do {
                 bind fdx = cx - foeX;  bind fdz = cz - foeZ
                 bind fdist = รากที่สอง(fdx*fdx + fdz*fdz) + 0.001
                 bind fnx = fdx/fdist;  bind fnz = fdz/fdist
+                # ── ปะทะลูก-vs-ลูก: อิมแพ็ค + เด้งแยก (ไม่เสียเลือดจากการชน) ──
+                ถ้า fdist < R*2.3 {
+                    ถ้า impactT <= 0.0 { เสียงเอฟเฟกต์((cx+foeX)*0.5, cy, (cz+foeZ)*0.5, 1.0, 170.0, 0.45*ปริมาณSFX, 0.14, "square") }
+                    bind impactT = 0.30;  bind impactX = (cx+foeX)*0.5;  bind impactZ = (cz+foeZ)*0.5
+                    bind vx = vx + fnx*0.6;  bind vz = vz + fnz*0.6
+                    bind foeVX = foeVX - fnx*0.6;  bind foeVZ = foeVZ - fnz*0.6
+                }
+                ถ้า impactT > 0.0 { bind impactT = impactT - 0.016 }
                 # ── เคลื่อนที่: คล่อง(agility) คุมความเร็ว; ไล่ล่า + รักษาระยะ ──
                 # ── สถานะ: หลับ (หยุดนิ่ง) / ช้า (เวลาช้าเฉพาะศัตรู, ผู้เล่นปกติ) ──
                 bind slowK = 1.0;  ถ้า foeSlow > 0.0 { bind foeSlow = foeSlow - 0.016;  bind slowK = 0.4 }
@@ -1866,6 +1875,14 @@ bind เริ่ม = do {
                     bind fcol = สีจากเฉด(foeBandHue)
                     วาดริบบิ้นสแลช(foeX, foeY + 0.5, foeZ, fyaw, foeCombo*0.7854, fprog, 7.0, list_get(fcol,0), list_get(fcol,1), list_get(fcol,2))
                     flush_3d()
+                }
+                # ── กราฟิกอิมแพ็คปะทะลูก (วงแหวนพุ่ง + ประกาย) ──
+                ถ้า impactT > 0.0 {
+                    โหมดผสม(1)
+                    bind ipr = (0.30 - impactT) / 0.30
+                    วงแหวนเติม(impactX, cy + 0.3, impactZ, ipr*4.2, ipr*3.0, 18, floor(255*(1.0-ipr)), floor(235*(1.0-ipr)), floor(130*(1.0-ipr)))
+                    อนุภาคทรงกลม(impactX, cy + 0.3, impactZ, ipr*3.6, 16, ipr*5.0, 255, 240, 180)
+                    flush_3d();  โหมดผสม(0)
                 }
                 # ── เลขดาเมจ/ฮีลลอยเหนือหัว (อาร์เคด) ──
                 โหมดผสม(1)
