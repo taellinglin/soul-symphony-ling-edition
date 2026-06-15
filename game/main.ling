@@ -109,7 +109,7 @@ bind เริ่ม = do {
     bind menuIdleT = 0.0;  bind hsInserted = 0.0   # ตัวจับเวลาไอเดิลเมนู + ธงแทรกคะแนนแล้ว
     bind gpNavT = 0.0;  bind gpAp = 0.0   # จอย: ดีเลย์เลื่อนเมนู + ขอบปุ่ม A
     bind debugHit = 0.0   # H: สลับแสดงดีบักฮิตบ็อกซ์ดาบ
-    bind impactT = 0.0;  bind impactX = 0.0;  bind impactZ = 0.0   # กราฟิกอิมแพ็คปะทะลูก
+    bind impactT = 0.0;  bind impactX = 0.0;  bind impactZ = 0.0;  bind clashFX = 0.0   # อิมแพ็คปะทะ + ปะดาบ
     bind ลูกชื่อ = "player"   # ค่าเริ่มชื่อลูก (เผื่อข้ามหน้าปรับแต่ง)
     # ── วินิจฉัยจอย: แสดงสิ่งที่ gilrs ตรวจพบ (สำหรับคอนโทรลเลอร์ที่ระบุแปลก ๆ) ──
     จอยโพล()
@@ -1506,6 +1506,14 @@ bind เริ่ม = do {
                 bind fdx = cx - foeX;  bind fdz = cz - foeZ
                 bind fdist = รากที่สอง(fdx*fdx + fdz*fdz) + 0.001
                 bind fnx = fdx/fdist;  bind fnz = fdz/fdist
+                # ── ปะดาบ: ทั้งคู่ฟันพร้อมกัน + ใกล้ → เด้งคู่แรง + ยกเลิกฟัน + ประกายปะดาบ ──
+                ถ้า slashT > 0.0 { ถ้า foeSlashT > 0.0 { ถ้า fdist < R*3.4 { ถ้า impactT <= 0.0 {
+                    bind impactT = 0.40;  bind impactX = (cx+foeX)*0.5;  bind impactZ = (cz+foeZ)*0.5;  bind clashFX = 1.0
+                    bind vx = vx + fnx*1.5;  bind vz = vz + fnz*1.5                  # เด้งคู่: ผู้เล่น
+                    bind foeVX = foeVX - fnx*1.5;  bind foeVZ = foeVZ - fnz*1.5      # เด้งคู่: ศัตรู
+                    bind slashHit = 1.0;  bind foeSlashT = 0.0                        # ปะกัน → ยกเลิกการฟันทั้งคู่
+                    เสียงเอฟเฟกต์((cx+foeX)*0.5, cy, (cz+foeZ)*0.5, 1.0, 850.0, 0.6*ปริมาณSFX, 0.18, "square");  จอยสั่น(0.6, 0.85, 130)
+                } } } }
                 # ── ปะทะลูก-vs-ลูก: อิมแพ็ค + เด้งแยก (ไม่เสียเลือดจากการชน) ──
                 ถ้า fdist < R*2.3 {
                     ถ้า impactT <= 0.0 { เสียงเอฟเฟกต์((cx+foeX)*0.5, cy, (cz+foeZ)*0.5, 1.0, 170.0, 0.45*ปริมาณSFX, 0.14, "square") }
@@ -1879,10 +1887,21 @@ bind เริ่ม = do {
                 # ── กราฟิกอิมแพ็คปะทะลูก (วงแหวนพุ่ง + ประกาย) ──
                 ถ้า impactT > 0.0 {
                     โหมดผสม(1)
-                    bind ipr = (0.30 - impactT) / 0.30
-                    วงแหวนเติม(impactX, cy + 0.3, impactZ, ipr*4.2, ipr*3.0, 18, floor(255*(1.0-ipr)), floor(235*(1.0-ipr)), floor(130*(1.0-ipr)))
-                    อนุภาคทรงกลม(impactX, cy + 0.3, impactZ, ipr*3.6, 16, ipr*5.0, 255, 240, 180)
+                    bind imax = 0.30;  ถ้า clashFX > 0.5 { bind imax = 0.40 }
+                    bind ipr = (imax - impactT) / imax;  ถ้า ipr < 0.0 { bind ipr = 0.0 }
+                    bind irad = 4.2;  bind isr = 255;  bind isg = 235;  bind isb = 130
+                    ถ้า clashFX > 0.5 { bind irad = 6.5;  bind isg = 248;  bind isb = 225 }   # ปะดาบ: ใหญ่ + ขาวสว่าง
+                    วงแหวนเติม(impactX, cy + 0.3, impactZ, ipr*irad, ipr*irad*0.7, 18, floor(isr*(1.0-ipr)), floor(isg*(1.0-ipr)), floor(isb*(1.0-ipr)))
+                    อนุภาคทรงกลม(impactX, cy + 0.3, impactZ, ipr*irad*0.85, 16, ipr*5.0, 255, 245, 200)
+                    ถ้า clashFX > 0.5 {
+                        สีดินสอ(floor(255*(1.0-ipr)), floor(250*(1.0-ipr)), floor(230*(1.0-ipr)))
+                        bind sk = 0
+                        ขณะที่ sk < 8 { bind sa = sk*0.7854
+                            วาดเส้น3มิติ(impactX, cy+0.3, impactZ,  impactX+โคไซน์(sa)*ipr*7.0, cy+0.3, impactZ+ไซน์(sa)*ipr*7.0)
+                            bind sk = sk + 1 }
+                    }
                     flush_3d();  โหมดผสม(0)
+                    ถ้า impactT <= 0.018 { bind clashFX = 0.0 }
                 }
                 # ── เลขดาเมจ/ฮีลลอยเหนือหัว (อาร์เคด) ──
                 โหมดผสม(1)

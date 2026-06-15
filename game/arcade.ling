@@ -242,7 +242,7 @@ bind ดาบสเตตัส = [
     bind sdx = ppx*cr;  bind sdy = 0.0 - srl;  bind sdz = ppz*cr            # แกนเหวี่ยง = perp*cos(roll) + up*sin(roll)
     bind span = 1.45
     bind rOut = reach * (0.45 + prog*0.85)                   # โตขึ้น (scale out)
-    bind rIn = rOut * 0.34
+    bind rIn = rOut * 0.10                                    # ใบหนาขึ้น (ดาบหนา)
     bind k = 0
     ขณะที่ k < 10 {
         bind f0 = k / 10.0;  bind f1 = (k + 1) / 10.0
