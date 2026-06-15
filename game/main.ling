@@ -605,7 +605,10 @@ bind เริ่ม = do {
                     ถ้า wantPriv > 0.5 { text_clear();  bind สถานะ = ST_HOSTPW }        # ส่วนตัว → ตั้งรหัสก่อน
                     มิฉะนั้น {
                         bind hostPass = "";  bind authSent = 0.0
-                        เน็ตโฮสต์(netPort)
+                        พิมพ์เขียว("  🌐 Host self-test:")
+                พิมพ์ฟ้า(เน็ตทดสอบ(netPort))
+                พิมพ์เหลือง("  external play: port-forward TCP " + to_str(netPort) + " to this PC + allow it in the firewall; joiners use your PUBLIC IP (verify with an online port checker). On CGNAT ISPs port-forward can't work — use Tailscale/Hamachi.")
+                เน็ตโฮสต์(netPort)
                         bind hMode = "coop";  ถ้า vsโหมด == 1 { bind hMode = "vs" }
                         เน็ตประกาศ(discPort, ลูกชื่อ + "|" + hMode + "|arena|0")
                         bind สถานะ = ST_LOBBY
@@ -629,6 +632,9 @@ bind เริ่ม = do {
             แสดงผล()
             ถ้า กดปุ่ม("enter") {
                 bind hostPass = text_get();  bind authSent = 0.0;  text_clear()
+                พิมพ์เขียว("  🌐 Host self-test:")
+                พิมพ์ฟ้า(เน็ตทดสอบ(netPort))
+                พิมพ์เหลือง("  external play: port-forward TCP " + to_str(netPort) + " to this PC + allow it in the firewall; joiners use your PUBLIC IP (verify with an online port checker). On CGNAT ISPs port-forward can't work — use Tailscale/Hamachi.")
                 เน็ตโฮสต์(netPort)
                 bind hMode = "coop";  ถ้า vsโหมด == 1 { bind hMode = "vs" }
                 เน็ตประกาศ(discPort, ลูกชื่อ + "|" + hMode + "|arena|1")
