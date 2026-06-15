@@ -256,7 +256,7 @@ bind เริ่ม = do {
         # ── BOOT ──────────────────────────────────────────────────────────────
         ถ้า สถานะ == ST_BOOT {
             bind el = t - bootStart
-            bind prog = el / 5.2                # บูตยาวขึ้นเล็กน้อย — ให้ตัวอักษรลงตัว
+            bind prog = el / 7.2                # บูต ~2 วิ นานขึ้น — ให้ตัวอักษรลงตัว แล้วเฟดดำ
             bind fade = 1.0
             ถ้า prog > 0.8 { bind fade = (1.0 - prog) / 0.2 }
             ถ้า fade < 0.0 { bind fade = 0.0 }
@@ -1103,8 +1103,9 @@ bind เริ่ม = do {
                         bind slashT = 0.16;  bind slashHit = 0.0
                         bind slashDir = slashDir + 1.0;  ถ้า slashDir > 7.5 { bind slashDir = 0.0 }   # วนทิศฟัน
                         bind combo = combo + 1.0;  ถ้า combo > sCmbMax { bind combo = 0.0 }
-                        bind aimYaw = camYaw
-                        ถ้า vx*vx + vz*vz > 0.0004 { bind aimYaw = atan2(vx, vz) }   # เล็งทิศเคลื่อนที่ (แรง/สติ๊กซ้าย)
+                        bind aimYaw = camYaw                                          # K+M: เล็งกล้อง (เมาส์)
+                        bind stickMag = จอยแกน("lx")*จอยแกน("lx") + จอยแกน("ly")*จอยแกน("ly")
+                        ถ้า stickMag > 0.1 { ถ้า vx*vx + vz*vz > 0.0004 { bind aimYaw = atan2(vx, vz) } }   # จอย: เล็งทิศเคลื่อนที่
                         bind arcType = combo;  bind arcYaw = aimYaw;  bind arcFade = 0.5
                         bind slashNote = slashNote + 1.0
                         bind sidx = slashNote - ปัดลง(slashNote / เก็บจำนวน) * เก็บจำนวน

@@ -436,7 +436,7 @@ bind โรมัน = [[8],[8,8],[8,8,8],[8,21],[21],[21,8],[21,8,8],[21,8,8,8]
     bind ad = prog - 0.82;  ถ้า ad < 0.0 { bind ad = 0.0 - ad }
     bind flashAmt = 0.0;  ถ้า ad < 0.07 { bind flashAmt = 1.0 - ad/0.07 }
     bind dim = 1.0
-    ถ้า prog > 0.85 { bind dim = 1.0 - (prog-0.85)/0.15;  ถ้า dim < 0.0 { bind dim = 0.0 } }
+    ถ้า prog > 0.78 { bind dim = 1.0 - (prog-0.78)/0.22;  ถ้า dim < 0.0 { bind dim = 0.0 } }   # เฟดดำกว้างขึ้น (นุ่ม)
     เติม(floor(2.0 + flashAmt*253.0), floor(3.0 + flashAmt*252.0), floor(10.0 + flashAmt*245.0))
     ตั้งกล้องมอง(0.0, 0.0, -30.0, 0.0, 0.0, 0.0)
     ตั้งระยะห่าง(3.0)
