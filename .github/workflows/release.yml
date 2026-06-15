@@ -1,0 +1,74 @@
+name: Release (Windows)
+
+# Builds the game with the Ling toolchain and publishes a zipped Windows build.
+# Trigger: push a tag like v1.2.3, or run manually from the Actions tab.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.1.0) — required for manual runs"
+        required: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      # The game's Cargo.toml has [patch] ling-lang = { path = "../ling" }, so the
+      # Ling source must sit next to the game checkout as ../ling.
+      - name: Checkout game (with LFS audio)
+        uses: actions/checkout@v4
+        with:
+          path: soul-symphony-ling
+          lfs: true
+
+      - name: Checkout Ling toolchain → ../ling
+        uses: actions/checkout@v4
+        with:
+          repository: taellinglin/ling
+          path: ling
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo + build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            soul-symphony-ling
+            ling
+
+      - name: Install lingfu (and ling)
+        run: |
+          cargo install --path ling/crates/ling-fu --bin lingfu --locked || cargo install --path ling/crates/ling-fu --bin lingfu
+          cargo install --path ling --bin ling --locked || cargo install --path ling --bin ling
+
+      - name: Build release (lingfu)
+        working-directory: soul-symphony-ling
+        run: lingfu build --release
+
+      - name: Package standalone build
+        working-directory: soul-symphony-ling
+        shell: pwsh
+        run: |
+          $out = "soul-symphony-ling-windows"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item target/release/soul-symphony-ling.exe $out/
+          foreach ($d in 'game','font','music') {
+            if (Test-Path "target/release/$d") { Copy-Item -Recurse "target/release/$d" "$out/$d" }
+          }
+          Get-ChildItem target/release -Filter *.cfg | Copy-Item -Destination $out/ -ErrorAction SilentlyContinue
+          Get-ChildItem target/release -Filter *.dat | Copy-Item -Destination $out/ -ErrorAction SilentlyContinue
+          Compress-Archive -Path "$out/*" -DestinationPath soul-symphony-ling-windows.zip -Force
+          "Zipped: $((Get-Item soul-symphony-ling-windows.zip).Length / 1MB) MB"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+          files: soul-symphony-ling/soul-symphony-ling-windows.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
