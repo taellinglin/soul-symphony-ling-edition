@@ -1864,7 +1864,7 @@ bind เริ่ม = do {
                     bind fyaw = atan2(cx - foeX, cz - foeZ)
                     bind fprog = 1.0 - foeSlashT / 0.32
                     bind fcol = สีจากเฉด(foeBandHue)
-                    วาดสแลชทิศ(foeX, foeY + 0.5, foeZ, camYaw, foeCombo*0.7854, fprog, 8.0, list_get(fcol,0), list_get(fcol,1), list_get(fcol,2))
+                    วาดริบบิ้นสแลช(foeX, foeY + 0.5, foeZ, fyaw, foeCombo*0.7854, fprog, 7.0, list_get(fcol,0), list_get(fcol,1), list_get(fcol,2))
                     flush_3d()
                 }
                 # ── เลขดาเมจ/ฮีลลอยเหนือหัว (อาร์เคด) ──
@@ -2094,10 +2094,11 @@ bind เริ่ม = do {
                 bind prog = 1.0 - slashT / 0.16
                 ถ้า อาร์เคดโหมด > 0.5 {
                     bind ssv = list_get(ดาบสเตตัส, swordType)
-                    bind vslen = list_get(ssv,2)*0.4;  ถ้า vslen > 7.0 { bind vslen = 7.0 }
-                    bind vahx = cx + ไซน์(arcYaw)*vslen;  bind vahz = cz + โคไซน์(arcYaw)*vslen   # หน้าลูก ตามทิศเคลื่อนที่
-                    วาดสแลชทิศ(vahx, cy + 0.5, vahz, camYaw, slashDir*0.7854, prog, vslen, list_get(ssv,4), list_get(ssv,5), list_get(ssv,6))
-                    ถ้า debugHit > 0.5 { วาดฮิตบ็อกซ์(vahx, cy + 0.5, vahz, vslen + R) }   # ดีบักฮิตบ็อกซ์ (กด H)
+                    bind vslen = list_get(ssv,2)*0.5;  ถ้า vslen > 9.0 { bind vslen = 9.0 }
+                    # ริบบิ้นโค้งจากลูก ตามทิศเล็ง (arcYaw) เอียงตามทิศฟัน (slashDir) — โค้ง+โต+จาง
+                    วาดริบบิ้นสแลช(cx, cy + 0.5, cz, arcYaw, slashDir*0.7854, prog, vslen, list_get(ssv,4), list_get(ssv,5), list_get(ssv,6))
+                    bind vahx = cx + ไซน์(arcYaw)*vslen;  bind vahz = cz + โคไซน์(arcYaw)*vslen
+                    ถ้า debugHit > 0.5 { วาดฮิตบ็อกซ์(cx + ไซน์(arcYaw)*vslen*0.8, cy + 0.5, cz + โคไซน์(arcYaw)*vslen*0.8, vslen*0.8 + R) }   # ดีบักฮิตบ็อกซ์ (กด H)
                 }
                 มิฉะนั้น { วาดสแลช(cx, cy + 0.5, cz, arcYaw, arcType, prog, 1.0, R * 4.6) }
                 flush_3d()

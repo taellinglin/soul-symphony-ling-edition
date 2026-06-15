@@ -230,6 +230,35 @@ bind ดาบสเตตัส = [
     flush_3d();  โหมดผสม(0)
 }
 
+# ── ริบบิ้นสแลช: ระนาบแบนที่โค้งตามการเหวี่ยง (เหวี่ยงรอบแกนเล็ง, เอียงตามเส้นฟัน) ──
+#   aimYaw = ทิศเหวี่ยง · roll = เอียงเส้นฟัน (0=นอน, π/2=ตั้ง) · prog 0..1 · reach = ระยะใบมีด
+ฟังก์ชัน วาดริบบิ้นสแลช(cx, cy, cz, aimYaw, roll, prog, reach, r, g, b) {
+    โหมดผสม(1)
+    bind fade = 1.0 - prog                                   # จางออก
+    สีดินสอ(floor(r*fade), floor(g*fade), floor(b*fade))
+    bind fwx = ไซน์(aimYaw);  bind fwz = โคไซน์(aimYaw)        # แกนเล็ง (หน้า)
+    bind ppx = ไซน์(aimYaw + 1.5708);  bind ppz = โคไซน์(aimYaw + 1.5708)   # แกนตั้งฉากแนวนอน
+    bind cr = โคไซน์(roll);  bind srl = ไซน์(roll)
+    bind sdx = ppx*cr;  bind sdy = 0.0 - srl;  bind sdz = ppz*cr            # แกนเหวี่ยง = perp*cos(roll) + up*sin(roll)
+    bind span = 1.45
+    bind rOut = reach * (0.45 + prog*0.85)                   # โตขึ้น (scale out)
+    bind rIn = rOut * 0.34
+    bind k = 0
+    ขณะที่ k < 10 {
+        bind f0 = k / 10.0;  bind f1 = (k + 1) / 10.0
+        ถ้า f0 < prog {
+            bind a0 = 0.0 - span + f0*2.0*span;  bind a1 = 0.0 - span + f1*2.0*span
+            bind c0 = โคไซน์(a0);  bind s0 = ไซน์(a0);  bind c1 = โคไซน์(a1);  bind s1 = ไซน์(a1)
+            bind d0x = fwx*c0 + sdx*s0;  bind d0y = sdy*s0;  bind d0z = fwz*c0 + sdz*s0
+            bind d1x = fwx*c1 + sdx*s1;  bind d1y = sdy*s1;  bind d1z = fwz*c1 + sdz*s1
+            วาดสามเหลี่ยม3มิติ(cx+d0x*rIn,cy+d0y*rIn,cz+d0z*rIn,  cx+d0x*rOut,cy+d0y*rOut,cz+d0z*rOut,  cx+d1x*rOut,cy+d1y*rOut,cz+d1z*rOut)
+            วาดสามเหลี่ยม3มิติ(cx+d0x*rIn,cy+d0y*rIn,cz+d0z*rIn,  cx+d1x*rOut,cy+d1y*rOut,cz+d1z*rOut,  cx+d1x*rIn,cy+d1y*rIn,cz+d1z*rIn)
+        }
+        bind k = k + 1
+    }
+    flush_3d();  โหมดผสม(0)
+}
+
 # ── ดีบักฮิตบ็อกซ์: วงกลมเส้นแดงบนระนาบ XZ ที่ y ──
 ฟังก์ชัน วาดฮิตบ็อกซ์(cx, cy, cz, r) {
     โหมดผสม(1);  สีดินสอ(255, 60, 60)
