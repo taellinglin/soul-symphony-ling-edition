@@ -8,6 +8,8 @@
 ใช้ "../instruments/chime"
 ใช้ "../game/proc_gen_level"
 ใช้ "../game/arcade"
+ใช้ "../game/queen_model"
+ใช้ "../game/companions"
 ใช้ "../font/Daemon"
 ใช้ "../font/English"
 
@@ -49,6 +51,8 @@ bind เริ่ม = do {
     audio_volume(0.6)
     พิมพ์ฟ้า("   จอ " + to_str(จอกว้าง) + "x" + to_str(จอสูง) + " @ " + to_str(จอFPS) + "Hz (เต็มจอไร้ขอบ)")
 
+    bind kMesh = mesh_load("game/king.lmesh")             # โมเดล native-res (เรนเดอร์ในเอนจิน)
+    bind qMesh = mesh_load("game/queen.lmesh")
     bind เพลงหลัก       = โหลดเพลง("music/Soul Symphony_Colors_Mix_Master.wav")
     bind ความยาวเพลงหลัก = ความยาวเพลง(เพลงหลัก)
     bind เพลงเกม        = โหลดเพลง("music/Antartica.wav")
@@ -158,6 +162,12 @@ bind เริ่ม = do {
     bind foeTrailBuf = [];  bind foeTrailHead = 0.0
     bind critT = 0.0;  bind critX = 0.0;  bind critZ = 0.0             # เอฟเฟกต์ "Critical!"
     bind fxSat = 1.0;  bind fxSpin = 0.0;  bind micOpened = 0.0         # อิ่มสี (FFT เพลง) + หมุน (ไมค์) สำหรับเทรล/ริบบิ้น
+    bind royg = [128.0, 128.0, 128.0]                                  # สี ROYGBIV จาก FFT (อัปเดตทุกเฟรม)
+    # ── สหาย AI: ราชา(น้ำเงิน)/ราชินี(แดง) ในโหมดสตอรี่ ──
+    bind compInit = 0.0;  bind kLiq = 0.0;  bind qLiq = 0.0;  bind kAtkT = 0.0;  bind qAtkT = 0.0   # แฮนเดิลของเหลว + คูลดาวน์โจมตี
+    bind kTrail = [];  bind kThead = 0.0;  bind qTrail = [];  bind qThead = 0.0;  bind kSlashT = 0.0;  bind qSlashT = 0.0   # เทรลแหวน + ตัวจับเวลาฟันของสหาย
+    bind kx = 0.0;  bind kz = 0.0;  bind ky = 0.0;  bind kvx = 0.0;  bind kvy = 0.0;  bind kvz = 0.0;  bind kph = 0.0;  bind kyaw = 0.0;  bind kanim = 0.0;  bind kgnd = 1.0;  bind kstep = 0.0
+    bind qx = 0.0;  bind qz = 0.0;  bind qy = 0.0;  bind qvx = 0.0;  bind qvy = 0.0;  bind qvz = 0.0;  bind qph = 0.0;  bind qyaw = 0.0;  bind qanim = 0.0;  bind qgnd = 1.0;  bind qstep = 0.0
     bind BOSS_Y = 0.0 - 55.0
     bind กรอบ      = 0.0
     bind bootStart = เวลาปัจจุบัน()
@@ -264,13 +274,18 @@ bind เริ่ม = do {
         # ── BOOT ──────────────────────────────────────────────────────────────
         ถ้า สถานะ == ST_BOOT {
             bind el = t - bootStart
-            bind prog = el / 7.2                # บูต ~2 วิ นานขึ้น — ให้ตัวอักษรลงตัว แล้วเฟดดำ
+            bind prog = el / 8.5                # บูตยาวขึ้น — ตัวอักษรลงตัว (~0.62) → ค้างไว้นาน → เฟดดำ
             bind fade = 1.0
-            ถ้า prog > 0.8 { bind fade = (1.0 - prog) / 0.2 }
+            ถ้า prog > 0.88 { bind fade = (1.0 - prog) / 0.12 }   # ค้างตัวอักษรนานขึ้นก่อนเฟด (เฟด 0.88→1.0)
             ถ้า fade < 0.0 { bind fade = 0.0 }
             bind lfo = 0.0                   # ไม่มีโมดูเลชัน — แพดคอร์ดนิ่ง
-            ถ้า prog > 0.82 { ถ้า flashChimePlayed < 0.5 { เล่นไชม์ใหญ่(0,0,0, 523.25, 0.95*ปริมาณSFX);  bind flashChimePlayed = 1.0 } }   # ไชม์ใหญ่ตอนแฟลชขาว
-            bind a = 0.22 * fade
+            # ฮัม (คล้าย binaural beat) — เฟดเข้า (0→0.22) → ค้าง → เฟดออก (0.86→1.0)
+            bind hum = 1.0
+            ถ้า prog < 0.22 { bind hum = prog / 0.22 }
+            ถ้า prog > 0.86 { bind hum = (1.0 - prog) / 0.14 }
+            ถ้า hum < 0.0 { bind hum = 0.0 }
+            ถ้า prog > 0.88 { ถ้า flashChimePlayed < 0.5 { เล่นไชม์ใหญ่(0,0,0, 523.25, 0.95*ปริมาณSFX);  bind flashChimePlayed = 1.0 } }   # ไชม์ใหญ่ตอนแฟลชขาว
+            bind a = 0.26 * hum
             เสียงโทน(0, 0,0,0, 1.0, 261.63, a,      lfo,      0.45*fade)
             เสียงโทน(1, 0,0,0, 1.0, 329.63, a*0.85, lfo*0.9,  0.45*fade)
             เสียงโทน(2, 0,0,0, 1.0, 392.00, a*0.8,  lfo*0.8,  0.45*fade)
@@ -307,7 +322,6 @@ bind เริ่ม = do {
             ถ้า กดปุ่ม("enter") { bind สถานะ = ST_TITLE }
             ถ้า กดปุ่ม("space") { bind สถานะ = ST_TITLE }
             ถ้า สถานะ == ST_TITLE {
-                เล่นฆ้อง(0,0,0, 98.0, 0.85*ปริมาณSFX)   # ฆ้องปิดท้ายบูต
                 เสียงโทน(0,0,0,0,1.0,261.0,0.0,0.0,0.0)
                 เสียงโทน(1,0,0,0,1.0,329.0,0.0,0.0,0.0)
                 เสียงโทน(2,0,0,0,1.0,392.0,0.0,0.0,0.0)
@@ -865,12 +879,31 @@ bind เริ่ม = do {
             เมฆดาว(t, skyFade, endf)
             flush_3d()
 
+            # ── ราชา: ปรากฏร่างใหญ่อยู่หลังดาวเคราะห์ (เผยตอนกล้องเข้าหา endf) ──
+            ถ้า endf > 0.02 {
+                โหมดผสม(0)
+                mesh_draw(kMesh, 0.0, 0.0-30.0, 0.0, 18.0, clock*0.07, 0.0, 0.0)
+                flush_3d()
+                โหมดผสม(1)
+            }
+
             # ดาวเคราะห์ (ลูกของเหลว)
             liquid_step(liq, 0.016)
             liquid_splat(liq, 28.0 + ไซน์(t)*12.0, 28.0 + โคไซน์(t*1.1)*12.0, 1.0, 0.2, 4.0)
             liquid_draw_surface(liq, 1, 0.0, 0.0-14.0, 0.0, 5.0, 5.0)
             อนุภาคทรงกลม(0.0, 0.0-14.0, 0.0, 4.6, 120.0, t, floor(200*skyFade), floor(180*skyFade), floor(255*skyFade))
             flush_3d()
+
+            # ── ราชินี: วิญญาณภายในลูก (ตาข่าย + ริกเรืองแสง) หมุนช้า — เผยพร้อมราชา ──
+            ถ้า endf > 0.02 {
+                bind kqYaw = clock * 0.28
+                โหมดผสม(0)
+                mesh_draw(qMesh, 0.0, 0.0-18.0, 0.0, 7.0, kqYaw, 0.0, 0.0)
+                flush_3d()
+                โหมดผสม(1)
+                วาดQueenริก(0.0, 0.0-18.0, 0.0, 2.33, kqYaw, floor(150*endf)+70, floor(90*endf)+45, floor(220*endf)+35)
+                flush_3d()
+            }
 
             # ดาวหางดนตรี — พุ่งเร็วสุ่มทิศ; ปลายฉากสไปรัลเข้าโคจรดาวเคราะห์
             เมฆดาวหาง(t, 0, list_get(bands, 0), skyFade, endf)
@@ -1457,11 +1490,12 @@ bind เริ่ม = do {
             bind fxSat = 0.7 + fxEnergy*0.55;  ถ้า fxSat > 1.6 { bind fxSat = 1.6 }
             bind fxSpin = fxSpin + เสียงRMS()*0.6                      # สะสมมุมหมุนจากไมค์
 
-            # ── เทรลแหวน: บันทึกตำแหน่ง+ความเร็วทุกเฟรม (อาร์เคด) ──
-            ถ้า อาร์เคดโหมด > 0.5 {
-                ถ้า trailInit < 0.5 { bind trailBuf = รายการศูนย์(floor(trailN)*6);  bind foeTrailBuf = รายการศูนย์(floor(trailN)*6);  bind trailInit = 1.0 }
-                bind trailBuf = เขียนเทรล(trailBuf, trailHead, cx, cy, cz, vx, vy, vz)
-                bind trailHead = (trailHead + 1.0) % trailN
+            bind royg = สีรุ้งFFT(fxBands)                  # สี ROYGBIV จาก FFT เพลง → "คลื่นเสียง"
+            # ── เทรลแหวน: บันทึกตำแหน่ง+ความเร็วผู้เล่นทุกเฟรม (ทุกโหมด) ──
+            ถ้า trailInit < 0.5 { bind trailBuf = รายการศูนย์(floor(trailN)*6);  bind foeTrailBuf = รายการศูนย์(floor(trailN)*6);  bind trailInit = 1.0 }
+            bind trailBuf = เขียนเทรล(trailBuf, trailHead, cx, cy, cz, vx, vy, vz)
+            bind trailHead = (trailHead + 1.0) % trailN
+            ถ้า อาร์เคดโหมด > 0.5 {                          # รอยศัตรู (อาร์เคดเท่านั้น)
                 bind foeTrailBuf = เขียนเทรล(foeTrailBuf, foeTrailHead, foeX, foeY + 0.5, foeZ, foeVX, 0.0, foeVZ)
                 bind foeTrailHead = (foeTrailHead + 1.0) % trailN
             }
@@ -1934,15 +1968,15 @@ bind เริ่ม = do {
                     bind pdr = (0.75 - popDmgT) * 5.0
                     bind pds = 1.6;  bind pcr = 255;  bind pcg = 120;  bind pcb = 120
                     ถ้า popDmgCrit > 0.5 { bind pds = 2.6;  bind pcr = 255;  bind pcg = 230;  bind pcb = 60 }
-                    วาดเลขป้าย(popDmg, 0.0-1.0, foeX, foeY - R - pdr, foeZ, pds, camYaw, pcr, pcg, pcb)
+                    วาดเลขRGB(popDmg, 0.0-1.0, foeX, foeY - R - pdr, foeZ, pds, camYaw, t)
                 }
                 ถ้า popHurtT > 0.0 {
                     bind phr = (0.75 - popHurtT) * 5.0
-                    วาดเลขป้าย(popHurt, 0.0-1.0, cx, cy - R - phr, cz, 1.6, camYaw, 255, 80, 80)
+                    วาดเลขRGB(popHurt, 0.0-1.0, cx, cy - R - phr, cz, 1.6, camYaw, t)
                 }
                 ถ้า popHealT > 0.0 {
                     bind pgr = (0.75 - popHealT) * 5.0
-                    วาดเลขป้าย(popHeal, 1.0, cx, cy - R - 2.0 - pgr, cz, 1.5, camYaw, 90, 255, 130)
+                    วาดเลขRGB(popHeal, 1.0, cx, cy - R - 2.0 - pgr, cz, 1.5, camYaw, t)
                 }
                 flush_3d();  โหมดผสม(0)
                 # ── เอฟเฟกต์ "critical!" : ดาวทองกระจาย + ข้อความสั่นลอยขึ้น ──
@@ -2106,8 +2140,82 @@ bind เริ่ม = do {
                 bind pg = (ไซน์(t*0.5+2.094)*0.5+0.5)*120.0 + 135.0
                 bind pb = (ไซน์(t*0.5+4.188)*0.5+0.5)*120.0 + 135.0
                 orb_particles(cx, cy, cz, R * 0.92, 240.0, t, pr, pg, pb)
+                # ── เทรลแหวน ROYGBIV ตาม FFT เพลง (สตอรี่) — เปล่งคลื่นเสียง ──
+                ถ้า trailInit > 0.5 { วาดเทรลแหวน(trailBuf, trailHead, trailN, list_get(royg,0), list_get(royg,1), list_get(royg,2), list_get(royg,0), list_get(royg,1), list_get(royg,2), fxSat, fxSpin) }
             }
             flush_3d()
+
+            # ── สหาย AI: ราชา(น้ำเงิน+ทอง)/ราชินี(แดง+ทอง) — ลูกของเหลวจริง, ฟิสิกส์, ทำดาเมจ (สตอรี่) ──
+            ถ้า อาร์เคดโหมด < 0.5 { ถ้า vsโหมด < 0.5 {
+                ถ้า compInit < 0.5 {
+                    bind kx = cx - 7.0;  bind kz = cz - 7.0;  bind ky = GROUND;  bind qx = cx + 7.0;  bind qz = cz - 7.0;  bind qy = GROUND
+                    bind kLiq = liquid_new(64.0, 64.0);  สีของเหลว(kLiq, 45, 115, 255, 250, 200, 60)    # ราชา: น้ำเงิน + ทอง (กริด 2× ละเอียด)
+                    bind qLiq = liquid_new(64.0, 64.0);  สีของเหลว(qLiq, 240, 50, 65, 250, 200, 60)     # ราชินี: แดง + ทอง
+                    liquid_splat(kLiq, 32.0, 26.0, 0.0, 0.6, 7.0);  liquid_splat(kLiq, 32.0, 38.0, 1.0, 0.6, 7.0)   # หยดสีแยกกัน → อินเตอร์เฟซ (ไม่ปนเป็นโคลน)
+                    liquid_splat(qLiq, 32.0, 26.0, 0.0, 0.6, 7.0);  liquid_splat(qLiq, 32.0, 38.0, 1.0, 0.6, 7.0)
+                    bind kTrail = รายการศูนย์(floor(trailN)*6);  bind qTrail = รายการศูนย์(floor(trailN)*6)
+                    bind compInit = 1.0
+                }
+                # หยดสีคนละวงโคจร (โซน + ทอง) → ม้วนเป็นเกลียว/ก้นหอย, ปริมาณน้อย → เห็นเกลียว + ช่องใส ไม่ทึบ
+                liquid_step(kLiq, 0.016);  liquid_splat(kLiq, 32.0+ไซน์(t*1.3)*18.0, 32.0+โคไซน์(t*1.1)*18.0, 0.0, 0.13, 5.0);  liquid_splat(kLiq, 32.0+โคไซน์(t*0.7)*18.0, 32.0+ไซน์(t*1.6)*18.0, 1.0, 0.12, 5.0)
+                liquid_step(qLiq, 0.016);  liquid_splat(qLiq, 32.0+ไซน์(t*1.2)*18.0, 32.0+โคไซน์(t*1.5)*18.0, 0.0, 0.13, 5.0);  liquid_splat(qLiq, 32.0+โคไซน์(t*0.8)*18.0, 32.0+ไซน์(t*1.4)*18.0, 1.0, 0.12, 5.0)
+                bind cEx = 0.0;  bind cEz = 0.0;  bind cHas = 0.0;  bind cBest = 999999.0;  bind cIdx = 0
+                bind cj = 0
+                ขณะที่ cj < มอนจำนวน {
+                    ถ้า list_get(มอนเป็น, cj) > 0 {
+                        bind cmp = ตำแหน่งมอน(cj, มอนseed, t, มอนspread, ชนิดมอน(cj, มอนseed), cx, cz)
+                        bind cdx = list_get(cmp,0)-cx;  bind cdz = list_get(cmp,1)-cz;  bind cd2 = cdx*cdx + cdz*cdz
+                        ถ้า cd2 < cBest { bind cBest = cd2;  bind cEx = list_get(cmp,0);  bind cEz = list_get(cmp,1);  bind cHas = 1.0;  bind cIdx = cj }
+                    }
+                    bind cj = cj + 1
+                }
+                # ── ราชา ──
+                bind kFloor = GROUND;  ถ้า ด่าน > 0.5 { bind kFloor = ความสูงพื้น2(kx, kz) };  ถ้า บอสโหมด > 0.5 { bind kFloor = ความสูงอารีนา(kx, kz) }
+                bind kr = สหายคิด(kx, kz, kvx, kvz, cx - 6.0, cz - 6.0, cEx, cEz, cHas, kgnd, สุ่ม())
+                bind kvx = list_get(kr,0);  bind kvz = list_get(kr,1);  bind kanim = list_get(kr,2)
+                bind kqdx = kx - qx;  bind kqdz = kz - qz;  bind kqd = รากที่สอง(kqdx*kqdx + kqdz*kqdz) + 0.001   # ผลักออกจากราชินี (ไม่ชนกัน)
+                ถ้า kqd < 9.0 { bind kvx = kvx + (kqdx/kqd)*0.14;  bind kvz = kvz + (kqdz/kqd)*0.14 }
+                ถ้า list_get(kr,3) > 0.5 { ถ้า kgnd > 0.5 { bind kvy = 0.0 - 0.85;  เสียงเอฟเฟกต์(kx, ky, kz, 1.0, 250.0, 0.2*ปริมาณSFX, 0.16, "sine") } }
+                bind kvy = kvy + 0.055;  bind ky = ky + kvy;  bind kgnd = 0.0
+                ถ้า ky > kFloor { bind ky = kFloor;  ถ้า kvy > 0.28 { เสียงเอฟเฟกต์(kx, ky, kz, 1.0, 130.0, 0.26*ปริมาณSFX, 0.14, "sine") };  bind kvy = 0.0 - kvy*0.35;  ถ้า kvy > 0.0-0.06 { bind kvy = 0.0 };  bind kgnd = 1.0 }
+                bind kx = kx + kvx;  bind kz = kz + kvz;  bind ksp = รากที่สอง(kvx*kvx + kvz*kvz)
+                ถ้า ksp > 0.03 { bind kyaw = atan2(kvx, kvz);  bind kph = kph + ksp*2.0 }
+                ถ้า kgnd < 0.5 { bind kanim = 3.0 }
+                ถ้า kgnd > 0.5 { ถ้า ksp > 0.06 { ถ้า floor(kph*0.5) > kstep { bind kstep = floor(kph*0.5);  เสียงเอฟเฟกต์(kx, ky, kz, 1.0, 80.0+ksp*70.0, 0.12*ปริมาณSFX, 0.1, "triangle") } } }
+                bind kTrail = เขียนเทรล(kTrail, kThead, kx, ky - 1.65, kz, kvx, kvy, kvz);  bind kThead = (kThead + 1.0) % trailN
+                ถ้า kSlashT > 0.0 { bind kSlashT = kSlashT - 0.016 }
+                ถ้า kAtkT > 0.0 { bind kAtkT = kAtkT - 0.016 }
+                ถ้า cHas > 0.5 { ถ้า (kx-cEx)*(kx-cEx)+(kz-cEz)*(kz-cEz) < 49.0 { ถ้า kAtkT <= 0.0 {
+                    bind มอนHP = ตั้งรายการ(มอนHP, cIdx, list_get(มอนHP, cIdx) - 2.5);  bind kAtkT = 0.6;  bind kSlashT = 0.16;  เสียงเอฟเฟกต์(cEx, kFloor, cEz, 1.0, 420.0, 0.3*ปริมาณSFX, 0.12, "saw")
+                    ถ้า list_get(มอนHP, cIdx) <= 0.0 { bind มอนเป็น = ตั้งรายการ(มอนเป็น, cIdx, 0);  bind คะแนน = คะแนน + 5 }
+                } } }
+                ถ้า compInit > 0.5 { วาดเทรลแหวน(kTrail, kThead, trailN, 255.0, 65.0, 65.0, 255.0, 65.0, 65.0, fxSat, fxSpin) }   # ราชา: รอยโซนิคแดง
+                bind kSlashP = 0.0 - 1.0;  ถ้า kSlashT > 0.0 { bind kSlashP = 1.0 - kSlashT/0.16 }
+                วาดสหาย(kMesh, kLiq, R, kx, ky, kz, kvx, kvz, kph, kyaw, kanim, t, 255.0, 65.0, 65.0, kSlashP)
+                # ── ราชินี ──
+                bind qFloor = GROUND;  ถ้า ด่าน > 0.5 { bind qFloor = ความสูงพื้น2(qx, qz) };  ถ้า บอสโหมด > 0.5 { bind qFloor = ความสูงอารีนา(qx, qz) }
+                bind qr = สหายคิด(qx, qz, qvx, qvz, cx + 6.0, cz - 6.0, cEx, cEz, cHas, qgnd, สุ่ม())
+                bind qvx = list_get(qr,0);  bind qvz = list_get(qr,1);  bind qanim = list_get(qr,2)
+                bind qkdx = qx - kx;  bind qkdz = qz - kz;  bind qkd = รากที่สอง(qkdx*qkdx + qkdz*qkdz) + 0.001   # ผลักออกจากราชา
+                ถ้า qkd < 9.0 { bind qvx = qvx + (qkdx/qkd)*0.14;  bind qvz = qvz + (qkdz/qkd)*0.14 }
+                ถ้า list_get(qr,3) > 0.5 { ถ้า qgnd > 0.5 { bind qvy = 0.0 - 0.85;  เสียงเอฟเฟกต์(qx, qy, qz, 1.0, 300.0, 0.2*ปริมาณSFX, 0.16, "sine") } }
+                bind qvy = qvy + 0.055;  bind qy = qy + qvy;  bind qgnd = 0.0
+                ถ้า qy > qFloor { bind qy = qFloor;  ถ้า qvy > 0.28 { เสียงเอฟเฟกต์(qx, qy, qz, 1.0, 160.0, 0.26*ปริมาณSFX, 0.14, "sine") };  bind qvy = 0.0 - qvy*0.35;  ถ้า qvy > 0.0-0.06 { bind qvy = 0.0 };  bind qgnd = 1.0 }
+                bind qx = qx + qvx;  bind qz = qz + qvz;  bind qsp = รากที่สอง(qvx*qvx + qvz*qvz)
+                ถ้า qsp > 0.03 { bind qyaw = atan2(qvx, qvz);  bind qph = qph + qsp*2.0 }
+                ถ้า qgnd < 0.5 { bind qanim = 3.0 }
+                ถ้า qgnd > 0.5 { ถ้า qsp > 0.06 { ถ้า floor(qph*0.5) > qstep { bind qstep = floor(qph*0.5);  เสียงเอฟเฟกต์(qx, qy, qz, 1.0, 95.0+qsp*70.0, 0.12*ปริมาณSFX, 0.1, "triangle") } } }
+                bind qTrail = เขียนเทรล(qTrail, qThead, qx, qy - 1.65, qz, qvx, qvy, qvz);  bind qThead = (qThead + 1.0) % trailN
+                ถ้า qSlashT > 0.0 { bind qSlashT = qSlashT - 0.016 }
+                ถ้า qAtkT > 0.0 { bind qAtkT = qAtkT - 0.016 }
+                ถ้า cHas > 0.5 { ถ้า (qx-cEx)*(qx-cEx)+(qz-cEz)*(qz-cEz) < 49.0 { ถ้า qAtkT <= 0.0 {
+                    bind มอนHP = ตั้งรายการ(มอนHP, cIdx, list_get(มอนHP, cIdx) - 2.5);  bind qAtkT = 0.6;  bind qSlashT = 0.16;  เสียงเอฟเฟกต์(cEx, qFloor, cEz, 1.0, 470.0, 0.3*ปริมาณSFX, 0.12, "saw")
+                    ถ้า list_get(มอนHP, cIdx) <= 0.0 { bind มอนเป็น = ตั้งรายการ(มอนเป็น, cIdx, 0);  bind คะแนน = คะแนน + 5 }
+                } } }
+                ถ้า compInit > 0.5 { วาดเทรลแหวน(qTrail, qThead, trailN, 70.0, 120.0, 255.0, 70.0, 120.0, 255.0, fxSat, fxSpin) }   # ราชินี: รอยโซนิคน้ำเงิน
+                bind qSlashP = 0.0 - 1.0;  ถ้า qSlashT > 0.0 { bind qSlashP = 1.0 - qSlashT/0.16 }
+                วาดสหาย(qMesh, qLiq, R, qx, qy, qz, qvx, qvz, qph, qyaw, qanim, t, 70.0, 120.0, 255.0, qSlashP)
+            } }
 
             # ── การ์ด: วงแหวนโล่รอบลูก (เรืองแสง) ──
             ถ้า guarding > 0.5 {
@@ -2176,8 +2284,11 @@ bind เริ่ม = do {
                 # ดาบเท่ 6 แบบ — ใช้ทั้งสตอรี่+อาร์เคด (เลิกใช้ดาบขาวเก่า วาดสแลช)
                 bind ssv = list_get(ดาบสเตตัส, floor(swordType))
                 bind vslen = list_get(ssv,2)*0.5;  ถ้า vslen > 9.0 { bind vslen = 9.0 }
+                # สีริบบิ้น: สตอรี่ = ROYGBIV ตาม FFT (คลื่นเสียง) · อาร์เคด = สีดาบ
+                bind rbR = list_get(ssv,4);  bind rbG = list_get(ssv,5);  bind rbB = list_get(ssv,6)
+                ถ้า อาร์เคดโหมด < 0.5 { bind rbR = list_get(royg,0);  bind rbG = list_get(royg,1);  bind rbB = list_get(royg,2) }
                 # ริบบิ้นโค้งจากลูก ตามทิศเล็ง (arcYaw) เอียงตามทิศฟัน (slashDir) — โค้ง+โต+จาง
-                วาดริบบิ้นสแลช(cx, cy + 0.5, cz, arcYaw, slashDir*0.7854, prog, vslen, list_get(ssv,4), list_get(ssv,5), list_get(ssv,6), fxSat, fxSpin)
+                วาดริบบิ้นสแลช(cx, cy + 0.5, cz, arcYaw, slashDir*0.7854, prog, vslen, rbR, rbG, rbB, fxSat, fxSpin)
                 วาดดาบเหวี่ยง(cx, cy + 0.5, cz, arcYaw, slashDir*0.7854, prog, vslen, list_get(ssv,4), list_get(ssv,5), list_get(ssv,6))
                 ถ้า debugHit > 0.5 {   # ดีบักฮิตบ็อกซ์ (กด H) — ตรงกับการตรวจดาเมจจริง บนดาบหนา
                     bind dbgLen = list_get(ssv,2)*0.4;  ถ้า dbgLen > 7.0 { bind dbgLen = 7.0 }
@@ -2212,6 +2323,9 @@ bind เริ่ม = do {
                 ถ้า rpx < 8.0 { bind rpx = 8.0 }
                 sparkle(ssx - rpx, ssy - rpx, rpx*2.0, rpx*2.0, 28.0, t)
             }
+
+            # ── ดิสทอร์ชัน: บิดจอเลเยอร์ 3D นุ่ม ๆ (เหมือนอยู่ในของเหลวใสหนืด) — ก่อนวาด UI ──
+            screen_distort(7.0, t)
 
             # ── UI: แถบคะแนน + HUD ไอเทม (เลข/ล้อเลือก) ──
             ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)

@@ -432,11 +432,11 @@ bind โรมัน = [[8],[8,8],[8,8,8],[8,21],[21],[21,8],[21,8,8],[21,8,8,8]
     }
 }
 ฟังก์ชัน วาดบูต(prog, t) {
-    # flash grenade ที่ prog~0.82, เฟดดำหลัง 0.85
-    bind ad = prog - 0.82;  ถ้า ad < 0.0 { bind ad = 0.0 - ad }
-    bind flashAmt = 0.0;  ถ้า ad < 0.07 { bind flashAmt = 1.0 - ad/0.07 }
+    # ตัวอักษรลงตัว ~0.62 → ค้างไว้เต็มจนถึง 0.88 → flash → เฟดดำ
+    bind ad = prog - 0.90;  ถ้า ad < 0.0 { bind ad = 0.0 - ad }
+    bind flashAmt = 0.0;  ถ้า ad < 0.06 { bind flashAmt = 1.0 - ad/0.06 }
     bind dim = 1.0
-    ถ้า prog > 0.78 { bind dim = 1.0 - (prog-0.78)/0.22;  ถ้า dim < 0.0 { bind dim = 0.0 } }   # เฟดดำกว้างขึ้น (นุ่ม)
+    ถ้า prog > 0.88 { bind dim = 1.0 - (prog-0.88)/0.12;  ถ้า dim < 0.0 { bind dim = 0.0 } }   # ค้างนานขึ้น แล้วเฟดดำ (0.88→1.0)
     เติม(floor(2.0 + flashAmt*253.0), floor(3.0 + flashAmt*252.0), floor(10.0 + flashAmt*245.0))
     ตั้งกล้องมอง(0.0, 0.0, -30.0, 0.0, 0.0, 0.0)
     ตั้งระยะห่าง(3.0)
