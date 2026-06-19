@@ -1,0 +1,139 @@
+# Chapter 1 cutscene module
+# Keeps script/data out of main.ling and returns [updatedPrevLine, shouldExit]
+
+ฟังก์ชัน ฉากบทหนึ่ง_บทพูด() {
+    คืน [
+        "chapter one. after the white silence, the queen still sleeps in glass.",
+        "the king says the sky can only be soothed by a true lullaby.",
+        "but the lullaby cannot be played without the meadow instrument.",
+        "it is called the cradle reed, hidden beyond the marching meadow.",
+        "bring it home, and we can wake the world without breaking it again.",
+        "go now. the first note is waiting where the green winds turn gold."
+    ]
+}
+
+ฟังก์ชัน ฉากบทหนึ่ง_โน้ต() {
+    คืน [293.66, 329.63, 392.00, 440.00, 523.25, 587.33]
+}
+
+ฟังก์ชัน ฉากบทหนึ่ง_ผู้พูด() {
+    คืน [0, 1, 1, 2, 1, 2]   # 0 narrator, 1 king, 2 queen
+}
+
+ฟังก์ชัน เล่นฉากบทหนึ่ง() {
+    bind c1t = t - บทหนึ่งเริ่ม
+    bind C1SEC = 3.55
+    bind C1N = ความยาว(บทหนึ่งพูด)
+    bind C1TOTAL = C1N * C1SEC
+    bind C1FADE = 0.0
+    ถ้า c1t > C1TOTAL - 2.4 { bind C1FADE = (c1t - (C1TOTAL - 2.4)) / 2.4 }
+    ถ้า C1FADE > 1.0 { bind C1FADE = 1.0 }
+
+    # BGM loop + gentle fade near cut
+    ถ้า musicOn == 1 {
+        ถ้า ยาวเพลงบทหนึ่ง > 1.0 {
+            ถ้า ตำแหน่งเพลง() >= ยาวเพลงบทหนึ่ง - 0.5 { ค้นหาเพลง(0);  เล่นเพลง(เพลงบทหนึ่ง) }
+        }
+        ระดับเพลง(ปริมาณBGM * (1.0 - C1FADE*0.7))
+    }
+
+    bind cR = floor(18.0 + ไซน์(c1t*0.28)*14.0)
+    bind cG = floor(22.0 + ไซน์(c1t*0.22 + 1.2)*16.0)
+    bind cB = floor(34.0 + ไซน์(c1t*0.19 + 2.7)*18.0)
+    เติม(cR, cG, cB)
+    ตั้งแสงรอบข้าง(0.55)
+    โหมดผสม(1)
+
+    # Cinematic camera: wide orbit -> side drift -> push-in
+    bind cin = c1t / C1TOTAL;  ถ้า cin > 1.0 { bind cin = 1.0 }
+    bind camR = 40.0 - cin * 23.0
+    bind camY = 0.0 - 36.0 + ไซน์(c1t*0.44)*4.5 + cin*13.0
+    bind camX = โคไซน์(c1t*0.33 + ไซน์(c1t*0.11)*0.45) * camR
+    bind camZ = ไซน์(c1t*0.33 + ไซน์(c1t*0.11)*0.45) * camR
+    bind lookX = ไซน์(c1t*0.26) * 3.2
+    bind lookY = 0.0 - 16.0 + ไซน์(c1t*0.22 + 1.4)*2.0
+    bind lookZ = โคไซน์(c1t*0.29) * 3.2
+    ถ้า cin > 0.33 {
+        bind p = (cin - 0.33) / 0.34
+        ถ้า p > 1.0 { bind p = 1.0 }
+        bind camX = camX*(1.0-p) + (26.0*โคไซน์(c1t*0.17))*p
+        bind camZ = camZ*(1.0-p) + (8.0 + ไซน์(c1t*0.31)*14.0)*p
+        bind camY = camY*(1.0-p) + (0.0-20.0 + ไซน์(c1t*0.7)*2.4)*p
+    }
+    ถ้า cin > 0.67 {
+        bind q = (cin - 0.67) / 0.33
+        ถ้า q > 1.0 { bind q = 1.0 }
+        bind camX = camX*(1.0-q) + (โคไซน์(c1t*0.62)*13.0)*q
+        bind camZ = camZ*(1.0-q) + (ไซน์(c1t*0.62)*13.0)*q
+        bind camY = camY*(1.0-q) + (0.0-14.8)*q
+        bind lookX = lookX*(1.0-q)
+        bind lookY = lookY*(1.0-q) + (0.0-14.1)*q
+        bind lookZ = lookZ*(1.0-q)
+    }
+    ตั้งกล้องมอง(camX, camY, camZ, lookX, lookY, lookZ)
+    ตั้งระยะห่าง(1.85)
+
+    โหมดผสม(0)
+    mesh_draw(kMesh, 0.0, 0.0-29.0, 0.0, 17.0, c1t*0.08, 0.0, 0.0, 0.0, 0.0, 0.0)
+    mesh_draw(qMesh, 0.0, 0.0-18.5, 0.0, 7.6, c1t*0.22, 0.0, 0.0, 0.0, 0.0, 0.0)
+    flush_3d()
+    โหมดผสม(1)
+    วาดQueenริก(0.0, 0.0-18.5, 0.0, 2.45, c1t*0.22, 170, 90, 230)
+    liquid_step(liq, 0.016)
+    liquid_splat(liq, 28.0 + ไซน์(c1t*1.7)*13.0, 28.0 + โคไซน์(c1t*1.2)*13.0, 1.0, 0.18, 3.4)
+    liquid_splat(liq, 28.0 + โคไซน์(c1t*1.1)*11.0, 28.0 + ไซน์(c1t*1.5)*11.0, 0.0, 0.19, 3.0)
+    liquid_draw_surface(liq, 1, 0.0, 0.0-13.2, 0.0, 4.6, 4.6)
+    อนุภาคทรงกลม(0.0, 0.0-13.2, 0.0, 5.7, 95.0, c1t, 245, 190, 120)
+    flush_3d()
+
+    bind c1i = floor(c1t / C1SEC)
+    ถ้า c1i > บทหนึ่งบรรทัดก่อน {
+        ถ้า c1i < C1N {
+            bind n = list_get(บทหนึ่งโน้ต, c1i)
+            bind who = list_get(บทหนึ่งผู้พูด, c1i)
+            ถ้า who < 0.5 {
+                เล่นไชม์ใหญ่(0.0, 0.0, 0.0, n, 0.33 * ปริมาณSFX)
+            }
+            ถ้า who > 0.5 { ถ้า who < 1.5 {
+                เล่นกาเมลัน(0.0, 0.0, 0.0, n, 0.42 * ปริมาณSFX)
+                เล่นฮังแพน(0.0, 0.0, 0.0, n*0.5, 0.20 * ปริมาณSFX)
+            } }
+            ถ้า who > 1.5 {
+                เล่นแฟนแฟร์(0.0, 0.0, 0.0, n*0.75, 0.30 * ปริมาณSFX)
+                เล่นฮังแพน(0.0, 0.0, 0.0, n*0.62, 0.16 * ปริมาณSFX)
+            }
+        }
+        bind บทหนึ่งบรรทัดก่อน = c1i
+    }
+
+    ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)
+    ตั้งระยะห่าง(2.8)
+    สีดินสอ(255, 210, 120)
+    วาดสตริง("chapter 1 : marching meadow", 0.0, 10.0, 0.0, 0.72, 1)
+    ถ้า c1i < C1N {
+        bind c1line = list_get(บทหนึ่งพูด, c1i)
+        bind who2 = list_get(บทหนึ่งผู้พูด, c1i)
+        bind lt = c1t - c1i*C1SEC
+        bind laf = 1.0
+        ถ้า lt < 0.6 { bind laf = lt / 0.6 }
+        ถ้า lt > C1SEC - 0.7 { bind laf = (C1SEC - lt) / 0.7 }
+        ถ้า laf < 0.0 { bind laf = 0.0 }
+        bind lr = floor(230.0 * laf);  bind lg = floor(240.0 * laf);  bind lb = floor(255.0 * laf)
+        ถ้า who2 > 0.5 { ถ้า who2 < 1.5 { bind lr = floor(255.0*laf);  bind lg = floor(218.0*laf);  bind lb = floor(128.0*laf) } }
+        ถ้า who2 > 1.5 { bind lr = floor(212.0*laf);  bind lg = floor(222.0*laf);  bind lb = floor(255.0*laf) }
+        สีดินสอ(lr, lg, lb)
+        วาดสตริง(c1line, 0.0, 8.3, 0.0, 0.56, 1)
+    }
+    สีดินสอ(170, 180, 205)
+    วาดสตริง("[enter/space] continue   [esc] skip", 0.0, 10.9, 0.0, 0.42, 1)
+    flush_3d()
+
+    แสดงผล()
+
+    bind outC1 = 0.0
+    ถ้า c1t >= C1TOTAL { bind outC1 = 1.0 }
+    ถ้า กดปุ่ม("enter") { bind outC1 = 1.0 }
+    ถ้า กดปุ่ม("space") { bind outC1 = 1.0 }
+    ถ้า กดปุ่ม("escape") { bind outC1 = 1.0 }
+    คืน [บทหนึ่งบรรทัดก่อน, outC1]
+}

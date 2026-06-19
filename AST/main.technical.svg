@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3.947in" height="0.773in" viewBox="0 0 1184.00 232.00" preserveAspectRatio="xMidYMid meet" style="font-family:'JetBrains Mono','Fira Code',monospace,sans-serif">
+<rect x="0" y="0" width="1184.00" height="232.00" fill="#0b0b1a"/><defs>
+  <filter id="glow-g" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <pattern id="tgrid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-width="0.4"/></pattern>
+</defs><rect width="1184.00" height="232.00" fill="url(#tgrid)" opacity="0.06"/><text x="36.00" y="44" fill="#ffd700" font-size="11" font-weight="bold" letter-spacing="3" opacity="0.7">LING · AST · TECHNICAL</text>
+            <text x="36.00" y="78" fill="#d8d8ff" font-size="30" font-weight="bold">main</text>
+            <text x="1148.00" y="78" fill="#52528a" font-size="13" text-anchor="end">1 files · 0 fns</text><rect x="24.00" y="106.00" width="1136.00" height="66.00" rx="12" fill="#10102a" opacity="0.45" stroke="#22225a" stroke-width="1"/>
+                <text x="36.00" y="132.00" fill="#8be9fd" font-size="14" font-weight="bold">◈ main.ling</text><text x="36.00" y="164.00" fill="#52528a" font-size="10">use music/เพลงชื่อเรื่อง    use music/songs    use music/SoulSymphony_data    use font/Daemon    use font/English    use font/Daemon3D    use font/English3D    use font/Thai    use font/Korean    use font/Japanese    use font/Chinese    use font/MenuTH    use font/MenuKO    use font/MenuJA    use font/MenuZH    use game/color    use game/audio    use game/level    use game/title    use game/play    use game/level    use game/proc_gen_level    use game/arena    use game/boss    use game/main</text>
+</svg>

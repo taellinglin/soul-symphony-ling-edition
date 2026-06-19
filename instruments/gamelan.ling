@@ -1,0 +1,53 @@
+# ── handpan.ling — a warm, mystical handpan (hang drum) swell ────────────────
+# เล่นฮังแพน(x,y,z, f0, amp): a mellow, exotic pan at world (x,y,z), fundamental f0,
+# loudness amp. Soft mallet attack, a clear fundamental with a strong octave and
+# twelfth, a gentle shimmer from slight inharmonics, and a slow beat from a detuned
+# fifth. No harsh metallic overtones — instead, a floating, resonant "dunk" that
+# sings like a steel pan from another world.
+#
+#   ใช้ "../instruments/handpan"
+#   เล่นฮังแพน(0,0,0, 220.0, 0.8 * ปริมาณSFX)
+
+ฟังก์ชัน เล่นฮังแพน(x, y, z, f0, amp) {
+    # ── soft mallet attack (warm, rounded, not bright) ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*5.0,  amp*0.20, 0.06, "triangle")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*3.0,  amp*0.28, 0.10, "triangle")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*1.5,  amp*0.35, 0.15, "triangle")
+
+    # ── warm, singing body (sparse, mostly low partials) ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*1.00, amp*0.95, 2.4, "sine")   # deep fundamental
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*2.00, amp*0.75, 2.0, "sine")   # strong octave (signature)
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*3.00, amp*0.55, 1.6, "sine")   # twelfth — adds richness
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*4.00, amp*0.30, 1.2, "sine")   # two octaves, gentle
+
+    # ── subtle inharmonic "shimmer" (like the pan's shell resonance) ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*4.80, amp*0.12, 0.9, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*6.20, amp*0.08, 0.7, "sine")
+
+    # ── detuned fifth → slow, hypnotic beating (≈ 1 Hz) ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*3.02, amp*0.25, 1.8, "sine")
+
+    # ── tiny "buzz" from a sympathetic tine or bead (exotic texture) ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*7.50, amp*0.04, 0.4, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*9.90, amp*0.03, 0.3, "sine")
+
+    คืน 0
+}
+
+# ── เล่นกาเมลัน(x,y,z, f0, amp): ระฆังสำริดกาเมลัน (saron/bonang) สำหรับเสียงอินเทอร์เฟซ ──
+#   ตีโลหะสดใส + พาร์เชียลอินฮาร์มอนิก (ไม่ใช่ออกเทฟแท้) + คู่ดีจูน → "ออมบัก" สั่นระยิบ
+#   จูนให้ f0 = โน้ตจาก Main_Menu.mid (ผ่าน midiconv) → เสียงเมนูเข้ากับเพลงเมนู
+ฟังก์ชัน เล่นกาเมลัน(x, y, z, f0, amp) {
+    # ── ตีโลหะ (แอตแทกสั้น สดใส) ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*4.20, amp*0.30, 0.05, "square")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*6.90, amp*0.16, 0.04, "triangle")
+    # ── ตัวสำริด: พาร์เชียลโลหะอินฮาร์มอนิก ดีเคย์ปานกลาง ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*1.000, amp*0.90, 0.95, "sine")   # มูลฐาน
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*2.010, amp*0.55, 0.80, "sine")   # ออกเทฟยืดเล็กน้อย
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*2.760, amp*0.38, 0.65, "sine")   # อินฮาร์มอนิก
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*5.400, amp*0.20, 0.45, "sine")
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*6.830, amp*0.12, 0.35, "sine")
+    # ── คู่ดีจูน → เสียงสั่นระยิบ (ลายเซ็นกาเมลัน "ออมบัก") ──
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f0*1.013, amp*0.42, 0.85, "sine")
+    คืน 0
+}

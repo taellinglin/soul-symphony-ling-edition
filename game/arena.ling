@@ -18,11 +18,12 @@ bind ARENA_CEIL  = 0.0 - 160.0
 }
 
 # วาดสนาม: พื้นเช็คเกอร์บอร์ดเชิงรัศมี (วงซ้อน × เสี้ยว) + เอดจ์ลูปเรืองแสง + กำแพงวงแหวน
-ฟังก์ชัน วาดอารีนา(t, lvl) {
+ฟังก์ชัน วาดอารีนา(t, lvl, hue) {
     โหมดผสม(0)
     bind N = 28
     bind RINGS = 6
-    # ── พื้น: เช็คเกอร์บอร์ดเชิงรัศมี (วงซ้อน ri × เสี้ยว k) ──
+    bind tr = ไซน์(hue*6.2832)*0.5+0.5;  bind tg = ไซน์(hue*6.2832+2.094)*0.5+0.5;  bind tb = ไซน์(hue*6.2832+4.189)*0.5+0.5   # สีสเตจ
+    # ── พื้น: เช็คเกอร์บอร์ดเชิงรัศมี (วงซ้อน ri × เสี้ยว k) ย้อมตามสเตจ ──
     bind ri = 0
     ขณะที่ ri < RINGS {
         bind r0 = ri * ARENA_R / RINGS;  bind r1 = (ri+1) * ARENA_R / RINGS
@@ -30,7 +31,7 @@ bind ARENA_CEIL  = 0.0 - 160.0
         ขณะที่ k < N {
             bind a0 = k * 6.2832 / N;  bind a1 = (k+1) * 6.2832 / N
             bind c0=โคไซน์(a0); bind s0=ไซน์(a0); bind c1=โคไซน์(a1); bind s1=ไซน์(a1)
-            ถ้า (ri+k) - ปัดลง((ri+k)/2.0)*2.0 == 0.0 { สีดินสอ(20, 24, 46) }  มิฉะนั้น { สีดินสอ(42, 50, 84) }
+            ถ้า (ri+k) - ปัดลง((ri+k)/2.0)*2.0 == 0.0 { สีดินสอ(floor(16+tr*26), floor(20+tg*26), floor(36+tb*40)) }  มิฉะนั้น { สีดินสอ(floor(34+tr*58), floor(40+tg*58), floor(64+tb*80)) }
             วาดสามเหลี่ยม3มิติ(c0*r0, ARENA_FLOOR, s0*r0,  c1*r0, ARENA_FLOOR, s1*r0,  c1*r1, ARENA_FLOOR, s1*r1)
             วาดสามเหลี่ยม3มิติ(c0*r0, ARENA_FLOOR, s0*r0,  c1*r1, ARENA_FLOOR, s1*r1,  c0*r1, ARENA_FLOOR, s0*r1)
             bind k = k + 1
@@ -38,8 +39,8 @@ bind ARENA_CEIL  = 0.0 - 160.0
         bind ri = ri + 1
     }
     flush_3d()
-    # ── เอดจ์ลูป: เส้นวงซ้อน + เส้นรัศมี เรืองแสง (เน้นกริด) ──
-    โหมดผสม(1);  สีดินสอ(55, 120, 195)
+    # ── เอดจ์ลูป: เส้นวงซ้อน + เส้นรัศมี เรืองแสง (เน้นกริด) ย้อมตามสเตจ ──
+    โหมดผสม(1);  สีดินสอ(floor(45+tr*150), floor(80+tg*140), floor(120+tb*120))
     bind ri = 1
     ขณะที่ ri < RINGS + 1 {
         bind rr = ri * ARENA_R / RINGS
@@ -63,8 +64,8 @@ bind ARENA_CEIL  = 0.0 - 160.0
     ขณะที่ k < N {
         bind a0 = k * 6.2832 / N;  bind a1 = (k+1) * 6.2832 / N
         bind c0=โคไซน์(a0); bind s0=ไซน์(a0); bind c1=โคไซน์(a1); bind s1=ไซน์(a1)
-        bind wr = floor((ไซน์(lvl*1.1+k*0.2)*0.5+0.5)*60+25)
-        สีดินสอ(wr, floor(wr*0.7), floor(wr*1.4))
+        bind wr = floor((ไซน์(lvl*1.1+k*0.2)*0.5+0.5)*55+25)
+        สีดินสอ(floor(wr*(0.5+tr*1.1)), floor(wr*(0.4+tg*1.1)), floor(wr*(0.5+tb*1.1)))   # ย้อมกำแพงตามสเตจ
         วาดสามเหลี่ยม3มิติ(c0*ARENA_R, ARENA_FLOOR, s0*ARENA_R,  c1*ARENA_R, ARENA_FLOOR, s1*ARENA_R,  c1*ARENA_R, ARENA_CEIL, s1*ARENA_R)
         วาดสามเหลี่ยม3มิติ(c0*ARENA_R, ARENA_FLOOR, s0*ARENA_R,  c1*ARENA_R, ARENA_CEIL, s1*ARENA_R,  c0*ARENA_R, ARENA_CEIL, s0*ARENA_R)
         bind k = k + 1

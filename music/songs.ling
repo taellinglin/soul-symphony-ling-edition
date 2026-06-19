@@ -10,8 +10,11 @@
 ใช้ "PeaceLoveHappiness_data"
 ใช้ "Swing_data"
 ใช้ "MoonTime_data"
-
-bind จำนวนเพลง = 10
+ใช้ "ChipTune_data"
+ใช้ "Chords_data"
+ใช้ "HealthyHell_data"
+ใช้ "Psyon_data"
+bind จำนวนเพลง = 13
 
 # ข้อมูล MIDI (โน้ต/ตำแหน่งของเก็บ) ของเพลงดัชนี i — คู่กับ WAV ดัชนีเดียวกัน
 ฟังก์ชัน ข้อมูลเพลงดัชนี(i) {
@@ -24,6 +27,9 @@ bind จำนวนเพลง = 10
     ถ้า i == 7 { คืน ข้อมูลเพลง_PeaceLoveHappiness() }
     ถ้า i == 8 { คืน ข้อมูลเพลง_Swing() }
     ถ้า i == 9 { คืน ข้อมูลเพลง_MoonTime() }
+    ถ้า i == 10 { คืน ข้อมูลเพลง_ChipTune() }
+    ถ้า i == 11 { คืน ข้อมูลเพลง_Chords() }
+    ถ้า i == 12 { คืน ข้อมูลเพลง_Psyon() }
     คืน ข้อมูลเพลง_Antartica()
 }
 
@@ -38,5 +44,12 @@ bind จำนวนเพลง = 10
     ถ้า i == 7 { คืน "music/Peace Love Happiness.wav" }
     ถ้า i == 8 { คืน "music/Swing.wav" }
     ถ้า i == 9 { คืน "music/MoonTime.wav" }
+    ถ้า i == 10 { คืน "music/ChipTune.wav" }
+    ถ้า i == 11 { คืน "music/Chords.wav" }
+    ถ้า i == 12 { คืน "music/Psyon.wav" }
     คืน "music/Antartica.wav"
 }
+
+# ── เพลงบอส (HealthyHell) — เฉพาะโหมดบอส, ไม่อยู่ในสุ่ม BGM ปกติ ──
+ฟังก์ชัน ข้อมูลเพลงบอส() { คืน ข้อมูลเพลง_HealthyHell() }
+ฟังก์ชัน เพลงบอสWAV() { คืน "music/HealthyHell.wav" }

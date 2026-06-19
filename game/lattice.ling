@@ -1,0 +1,228 @@
+# ════════════════════════════════════════════════════════════════════════════
+# lattice.ling — โครงเลเวลแบบ "ห้อง + ทางเดิน" (room/hallway lattice)
+#   ห้องเรียบที่ระดับ L ต่อกันด้วยทางเดิน; ทางเดินต่างระดับ = ทางลาด (ขึ้น 1F→2F)
+#   ดีเทอร์มินิสติกต่อ seed (ไม่เก็บสถานะ) · สตรีมเฉพาะ 5 ห้อง (กลาง + 4 ข้าง)
+#   โลกนี้ +y ลง → ระดับสูง = y น้อย.  ฐาน LAT_BASE (= LVL_F ในสตอรี่)
+# ════════════════════════════════════════════════════════════════════════════
+bind LAT_BASE   = 3.0        # y ของระดับ 0 (= LVL_F ของวิหารทิวทอเรียล)
+bind ROOM_S     = 256.0      # ขนาดห้อง — ใหญ่เท่าทิวทอเรียล (±256)
+bind HALL_W     = 64.0       # กว้างทางเดิน (ลูกผ่านสบาย)
+bind LAT_H      = 56.0       # สูงต่อชั้น (ชั้น 2/3 — สูงพอบล็อกลูก ต้องใช้ทางลาด)
+bind LAT_MAXL   = 2.0        # ชั้นสูงสุด → 3 ชั้น: พื้น(0)/ชั้นสอง(1)/ชั้นสาม(2)
+bind RAMP_REACH = 96.0       # ระยะทางลาด (< ROOM_S/2=128 → กลางห้องราบ, ลาด ~30°)
+
+# y ของพื้นระดับ L
+ฟังก์ชัน latY(L) { คืน LAT_BASE - L * LAT_H }
+
+# แฮชสุ่ม 0..1 (GLSL-style fract) — ต่อขอบ/มุม
+ฟังก์ชัน latHash(a, b, seed) {
+    bind h = ไซน์(a*12.9898 + b*78.233 + seed*37.719) * 43758.5453
+    คืน h - ปัดลง(h)
+}
+
+# ระดับพื้นของห้อง (rc,rr) — แฮชต่อห้อง (ความถี่สูง → เพื่อนบ้านต่างระดับ → มีทางลาดให้เห็น)
+#   พื้นเป็นหลัก (~45%) + ชั้นสอง (~33%) + ชั้นสาม (~22%) → "ใหญ่เหมือนทิวทอเรียล + ชั้น 2/3"
+ฟังก์ชัน roomLevel(rc, rr, seed) {
+    bind h = latHash(rc, rr, seed)
+    bind L = 0.0
+    ถ้า h > 0.45 { bind L = 1.0 }
+    ถ้า h > 0.78 { bind L = 2.0 }
+    ถ้า L > LAT_MAXL { bind L = LAT_MAXL }
+    คืน L
+}
+
+# ขอบเปิด (ทางเดิน) หรือไม่ — สมมาตร (สองห้องอ้างขอบเดียวกัน) · nExits คุมความหนาแน่น
+#   horiz=1 ขอบนอน (ระหว่าง (ec,er) กับ (ec+1,er)) · horiz=0 ขอบตั้ง (กับ (ec,er+1))
+ฟังก์ชัน edgeOpen(ec, er, horiz, seed, nExits) {
+    bind h = latHash(ec*1.7 + horiz*131.0, er*1.3 + 9.0, seed)
+    bind thr = nExits/4.0 * 0.9 + 0.06
+    ถ้า h < thr { คืน 1.0 }
+    คืน 0.0
+}
+
+# ── ความสูงพื้นเดินได้ที่ (x,z): ห้องเรียบ + ทางลาดในแถบทางเดิน (ต่อเนื่อง) ──
+ฟังก์ชัน latticeHeight(x, z, seed, nExits) {
+    bind rc = ปัดลง(x / ROOM_S);  bind rr = ปัดลง(z / ROOM_S)
+    bind L = roomLevel(rc, rr, seed)
+    bind base = latY(L)
+    bind lx = x - rc*ROOM_S;  bind lz = z - rr*ROOM_S
+    bind hc = ROOM_S * 0.5
+    bind hw = HALL_W * 0.5
+    # E (lx ใหญ่) — แถบรอบ lz=กลาง
+    bind dzc = lz - hc;  ถ้า dzc < 0.0 { bind dzc = 0.0 - dzc }
+    bind dxc = lx - hc;  ถ้า dxc < 0.0 { bind dxc = 0.0 - dxc }
+    ถ้า lx > ROOM_S - RAMP_REACH { ถ้า dzc < hw { ถ้า edgeOpen(rc, rr, 1.0, seed, nExits) > 0.5 {
+        bind mid = (base + latY(roomLevel(rc+1, rr, seed))) * 0.5
+        คืน base + (mid - base) * ((lx - (ROOM_S - RAMP_REACH)) / RAMP_REACH)
+    } } }
+    ถ้า lx < RAMP_REACH { ถ้า dzc < hw { ถ้า edgeOpen(rc-1, rr, 1.0, seed, nExits) > 0.5 {
+        bind mid = (base + latY(roomLevel(rc-1, rr, seed))) * 0.5
+        คืน base + (mid - base) * ((RAMP_REACH - lx) / RAMP_REACH)
+    } } }
+    ถ้า lz > ROOM_S - RAMP_REACH { ถ้า dxc < hw { ถ้า edgeOpen(rc, rr, 0.0, seed, nExits) > 0.5 {
+        bind mid = (base + latY(roomLevel(rc, rr+1, seed))) * 0.5
+        คืน base + (mid - base) * ((lz - (ROOM_S - RAMP_REACH)) / RAMP_REACH)
+    } } }
+    ถ้า lz < RAMP_REACH { ถ้า dxc < hw { ถ้า edgeOpen(rc, rr-1, 0.0, seed, nExits) > 0.5 {
+        bind mid = (base + latY(roomLevel(rc, rr-1, seed))) * 0.5
+        คืน base + (mid - base) * ((RAMP_REACH - lz) / RAMP_REACH)
+    } } }
+    คืน base
+}
+
+ฟังก์ชัน สีห้อง(L, hueR, hueG, hueB, k) {
+    bind m = 1.0 + k                                          # k<0 → เข้มลง (ผนัง/ขั้น) · k=0 → พื้น
+    คืน [floor(((hueR*0.5 + 0.5)*70 + L*22 + 30) * m), floor(((hueG*0.5 + 0.5)*70 + L*20 + 32) * m), floor(((hueB*0.5 + 0.5)*90 + L*26 + 46) * m)]
+}
+
+# ผนังข้างทางลาด (ปิดร่อง/สันข้าง → ไม่มีรูข้างลาดตอนใกล้ถึงยอด) — สามเหลี่ยมจากฐาน→ขอบ
+ฟังก์ชัน ข้างลาดX(xTop, xEdge, za, zb, yBase, yMid) {
+    วาดสามเหลี่ยม3มิติ(xTop, yBase, za, xEdge, yBase, za, xEdge, yMid, za)
+    วาดสามเหลี่ยม3มิติ(xTop, yBase, zb, xEdge, yBase, zb, xEdge, yMid, zb)
+}
+ฟังก์ชัน ข้างลาดZ(zTop, zEdge, xa, xb, yBase, yMid) {
+    วาดสามเหลี่ยม3มิติ(xa, yBase, zTop, xa, yBase, zEdge, xa, yMid, zEdge)
+    วาดสามเหลี่ยม3มิติ(xb, yBase, zTop, xb, yBase, zEdge, xb, yMid, zEdge)
+}
+
+# ════════════════════════════════════════════════════════════════════════════
+# พื้นเช็คเกอร์ (CHECKER FLOOR) — เอกสารอธิบายทั้งระบบ
+# ────────────────────────────────────────────────────────────────────────────
+# ห้องหนึ่ง = ตาราง SUB×SUB กระเบื้อง (SUB=8 → 64 ใบ, ขนาดใบ cell=ROOM_S/8=32).
+# สีกระเบื้องสลับลายหมากรุกตาม parity ของ (i+j): คู่=ct0 (สว่าง), คี่=ct1 (เข้มลง 17%).
+#   สีฐาน ct0/ct1/ผนัง cw มาจาก สีห้อง(L,hue...) → เปลี่ยนโทนตามเพลง (songIdx ใน main).
+#   * "พื้นเขียว" = เมื่อ hue ของเพลงนั้นออกโทนเขียว; ระบบสีเดียวคุมทุกสเตจ.
+#
+# ความสูงกระเบื้อง — แต่ละใบเป็น "ราบ" หรือ "ลาด" เต็มใบ (ไม่มีใบครึ่ง ๆ) เพราะ
+# ขอบแถบทางลาดถูกจัดให้ตรงเส้นกริดพอดี:  ROOM_S=256, RAMP_REACH=96, HALL_W=64
+#   → แถบลาดด้าน E อยู่คอลัมน์ i=5,6,7 (lx 160..256) แถวกลาง j=3,4 (lz 96..160).
+#   ค่าทั้งหมด (96,160) หาร 32 ลงตัว → กระเบื้องไม่คร่อมขอบ → ไม่มีรอยต่อ/รู.
+#   ใบราบ: y ทุกมุม = base (latY ของระดับห้อง).  ใบลาด: y = สูตร slope ตรง ๆ
+#   (ไม่เรียก latticeHeight ต่อจุด — เร็วกว่าเดิม ~4 เท่า, ไม่มี sin ใน hot loop).
+#   สูตร slope ตรงกับ latticeHeight ทุกประการ → คอลลิชัน (latticeBlock) ตรงกับภาพ.
+#
+# กันรู: (1) มุมกระเบื้องที่ใช้ร่วมกันคำนวณ y เท่ากันเป๊ะ → ไม่มีรอยต่อ.
+#        (2) ผนังข้างลาด (ข้างลาดX/Z) ปิดด้านข้างร่องลาด → ไม่ทะลุเห็นฟ็อกข้างลาด.
+#        (3) ผนังขั้นขอบ (วาดขอบ) ปิดขอบที่เพื่อนบ้านต่ำกว่า เว้นช่องทางเดิน.
+# ════════════════════════════════════════════════════════════════════════════
+# ── วาดห้องเดียว: แคชข้อมูลห้องครั้งเดียว → พื้นเช็คเกอร์ (ความสูงเร็ว, มุมตรง = ไม่มีรู) ──
+#   + ผนังข้างลาด + ผนังขั้นขอบ.  ROOM_S=256,SUB=8 → cell=32, ขอบแถบลาด (96/160) ตรงเส้นกริดพอดี
+ฟังก์ชัน วาดห้อง(rc, rr, seed, nExits, hueR, hueG, hueB, t) {
+    bind L = roomLevel(rc, rr, seed)
+    bind ox = rc*ROOM_S;  bind oz = rr*ROOM_S
+    bind base = latY(L)
+    bind hc = ROOM_S*0.5;  bind hw = HALL_W*0.5
+    # แคชเพื่อนบ้าน + ขอบเปิด + จุดกึ่งกลางลาด (คำนวณครั้งเดียวต่อห้อง)
+    bind LE = roomLevel(rc+1, rr, seed);  bind opE = edgeOpen(rc, rr, 1.0, seed, nExits)
+    bind LW = roomLevel(rc-1, rr, seed);  bind opW = edgeOpen(rc-1, rr, 1.0, seed, nExits)
+    bind LS = roomLevel(rc, rr+1, seed);  bind opS = edgeOpen(rc, rr, 0.0, seed, nExits)
+    bind LN = roomLevel(rc, rr-1, seed);  bind opN = edgeOpen(rc, rr-1, 0.0, seed, nExits)
+    bind midE = (base+latY(LE))*0.5;  bind midW = (base+latY(LW))*0.5
+    bind midS = (base+latY(LS))*0.5;  bind midN = (base+latY(LN))*0.5
+    bind ct0 = สีห้อง(L, hueR, hueG, hueB, 0.0)
+    bind ct1 = สีห้อง(L, hueR, hueG, hueB, 0.0-0.17)            # เช็คเกอร์: ช่องสลับเข้มลง
+    bind cw  = สีห้อง(L, hueR, hueG, hueB, 0.0-0.42)            # ผนัง: เข้มชัด (กำแพง 90°)
+    bind SUB = 8.0;  bind cell = ROOM_S / SUB;  bind RBASE = ROOM_S - RAMP_REACH
+    # ── พื้นเช็คเกอร์: แต่ละกระเบื้องเป็น "ราบ" หรือ "ลาด" เต็มใบ (ขอบแถบตรงเส้นกริด) ──
+    #   ลาด = คำนวณ slope ตรง ๆ (ไม่เรียกฟังก์ชันความสูงต่อจุด → เร็วมาก)
+    bind i = 0.0
+    ขณะที่ i < SUB {
+        bind j = 0.0
+        ขณะที่ j < SUB {
+            bind lx0 = i*cell;  bind lx1 = lx0 + cell;  bind lz0 = j*cell;  bind lz1 = lz0 + cell
+            bind x0 = ox + lx0;  bind x1 = ox + lx1;  bind z0 = oz + lz0;  bind z1 = oz + lz1
+            bind y00 = base;  bind y10 = base;  bind y11 = base;  bind y01 = base
+            ถ้า opE > 0.5 { ถ้า i > 4.5 { ถ้า j > 2.5 { ถ้า j < 4.5 {
+                bind y00 = base + (midE-base)*((lx0-RBASE)/RAMP_REACH);  bind y10 = base + (midE-base)*((lx1-RBASE)/RAMP_REACH);  bind y01 = y00;  bind y11 = y10 } } } }
+            ถ้า opW > 0.5 { ถ้า i < 2.5 { ถ้า j > 2.5 { ถ้า j < 4.5 {
+                bind y00 = base + (midW-base)*((RAMP_REACH-lx0)/RAMP_REACH);  bind y10 = base + (midW-base)*((RAMP_REACH-lx1)/RAMP_REACH);  bind y01 = y00;  bind y11 = y10 } } } }
+            ถ้า opS > 0.5 { ถ้า j > 4.5 { ถ้า i > 2.5 { ถ้า i < 4.5 {
+                bind y00 = base + (midS-base)*((lz0-RBASE)/RAMP_REACH);  bind y01 = base + (midS-base)*((lz1-RBASE)/RAMP_REACH);  bind y10 = y00;  bind y11 = y01 } } } }
+            ถ้า opN > 0.5 { ถ้า j < 2.5 { ถ้า i > 2.5 { ถ้า i < 4.5 {
+                bind y00 = base + (midN-base)*((RAMP_REACH-lz0)/RAMP_REACH);  bind y01 = base + (midN-base)*((RAMP_REACH-lz1)/RAMP_REACH);  bind y10 = y00;  bind y11 = y01 } } } }
+            ถ้า (i+j) - ปัดลง((i+j)/2.0)*2.0 == 0.0 { สีดินสอ(list_get(ct0,0), list_get(ct0,1), list_get(ct0,2)) }
+            มิฉะนั้น { สีดินสอ(list_get(ct1,0), list_get(ct1,1), list_get(ct1,2)) }
+            วาดสามเหลี่ยม3มิติ(x0,y00,z0, x1,y10,z0, x1,y11,z1)
+            วาดสามเหลี่ยม3มิติ(x0,y00,z0, x1,y11,z1, x0,y01,z1)
+            bind j = j + 1.0
+        }
+        bind i = i + 1.0
+    }
+    # ── ผนังข้างทางลาด (ปิดด้านข้างร่องลาด → กันรูตอนใกล้ยอด) ──
+    สีดินสอ(list_get(cw,0), list_get(cw,1), list_get(cw,2))
+    ถ้า opE > 0.5 { ข้างลาดX(ox+ROOM_S-RAMP_REACH, ox+ROOM_S, oz+hc-hw, oz+hc+hw, base, midE) }
+    ถ้า opW > 0.5 { ข้างลาดX(ox+RAMP_REACH, ox, oz+hc-hw, oz+hc+hw, base, midW) }
+    ถ้า opS > 0.5 { ข้างลาดZ(oz+ROOM_S-RAMP_REACH, oz+ROOM_S, ox+hc-hw, ox+hc+hw, base, midS) }
+    ถ้า opN > 0.5 { ข้างลาดZ(oz+RAMP_REACH, oz, ox+hc-hw, ox+hc+hw, base, midN) }
+    # ── ผนังขั้นขอบ: ทุกขอบที่เพื่อนบ้านต่ำกว่า → กำแพง เว้นช่องทางเดิน ──
+    ถ้า LE < L { วาดขอบ(ox+ROOM_S, oz, ox+ROOM_S, oz+ROOM_S, base, latY(LE), opE, hw) }
+    ถ้า LW < L { วาดขอบ(ox, oz, ox, oz+ROOM_S, base, latY(LW), opW, hw) }
+    ถ้า LS < L { วาดขอบ(ox, oz+ROOM_S, ox+ROOM_S, oz+ROOM_S, base, latY(LS), opS, hw) }
+    ถ้า LN < L { วาดขอบ(ox, oz, ox+ROOM_S, oz, base, latY(LN), opN, hw) }
+}
+
+# ผนังขั้นแนวตั้งจาก (ax,az)-(bx,bz) ระหว่าง y_top (สูง) → y_bot (ต่ำ)
+ฟังก์ชัน วาดผนังขั้น(ax, az, bx, bz, yt, yb) {
+    วาดสามเหลี่ยม3มิติ(ax, yt, az, bx, yt, bz, bx, yb, bz)
+    วาดสามเหลี่ยม3มิติ(ax, yt, az, bx, yb, bz, ax, yb, az)
+}
+
+# กำแพงตามขอบ (ax,az)->(bx,bz); ถ้า gapOpen เว้นช่องกลางกว้าง 2*gw (ทางเดิน/ทางลาด)
+ฟังก์ชัน วาดขอบ(ax, az, bx, bz, yt, yb, gapOpen, gw) {
+    ถ้า gapOpen > 0.5 {
+        bind dx = bx - ax;  bind dz = bz - az;  bind ln = รากที่สอง(dx*dx + dz*dz)
+        bind ux = dx/ln;  bind uz = dz/ln
+        bind mx = (ax+bx)*0.5;  bind mz = (az+bz)*0.5
+        วาดผนังขั้น(ax, az, mx - ux*gw, mz - uz*gw, yt, yb)          # ก่อนช่อง
+        วาดผนังขั้น(mx + ux*gw, mz + uz*gw, bx, bz, yt, yb)          # หลังช่อง
+    }
+    มิฉะนั้น { วาดผนังขั้น(ax, az, bx, bz, yt, yb) }
+}
+
+# ── คอลลิชันผนัง: กันลูกปีนขึ้นห้องที่สูงกว่า (ผ่านได้เฉพาะแถบทางเดินที่เปิด) ──
+#   คืน [hit, qx, qz] (รูปแบบเดียวกับ หากล่อง2) · ลงต่ำ = ปล่อย (ตกได้)
+ฟังก์ชัน latticeBlock(cx, cz, cy, R, seed, nExits) {
+    bind rc = ปัดลง(cx / ROOM_S);  bind rr = ปัดลง(cz / ROOM_S)
+    bind L = roomLevel(rc, rr, seed)
+    bind lx = cx - rc*ROOM_S;  bind lz = cz - rr*ROOM_S
+    bind hc = ROOM_S*0.5;  bind hw = HALL_W*0.5
+    bind dzc = lz - hc;  ถ้า dzc < 0.0 { bind dzc = 0.0 - dzc }
+    bind dxc = lx - hc;  ถ้า dxc < 0.0 { bind dxc = 0.0 - dxc }
+    ถ้า lx > ROOM_S - R {                                         # E
+        bind blk = 1.0
+        ถ้า roomLevel(rc+1, rr, seed) <= L { bind blk = 0.0 }
+        ถ้า dzc < hw { ถ้า edgeOpen(rc, rr, 1.0, seed, nExits) > 0.5 { bind blk = 0.0 } }
+        ถ้า blk > 0.5 { คืน [1.0, rc*ROOM_S + ROOM_S - R, cz] }
+    }
+    ถ้า lx < R {                                                  # W
+        bind blk = 1.0
+        ถ้า roomLevel(rc-1, rr, seed) <= L { bind blk = 0.0 }
+        ถ้า dzc < hw { ถ้า edgeOpen(rc-1, rr, 1.0, seed, nExits) > 0.5 { bind blk = 0.0 } }
+        ถ้า blk > 0.5 { คืน [1.0, rc*ROOM_S + R, cz] }
+    }
+    ถ้า lz > ROOM_S - R {                                         # S
+        bind blk = 1.0
+        ถ้า roomLevel(rc, rr+1, seed) <= L { bind blk = 0.0 }
+        ถ้า dxc < hw { ถ้า edgeOpen(rc, rr, 0.0, seed, nExits) > 0.5 { bind blk = 0.0 } }
+        ถ้า blk > 0.5 { คืน [1.0, cx, rr*ROOM_S + ROOM_S - R] }
+    }
+    ถ้า lz < R {                                                  # N
+        bind blk = 1.0
+        ถ้า roomLevel(rc, rr-1, seed) <= L { bind blk = 0.0 }
+        ถ้า dxc < hw { ถ้า edgeOpen(rc, rr-1, 0.0, seed, nExits) > 0.5 { bind blk = 0.0 } }
+        ถ้า blk > 0.5 { คืน [1.0, cx, rr*ROOM_S + R] }
+    }
+    คืน [0.0, cx, cz]
+}
+
+# ── วาดทั้งโครง: สตรีมเฉพาะ 5 ห้อง (กลาง + 4 ข้าง) ──
+ฟังก์ชัน drawLattice(cx, cz, seed, nExits, hueR, hueG, hueB, t) {
+    โหมดผสม(0)
+    bind rc = ปัดลง(cx / ROOM_S);  bind rr = ปัดลง(cz / ROOM_S)
+    วาดห้อง(rc,     rr,     seed, nExits, hueR, hueG, hueB, t)
+    วาดห้อง(rc+1.0, rr,     seed, nExits, hueR, hueG, hueB, t)
+    วาดห้อง(rc-1.0, rr,     seed, nExits, hueR, hueG, hueB, t)
+    วาดห้อง(rc,     rr+1.0, seed, nExits, hueR, hueG, hueB, t)
+    วาดห้อง(rc,     rr-1.0, seed, nExits, hueR, hueG, hueB, t)
+    flush_3d()
+}

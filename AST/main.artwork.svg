@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2.067in" height="2.067in" viewBox="0 0 620.00 620.00" preserveAspectRatio="xMidYMid meet" style="font-family:'JetBrains Mono','Fira Code',monospace,sans-serif">
+<defs>
+  <radialGradient id="agrad" cx="50%" cy="42%" r="75%">
+    <stop offset="0%" stop-color="#171733"/><stop offset="55%" stop-color="#0c0c1e"/><stop offset="100%" stop-color="#050510"/>
+  </radialGradient>
+</defs><rect width="620.00" height="620.00" fill="url(#agrad)"/><polygon points="412.82,682.07 -44.15,364.12 459.69,127.35" fill="hsl(0,55%,55%)" opacity="0.05"/><polygon points="262.96,313.84 516.24,45.07 785.01,298.35 531.73,567.12" fill="hsl(47,55%,55%)" opacity="0.05"/><polygon points="405.85,674.94 143.22,526.03 203.68,230.24 503.68,196.34 628.62,471.18" fill="hsl(94,55%,55%)" opacity="0.05"/><polygon points="177.60,252.14 256.08,457.23 117.72,627.73 -99.13,593.16 -177.61,388.08 -39.25,217.57" fill="hsl(141,55%,55%)" opacity="0.05"/><polygon points="299.60,389.85 422.90,341.17 537.84,407.22 557.86,538.27 467.89,635.62 335.67,625.98 260.78,516.60" fill="hsl(188,55%,55%)" opacity="0.05"/><polygon points="265.77,380.64 477.07,24.34 679.98,385.48" fill="hsl(235,55%,55%)" opacity="0.05"/><polygon points="763.12,513.38 470.44,784.57 199.25,491.89 491.93,220.70" fill="hsl(282,55%,55%)" opacity="0.05"/>
+</svg>

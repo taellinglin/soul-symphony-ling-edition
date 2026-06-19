@@ -46,3 +46,6 @@ panic = "abort"
 [profile.dev]
 opt-level = 1
 debug = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]

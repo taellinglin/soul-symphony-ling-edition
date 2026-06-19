@@ -26,66 +26,27 @@ bind PG_RAMPZ = 200.0          # ปลายล่าง ramp (z) — อยู
 
 # จำนวนกล่อง/มอนสเตอร์ ตามเลเวล
 ฟังก์ชัน จำนวนกล่อง(lvl) { bind n = 5.0 + ปัดลง(lvl);  ถ้า n > 14.0 { bind n = 14.0 }  คืน n }
-ฟังก์ชัน จำนวนมอน(lvl)   { bind n = 2.0 + ปัดลง(lvl);  ถ้า n > 12.0 { bind n = 12.0 }  คืน n }
+
+# กระจายจุดแบบซันฟลาวเวอร์ (even-ish) บนลาน
+ฟังก์ชัน กระจายลาน(i, n, lvl, radius) {
+    bind ang = i * 2.3999632 + lvl * 0.91
+    bind rad = รากที่สอง((i + 0.5) / n) * radius
+    คืน [โคไซน์(ang) * rad, ไซน์(ang) * rad]
+}
 
 # ตำแหน่งกล่องตัวอักษร i → [x, z]
 ฟังก์ชัน ตำแหน่งกล่อง(i, lvl) {
-    bind rx = (pgRand(i, lvl) * 2.0 - 1.0) * (PG_HALF - 40.0)
-    bind rz = (pgRand(i + 37.0, lvl) * 2.0 - 1.0) * (PG_HALF - 40.0)
+    bind n = จำนวนกล่อง(lvl)
+    bind p = กระจายลาน(i, n, lvl, PG_HALF - 42.0)
+    bind rx = list_get(p, 0)
+    bind rz = list_get(p, 1)
     คืน [rx, rz]
 }
 
-# ชนิดมอน: 0 = drifter (ช้า เดินวน), 1 = hunter (เร็ว ไล่ผู้เล่น)
-ฟังก์ชัน ชนิดมอน(i, lvl) {
-    ถ้า lvl < 1.5 { คืน 0 }
-    ถ้า pgRand(i + 500.0, lvl) > 0.55 { คืน 1 }
-    คืน 0
-}
 
-# 8 สเตตัส [STR,AGI,VIT,FOC,DEF,LCK,SPD,PWR] (สเกลตามเลเวล)
-ฟังก์ชัน สเตตัสมอน(seed, lvl) {
-    bind b = 3.0 + lvl * 1.5
-    คืน [
-        floor(b + pgRand(seed+1.0, lvl)*lvl*3.0), floor(b + pgRand(seed+2.0, lvl)*lvl*3.0),
-        floor(b + pgRand(seed+3.0, lvl)*lvl*3.0), floor(b + pgRand(seed+4.0, lvl)*lvl*3.0),
-        floor(b + pgRand(seed+5.0, lvl)*lvl*3.0), floor(b + pgRand(seed+6.0, lvl)*lvl*3.0),
-        floor(b + pgRand(seed+7.0, lvl)*lvl*3.0), floor(b + pgRand(seed+8.0, lvl)*lvl*3.0)
-    ]
-}
 
-# ตำแหน่งมอน i → [x,z]; typ 1 = นักล่า ไล่ (px,pz) — rule-based AI (ไม่ใช่ LLM)
-ฟังก์ชัน ตำแหน่งมอน(i, lvl, t, spread, typ, px, pz) {
-    bind bx = (pgRand(i + 200.0, lvl) * 2.0 - 1.0) * spread
-    bind bz = (pgRand(i + 260.0, lvl) * 2.0 - 1.0) * spread
-    bind a = t * 0.45 + i * 1.3
-    bind ox = bx + โคไซน์(a) * 18.0
-    bind oz = bz + ไซน์(a) * 18.0
-    ถ้า typ > 0.5 {
-        bind hx = px - ox;  bind hz = pz - oz
-        bind chase = (ไซน์(t*0.55 + i)*0.5+0.5) * 0.82   # พุ่งเข้าหาเป็นจังหวะ
-        คืน [ox + hx*chase, oz + hz*chase]
-    }
-    คืน [ox, oz]
-}
 
-# ── ออกตาฮีดรอนเติม (ลำตัวมอนแหลม 3D) ────────────────────────────────────────
-ฟังก์ชัน วาดออคตา(cx,cy,cz, rx,ry,rz) {
-    bind ty=cy-ry;  bind by=cy+ry;  bind ey=cy
-    bind ax=cx+rx;  bind bx2=cx;     bind cx2=cx-rx;  bind dx2=cx
-    bind az=cz;     bind bz2=cz+rz;  bind cz2=cz;     bind dz2=cz-rz
-    วาดสามเหลี่ยม3มิติ(cx,ty,cz, ax,ey,az, bx2,ey,bz2)  วาดสามเหลี่ยม3มิติ(cx,ty,cz, bx2,ey,bz2, cx2,ey,cz2)
-    วาดสามเหลี่ยม3มิติ(cx,ty,cz, cx2,ey,cz2, dx2,ey,dz2) วาดสามเหลี่ยม3มิติ(cx,ty,cz, dx2,ey,dz2, ax,ey,az)
-    วาดสามเหลี่ยม3มิติ(cx,by,cz, bx2,ey,bz2, ax,ey,az)  วาดสามเหลี่ยม3มิติ(cx,by,cz, cx2,ey,cz2, bx2,ey,bz2)
-    วาดสามเหลี่ยม3มิติ(cx,by,cz, dx2,ey,dz2, cx2,ey,cz2) วาดสามเหลี่ยม3มิติ(cx,by,cz, ax,ey,az, dx2,ey,dz2)
-}
 
-# ไอคอนบัฟ stat (0-7) ที่ (x,y) ระนาบ x-y — สีต่างกัน 8 แบบ
-ฟังก์ชัน ไอคอนบัฟ(stat, x, y, z, s) {
-    bind h = stat * 0.785
-    สีดินสอ(floor((ไซน์(h)*0.5+0.5)*200+55), floor((ไซน์(h+2.094)*0.5+0.5)*200+55), floor((ไซน์(h+4.189)*0.5+0.5)*200+55))
-    วาดสามเหลี่ยม3มิติ(x,y-s,z, x+s,y,z, x,y+s,z)
-    วาดสามเหลี่ยม3มิติ(x,y-s,z, x,y+s,z, x-s,y,z)
-}
 
 # ── ความสูงพื้นที่ (x,z): ฐาน LVL_F; วัด/สเก็ตพาร์ค — 3 ramp (ใต้/ตะวันตก/ตะวันออก) ──
 ฟังก์ชัน ความสูงพื้น2(x, z) {
@@ -140,10 +101,10 @@ bind PG_RAMPZ = 200.0          # ปลายล่าง ramp (z) — อยู
 # ── จุดเก็บตัวอักษร i (จาก n) กระจายสม่ำเสมอ (เกลียวซันฟลาวเวอร์) → [x, y, z] ──
 #   ถ้าตำแหน่งพื้นล่างถูกบล็อก (ในกล่องตัวอักษร) → ย้ายขึ้นชั้น 2 (PG_LEDGE)
 ฟังก์ชัน ตำแหน่งเก็บ2(i, n, lvl) {
-    bind ang = i * 2.3999632                       # golden angle → กระจายทั่วถึง
-    bind rad = รากที่สอง((i + 0.5) / n) * (PG_HALF - 36.0)
-    bind x = โคไซน์(ang) * rad
-    bind z = ไซน์(ang) * rad
+    bind p = กระจายลาน(i, n, lvl+31.0, PG_HALF - 36.0)
+    bind ang = i * 2.3999632 + (lvl+31.0) * 0.91
+    bind x = list_get(p, 0)
+    bind z = list_get(p, 1)
     # บล็อกไหม? (อยู่ในรอยเท้ากล่องตัวอักษร half=13+ระยะเผื่อ)
     bind blocked = 0
     bind nb = จำนวนกล่อง(lvl)
@@ -203,8 +164,8 @@ bind PG_RAMPZ = 200.0          # ปลายล่าง ramp (z) — อยู
         bind ix = 0.0 - PG_LH
         ขณะที่ ix < PG_LH {
             ถ้า กระเบื้องหน้ากล้อง(ix, PG_LEDGE, iz, ix+S, iz+S) == 1 {
-                ถ้า (ปัดลง(ix/S) + ปัดลง(iz/S)) - ปัดลง((ปัดลง(ix/S)+ปัดลง(iz/S))/2.0)*2.0 == 0.0 { สีดินสอ(14,40,38) }
-                มิฉะนั้น { สีดินสอ(22,60,58) }
+                ถ้า (ปัดลง(ix/S) + ปัดลง(iz/S)) - ปัดลง((ปัดลง(ix/S)+ปัดลง(iz/S))/2.0)*2.0 == 0.0 { สีดินสอ(36,36,42) }
+                มิฉะนั้น { สีดินสอ(54,54,62) }
                 วาดสามเหลี่ยม3มิติ(ix, PG_LEDGE, iz,  ix+S, PG_LEDGE, iz,  ix+S, PG_LEDGE, iz+S)
                 วาดสามเหลี่ยม3มิติ(ix, PG_LEDGE, iz,  ix+S, PG_LEDGE, iz+S,  ix, PG_LEDGE, iz+S)
             }
@@ -224,15 +185,14 @@ bind PG_RAMPZ = 200.0          # ปลายล่าง ramp (z) — อยู
 # ── ภาพศิลป์เฟรมบนผนัง: กรอบทอง 2 ชั้น + ลายเวกเตอร์เคลื่อนไหวในกรอบ ──────────
 #   (cx,cy,cz)=กลางเฟรม; (rx,rz)=แกนขวาแนวนอนของผนัง; up=(0,-1,0); cull จาก (bx,bz)
 ฟังก์ชัน วาดศิลป์ผนัง(cx, cy, cz, rx, rz, w, h, t, kind, hue, bx, bz) {
-    ถ้า (cx-bx)*(cx-bx) + (cz-bz)*(cz-bz) > 110000.0 { คืน 0 }
+    ถ้า (cx-bx)*(cx-bx) + (cz-bz)*(cz-bz) > 200000.0 { คืน 0 }
     bind o = 1.6
     สีดินสอ(190, 155, 75)
     วาดเส้น3มิติ(cx-rx*(w+o), cy-h-o, cz-rz*(w+o),  cx+rx*(w+o), cy-h-o, cz+rz*(w+o))
     วาดเส้น3มิติ(cx-rx*(w+o), cy+h+o, cz-rz*(w+o),  cx+rx*(w+o), cy+h+o, cz+rz*(w+o))
     วาดเส้น3มิติ(cx-rx*(w+o), cy-h-o, cz-rz*(w+o),  cx-rx*(w+o), cy+h+o, cz-rz*(w+o))
     วาดเส้น3มิติ(cx+rx*(w+o), cy-h-o, cz+rz*(w+o),  cx+rx*(w+o), cy+h+o, cz+rz*(w+o))
-    สีดินสอ(110, 88, 44)
-    วาดเส้น3มิติ(cx-rx*w, cy-h, cz-rz*w,  cx+rx*w, cy-h, cz+rz*w)
+    สีดินสอ(48, 44, 40)
     วาดเส้น3มิติ(cx-rx*w, cy+h, cz-rz*w,  cx+rx*w, cy+h, cz+rz*w)
     วาดเส้น3มิติ(cx-rx*w, cy-h, cz-rz*w,  cx-rx*w, cy+h, cz-rz*w)
     วาดเส้น3มิติ(cx+rx*w, cy-h, cz+rz*w,  cx+rx*w, cy+h, cz+rz*w)
@@ -273,7 +233,7 @@ bind PG_RAMPZ = 200.0          # ปลายล่าง ramp (z) — อยู
     ขณะที่ i < nb {
         bind p = ตำแหน่งกล่อง(i, lvl)
         bind px = list_get(p,0);  bind pz = list_get(p,1)
-        ถ้า (px-cx)*(px-cx) + (pz-cz)*(pz-cz) < 90000.0 {
+        ถ้า (px-cx)*(px-cx) + (pz-cz)*(pz-cz) < 160000.0 {
             วาดกล่องตัวอักษร(px, pz, (i*7.0 + lvl*3.0) % 26.0, t)
         }
         bind i = i + 1
@@ -295,62 +255,33 @@ bind PG_RAMPZ = 200.0          # ปลายล่าง ramp (z) — อยู
 }
 
 ฟังก์ชัน ดึงกล้อง2(cx, cz) {
-    bind b = หากล่อง2(cx, cz, 3.0)
-    คืน [list_get(b,1), list_get(b,2)]
+    คืน [cx, cz]   # แลตทิซ: ห้องเปิดกว้าง — ไม่หนีบกล้องด้วยเรขาเก่า (กันกล้องเพี้ยน)
 }
 
 # ของเก็บกระจายในลาน (จาก MIDI offset ขยายเข้าลาน)
-ฟังก์ชัน ตำแหน่งเก็บ2(ci) {
+ฟังก์ชัน ตำแหน่งเก็บเพลง2(ci) {
     คืน [list_get(เก็บX, ci) * 7.0, list_get(เก็บZ, ci) * 7.0]
 }
 
-# มอนสเตอร์ปีศาจ: ลำตัวมืด + หนามแดงหมุน + ตาเรือง + เขา (วาดเมื่อยังไม่ตาย)
-# มอนสเตอร์ 3D เติม น่ากลัว: typ 0=ปีศาจแดง, 1=นักล่าม่วง; hpfrac=เลือด, lvl=เลเวล
-ฟังก์ชัน วาดมอน(x, z, t, seed, typ, hpfrac, lvl, lod) {
-    bind by = (LVL_F - 5.0) + ไซน์(t*3.0 + seed) * 0.6
-    bind r1=120.0; bind g1=12.0; bind b1=24.0
-    ถ้า typ > 0.5 { bind r1=95.0; bind g1=10.0; bind b1=135.0 }
-    โหมดผสม(0)
-    สีดินสอ(floor(r1*0.4), floor(g1*0.4), floor(b1*0.4))
-    วาดออคตา(x, by, z, 3.2, 5.2, 3.2)                       # ลำตัวมืด (วาดเสมอ)
-    ถ้า lod < 0.5 {                                          # รายละเอียดเต็ม (ใกล้เท่านั้น)
-        bind pulse = ไซน์(t*5.0+seed)*0.5+0.5
-        สีดินสอ(floor(r1*0.7+pulse*70.0), floor(g1+pulse*30.0), floor(b1*0.7+pulse*55.0))
-        วาดออคตา(x, by, z, 1.7, 6.6, 1.7)                   # แกนเรือง
-        สีดินสอ(floor(r1), floor(g1), floor(b1))
-        วาดออคตา(x, by, z, 5.4, 1.1, 5.4)                   # หนามข้าง
-        โหมดผสม(1)
-        อนุภาคทรงกลม(x-1.3, by-1.8, z-2.4, 0.6, 6, t*5.0+seed, 255, 230, 60)
-        อนุภาคทรงกลม(x+1.3, by-1.8, z-2.4, 0.6, 6, t*5.0+seed, 255, 230, 60)
-        โหมดผสม(0)
-        สีดินสอ(floor(r1*1.3), floor(g1), floor(b1))
-        วาดสามเหลี่ยม3มิติ(x-2.2,by-4.2,z, x-1.3,by-4.0,z, x-3.6,by-7.6,z)
-        วาดสามเหลี่ยม3มิติ(x+2.2,by-4.2,z, x+1.3,by-4.0,z, x+3.6,by-7.6,z)
-    }
-    # ── แถบเลือด เหนือหัว (วาดเสมอ) ──
-    bind hy = by - 9.0
-    สีดินสอ(40, 8, 8)
-    วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x+4.0,hy,z, x+4.0,hy-0.8,z)  วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x+4.0,hy-0.8,z, x-4.0,hy-0.8,z)
-    bind hw = 8.0 * hpfrac
-    สีดินสอ(40, 220, 90)
-    วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x-4.0+hw,hy,z, x-4.0+hw,hy-0.8,z)  วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x-4.0+hw,hy-0.8,z, x-4.0,hy-0.8,z)
-    ถ้า lod < 0.5 {                                          # pips เลเวล เฉพาะใกล้
-        สีดินสอ(255, 210, 80)
-        bind pp = 0
-        ขณะที่ pp < lvl { ถ้า pp < 8 {
-            bind pxp = x - 3.5 + pp*1.0
-            วาดสามเหลี่ยม3มิติ(pxp,hy-1.3,z, pxp+0.6,hy-1.3,z, pxp+0.3,hy-2.1,z)
-        }  bind pp = pp + 1 }
-    }
-}
+
+
 
 ฟังก์ชัน ตั้งแสงเลเวล2(cx, cz, t, lvl) {
     ล้างแสง()
-    # โคมกลาง: สีเปลี่ยนตามเลเวล (environment change)
-    เพิ่มแสง(0.0, PG_LEDGE-30.0, 0.0,
-        0.6+ไซน์(lvl*1.1)*0.4, 0.6+ไซน์(lvl*1.1+2.0)*0.4, 0.6+ไซน์(lvl*1.1+4.0)*0.4,
-        1.5, 360.0)
-    # ไฟผนัง 2 ดวง (ลดจาก 4 → FPS; แสง×สามเหลี่ยม แพง)
-    เพิ่มแสง(0.0-PG_HALF+8.0, คบY, 0.0, 1.0,0.5,0.18, 1.2, 240.0)
-    เพิ่มแสง(PG_HALF-8.0, คบY, 0.0, 1.0,0.5,0.18, 1.2, 240.0)
+    # ── แสง ROYGBIV ทั่วทั้งเลเวล: โคม 1 ดวง/ห้องที่สตรีม (กลาง + 4 ข้าง) ──
+    #   สีรุ้งไล่กัน 5 ดวง (72° ต่อดวง) + หมุนช้าตามเวลา; อยู่สูงเหนือชั้นบนสุด
+    #   รัศมีคลุมทั้งห้อง → สว่างทุกห้อง/ทุกชั้น ไม่ใช่จุดเดียว
+    bind rc = ปัดลง(cx / ROOM_S);  bind rr = ปัดลง(cz / ROOM_S)
+    bind hc = ROOM_S * 0.5
+    bind ly = LAT_BASE - LAT_MAXL*LAT_H - 44.0      # เหนือชั้นสูงสุด → ส่องลงทุกชั้น
+    bind rad = ROOM_S * 0.95
+    bind ปัก = [0.0,0.0,  1.0,0.0,  0.0-1.0,0.0,  0.0,1.0,  0.0,0.0-1.0]
+    bind k = 0
+    ขณะที่ k < 5 {
+        bind dc = list_get(ปัก, k*2);  bind dr = list_get(ปัก, k*2+1)
+        bind lx = (rc+dc)*ROOM_S + hc;  bind lz = (rr+dr)*ROOM_S + hc
+        bind hue = k*1.2566 + t*0.4 + lvl*0.8       # ไล่รุ้ง + หมุน + ต่างต่อเลเวล
+        เพิ่มแสง(lx, ly, lz, ไซน์(hue)*0.5+0.55, ไซน์(hue+2.094)*0.5+0.55, ไซน์(hue+4.189)*0.5+0.55, 1.7, rad)
+        bind k = k + 1
+    }
 }

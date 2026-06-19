@@ -9,21 +9,25 @@
 ฟังก์ชัน วาดสหาย(meshId, liqH, ballR, cx, cy, cz, vx, vz, phase, yaw, anim, t, swR, swG, swB, slashP) {
     bind sc = ballR * 1.7                                               # ขนาด = ลูกผู้เล่น (โมเดลเบกสูง 1 → สูง ~1.7*R พอดีในลูก)
     bind speed = รากที่สอง(vx*vx + vz*vz)
-    bind gait = speed * 6.0;  ถ้า gait > 1.0 { bind gait = 1.0 }        # 0 idle … 1 run (ทวีนลื่น)
-    # ── ท่านุ่ม: หายใจ idle → เด้ง + แกว่งแขน/หัว + แกว่งแขนสลับข้าง (gait) ──
-    bind breath = ไซน์(t*1.8 + cx*0.2)*0.03
-    bind bob = 0.0 - (ไซน์(phase*2.0)*0.07*gait + breath)*sc            # ขึ้น -Y
-    bind sway = ไซน์(phase)*0.10*gait + ไซน์(t*1.8 + cz*0.2)*0.03       # เอนตัวบน
-    bind arm = ไซน์(phase)*0.34*gait + ไซน์(t*1.6 + cx*0.3)*0.05        # แกว่งแขน/ข้อศอก (สลับข้าง)
-    bind fwd = 0.12*gait                                               # เอนหน้า (ลูกกลิ้ง)
-    ถ้า anim == 3.0 { bind bob = 0.0 - 0.55*sc;  bind arm = ไซน์(t*9.0)*0.2 }                       # กระโดด
-    ถ้า anim == 4.0 { bind fwd = 0.42;  bind arm = ไซน์(phase*4.0)*0.45 }                            # โจมตี (ฟันแขน)
-    ถ้า anim == 5.0 { bind fwd = 0.0-0.16;  bind bob = 0.05*sc;  bind arm = 0.0-0.2 }                # การ์ด (กอด)
+    bind gait = speed * 5.0;  ถ้า gait > 1.0 { bind gait = 1.0 }        # 0 idle … 1 run (ช้าลง — ไม่ frantic)
+    # ── วงจรเดิน/วิ่ง: แขน+ขาสลับเฟส (ธรรมชาติ) · เด้ง 2 ครั้ง/รอบ · sync กับการกลิ้ง ──
+    bind sw = ไซน์(phase)                                              # การแกว่งหลัก
+    bind breath = ไซน์(t*1.5 + cx*0.2)*0.025
+    bind bob = 0.0 - (ไซน์(phase*2.0)*0.05*gait + breath)*sc           # เด้งตอนผ่านเท้า
+    bind sway = sw*0.07*gait + ไซน์(t*1.5 + cz*0.2)*0.022              # เอนสะโพก
+    bind arm = sw*0.34*gait + ไซน์(t*1.4 + cx*0.3)*0.04                # แขนแกว่ง (สลับซ้าย-ขวา)
+    bind leg = 0.0 - sw*0.22*gait                                      # ขาแกว่งตรงข้ามแขน (ธรรมชาติ)
+    bind lean = gait*0.24;  bind tuck = 0.0;  bind fwd = 0.08*gait     # ก้มวิ่งเล็กน้อย
+    ถ้า anim == 6.0 { bind tuck = 0.40;  bind bob = 0.20*sc;  bind arm = 0.0-0.15;  bind leg = 0.0;  bind lean = 0.18;  bind fwd = 0.0 }   # ชาร์จ (ย่อตัว)
+    ถ้า anim == 3.0 { bind tuck = 0.72;  bind bob = 0.0;  bind arm = ไซน์(t*8.0)*0.14;  bind leg = 0.0;  bind lean = 0.14 }                # ลอย (เข่ายกขึ้น)
+    ถ้า anim == 7.0 { bind tuck = 0.45;  bind fwd = 0.38;  bind arm = ไซน์(phase*5.0)*0.5;  bind lean = 0.42;  bind leg = 0.1 }            # จู่โจมกลางอากาศ
+    ถ้า anim == 4.0 { bind fwd = 0.40;  bind arm = ไซน์(phase*4.0)*0.45;  bind lean = 0.32;  bind leg = 0.0-sw*0.1 }                       # โจมตีพื้น
+    ถ้า anim == 5.0 { bind fwd = 0.0-0.16;  bind bob = 0.05*sc;  bind arm = 0.0-0.2;  bind leg = 0.0;  bind lean = 0.0-0.1 }               # การ์ด
     bind fx = ไซน์(yaw)*fwd*sc;  bind fz = โคไซน์(yaw)*fwd*sc
     bind mx = cx + fx;  bind mz = cz + fz;  bind my = cy + bob
-    # ── โมเดลเรนเดอร์ที่ native res ในเอนจิน (ไม่รับแสง, เร็ว) + แกว่งแขน/ตัว ──
+    # ── โมเดล native res ในเอนจิน (ไม่รับแสง, เร็ว) + วงจรเดิน/วิ่ง/กระโดด ──
     โหมดผสม(0)
-    mesh_draw(meshId, mx, my, mz, sc, yaw, sway, arm)
+    mesh_draw(meshId, mx, my, mz, sc, yaw, sway, arm, lean, leg, tuck)
     flush_3d()
     # ── ดาบฟัน (ราชา=แดง · ราชินี=น้ำเงิน) เมื่อโจมตี ──
     ถ้า slashP > 0.0-0.5 {
@@ -50,21 +54,23 @@
         ถ้า de < 20.0 { bind tx = ex;  bind tz = ez;  bind hot = 1.0 }
     }
     bind dtx = tx - cx;  bind dtz = tz - cz;  bind dt = รากที่สอง(dtx*dtx + dtz*dtz) + 0.001
+    # ── ฟิสิกส์ = ผู้เล่น: เร่ง 0.045, หน่วง 0.99 (โมเมนตัม); เบรก 0.90 ตอนใกล้เป้า ──
+    bind dmp = 0.90                                          # ใกล้/นิ่ง → เบรก
     ถ้า hot > 0.5 {                                         # ── โหมดล่าศัตรู ──
-        ถ้า dt < 5.5 { bind anim = 4.0;  ถ้า rnd < 0.07 { bind jump = 1.0 } }   # โจมตี + กระโดดฟัน
+        ถ้า dt < 5.5 { bind anim = 4.0;  ถ้า rnd < 0.06 { bind jump = 1.0 } }   # โจมตี + กระโดดฟัน
         มิฉะนั้น {
-            bind acc = 0.09;  bind anim = 2.0
+            bind acc = 0.045;  bind anim = 2.0;  bind dmp = 0.99
             bind vx = vx + (dtx/dt)*acc;  bind vz = vz + (dtz/dt)*acc
-            ถ้า rnd < 0.025 { bind jump = 1.0 }            # โดดพุ่งเข้า
+            ถ้า rnd < 0.02 { bind jump = 1.0 }             # โดดพุ่งเข้า
         }
     }
     มิฉะนั้น {                                              # ── ตามผู้เล่น / เดินเล่น ──
-        ถ้า dt > 12.0 { bind acc = 0.085;  bind anim = 2.0;  ถ้า rnd < 0.03 { bind jump = 1.0 } }   # ไกล → วิ่งตาม
-        มิฉะนั้น { ถ้า dt > 5.0 { bind acc = 0.05;  bind anim = 1.0 }                                  # ปานกลาง → เดิน
-                  มิฉะนั้น { bind anim = 0.0;  ถ้า rnd < 0.012 { bind jump = 1.0 } } }                 # ใกล้ → ว่าง + กระโดดเล่น
+        ถ้า dt > 12.0 { bind acc = 0.045;  bind anim = 2.0;  bind dmp = 0.99;  ถ้า rnd < 0.025 { bind jump = 1.0 } }   # ไกล → วิ่งตาม
+        มิฉะนั้น { ถ้า dt > 5.0 { bind acc = 0.045;  bind anim = 1.0;  bind dmp = 0.96 }                                 # ปานกลาง → เดิน
+                  มิฉะนั้น { bind anim = 0.0;  ถ้า rnd < 0.01 { bind jump = 1.0 } } }                                   # ใกล้ → ว่าง + กระโดดเล่น
         ถ้า dt > 5.0 { bind vx = vx + (dtx/dt)*acc;  bind vz = vz + (dtz/dt)*acc }
     }
-    bind vx = vx * 0.85;  bind vz = vz * 0.85               # หน่วง (กลิ้ง)
+    bind vx = vx * dmp;  bind vz = vz * dmp                  # หน่วงแบบผู้เล่น (โมเมนตัม/เบรก)
     bind sp = รากที่สอง(vx*vx + vz*vz)
     ถ้า hot < 0.5 { ถ้า sp < 0.03 { bind anim = 0.0 } }     # นิ่ง → idle
     คืน [vx, vz, anim, jump]

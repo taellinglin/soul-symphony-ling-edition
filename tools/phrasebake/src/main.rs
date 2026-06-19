@@ -80,8 +80,9 @@ fn main() {
     let center_x = total_adv_em * 0.5;
     let center_y = 0.35; // rough vertical centre (cap-height-ish above baseline)
 
-    // Build triangles.
-    let mut tris = String::new();
+    // Build per-glyph quad lists (so each letter can be animated independently):
+    // each quad = (lx_l, lx_r, ly_t, ly_b) in centred em units.
+    let mut glyph_quads: Vec<Vec<(f32, f32, f32, f32)>> = Vec::new();
     let mut n_tri = 0usize;
     let mut cursor_em = 0.0f32; // pen x in em units
     for (info, pos) in infos.iter().zip(positions.iter()) {
@@ -90,8 +91,8 @@ fn main() {
         let (w, h) = (m.width, m.height);
         let pen_x_em = cursor_em + pos.x_offset as f32 / upm;
         let pen_y_em = pos.y_offset as f32 / upm;
+        let mut quads: Vec<(f32, f32, f32, f32)> = Vec::new();
         if w != 0 && h != 0 && bitmap.iter().any(|&c| c >= THRESH) {
-            // glyph origin (left/bottom bearing) in em units, fontdue px → em via /PX
             let gl = pen_x_em + m.xmin as f32 / PX;
             let gb = pen_y_em + m.ymin as f32 / PX;
             for r in rects_of(w, h, &bitmap) {
@@ -99,20 +100,44 @@ fn main() {
                 let lx_r = gl + r.x1 as f32 / PX - center_x;
                 let ly_t = gb + (h - r.y0) as f32 / PX - center_y; // top row → larger y
                 let ly_b = gb + (h - r.y1) as f32 / PX - center_y;
-                // billboard: right=(1,0,0), up=(0,-1,0) → world = (ox+lx*sc, oy-ly*sc, 0)
-                let p = |x: f32, y: f32| format!("ox+{}*sc, oy-{}*sc, 0.0", fmt_coef(x), fmt_coef(y));
-                writeln!(tris, "    วาดสามเหลี่ยม3มิติ({},  {},  {})", p(lx_l, ly_t), p(lx_r, ly_t), p(lx_r, ly_b)).unwrap();
-                writeln!(tris, "    วาดสามเหลี่ยม3มิติ({},  {},  {})", p(lx_l, ly_t), p(lx_r, ly_b), p(lx_l, ly_b)).unwrap();
-                n_tri += 2;
+                quads.push((lx_l, lx_r, ly_t, ly_b));
+                n_tri += 4; // front + extruded back
             }
         }
+        glyph_quads.push(quads);
         cursor_em += pos.x_advance as f32 / upm;
     }
 
+    // Emit an animated 3-D draw: per letter → bob + sway + depth-wave + a dark
+    // extruded back-copy (3-D thickness) + per-letter ROYGBIV colour cycling.
+    //   วาด<Name>(ox, oy, sc, t)   (t = time in seconds, drives the animation)
     let mut out = String::new();
     writeln!(out, "# {name} — baked phrase \"{phrase}\" (auto-gen by phrasebake; do not edit)").unwrap();
-    writeln!(out, "ฟังก์ชัน วาด{name}(ox, oy, sc) {{").unwrap();
-    out.push_str(&tris);
+    writeln!(out, "# 3D + sway/bob + per-letter ROYGBIV.  วาด{name}(ox, oy, sc, t)").unwrap();
+    writeln!(out, "ฟังก์ชัน วาด{name}(ox, oy, sc, t) {{").unwrap();
+    for (gi, quads) in glyph_quads.iter().enumerate() {
+        if quads.is_empty() { continue; }
+        let a = gi as f32;
+        // per-letter animation params (amplitudes ∝ sc)
+        writeln!(out, "    bind sx = ไซน์(t*1.7 + {a:.1}*0.55)*0.05*sc").unwrap();   // sway (x)
+        writeln!(out, "    bind by = ไซน์(t*3.0 + {a:.1}*0.60)*0.11*sc").unwrap();   // bob (y)
+        writeln!(out, "    bind dz = ไซน์(t*2.0 + {a:.1}*0.80)*0.28*sc").unwrap();   // depth wave (z) → 3D
+        writeln!(out, "    bind hq = {a:.1}*0.55 + t*1.3").unwrap();                 // ROYGBIV hue, cycles
+        // back copy (extruded behind, dark) — gives 3-D thickness
+        writeln!(out, "    สีดินสอ(18, 16, 30)").unwrap();
+        for &(xl, xr, yt, yb) in quads {
+            let pb = |x: f32, y: f32| format!("ox+sx+{}*sc, oy-by-{}*sc, dz+0.45*sc", fmt_coef(x), fmt_coef(y));
+            writeln!(out, "    วาดสามเหลี่ยม3มิติ({},  {},  {})", pb(xl, yt), pb(xr, yt), pb(xr, yb)).unwrap();
+            writeln!(out, "    วาดสามเหลี่ยม3มิติ({},  {},  {})", pb(xl, yt), pb(xr, yb), pb(xl, yb)).unwrap();
+        }
+        // front face — per-letter ROYGBIV
+        writeln!(out, "    สีดินสอ(floor((ไซน์(hq)*0.5+0.5)*200+55), floor((ไซน์(hq+2.094)*0.5+0.5)*200+55), floor((ไซน์(hq+4.189)*0.5+0.5)*200+55))").unwrap();
+        for &(xl, xr, yt, yb) in quads {
+            let pf = |x: f32, y: f32| format!("ox+sx+{}*sc, oy-by-{}*sc, dz", fmt_coef(x), fmt_coef(y));
+            writeln!(out, "    วาดสามเหลี่ยม3มิติ({},  {},  {})", pf(xl, yt), pf(xr, yt), pf(xr, yb)).unwrap();
+            writeln!(out, "    วาดสามเหลี่ยม3มิติ({},  {},  {})", pf(xl, yt), pf(xr, yb), pf(xl, yb)).unwrap();
+        }
+    }
     writeln!(out, "}}").unwrap();
     fs::write(out_file, out).unwrap();
     eprintln!("wrote {name} ({} glyphs, {n_tri} tris, width {:.2}em) → {out_file}", infos.len(), total_adv_em);

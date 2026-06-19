@@ -1,0 +1,163 @@
+# ════════════════════════════════════════════════════════════════════════════
+# monster.ling — มอนสเตอร์คริสตัลไวรัส: สเตตัส/ชนิด/ตำแหน่ง(AI) + โมเดล 3D + หนวดวงจร
+#   ย้ายมาจาก proc_gen_level.ling (อ้างอิงร่วม: pgRand, กระจายลาน, LVL_F เป็นโกลบอล)
+#   ฟังก์ชันทั้งหมดเป็นโกลบอล → เรียก pgRand/กระจายลาน/LVL_F (นิยามใน proc_gen_level/level)
+#   ได้ตราบที่ main.ling ใช้ทั้งสองไฟล์
+# ════════════════════════════════════════════════════════════════════════════
+
+# จำนวนมอนสเตอร์ ตามเลเวล
+ฟังก์ชัน จำนวนมอน(lvl)   { bind n = 2.0 + ปัดลง(lvl);  ถ้า n > 12.0 { bind n = 12.0 }  คืน n }
+
+# ชนิดมอน: 0 = drifter (ช้า เดินวน), 1 = hunter (เร็ว ไล่ผู้เล่น)
+ฟังก์ชัน ชนิดมอน(i, lvl) {
+    ถ้า lvl < 1.5 { คืน 0 }
+    ถ้า pgRand(i + 500.0, lvl) > 0.55 { คืน 1 }
+    คืน 0
+}
+
+# 8 สเตตัส [STR,AGI,VIT,FOC,DEF,LCK,SPD,PWR] (สเกลตามเลเวล)
+ฟังก์ชัน สเตตัสมอน(seed, lvl) {
+    bind b = 3.0 + lvl * 1.5
+    คืน [
+        floor(b + pgRand(seed+1.0, lvl)*lvl*3.0), floor(b + pgRand(seed+2.0, lvl)*lvl*3.0),
+        floor(b + pgRand(seed+3.0, lvl)*lvl*3.0), floor(b + pgRand(seed+4.0, lvl)*lvl*3.0),
+        floor(b + pgRand(seed+5.0, lvl)*lvl*3.0), floor(b + pgRand(seed+6.0, lvl)*lvl*3.0),
+        floor(b + pgRand(seed+7.0, lvl)*lvl*3.0), floor(b + pgRand(seed+8.0, lvl)*lvl*3.0)
+    ]
+}
+
+# ตำแหน่งมอน i → [x,z]; typ 1 = นักล่า ไล่ (px,pz) — rule-based AI (ไม่ใช่ LLM)
+ฟังก์ชัน ตำแหน่งมอน(i, lvl, t, spread, typ, px, pz) {
+    bind n = จำนวนมอน(lvl)
+    bind p = กระจายลาน(i, n, lvl+13.0, spread)
+    bind bx = list_get(p, 0)
+    bind bz = list_get(p, 1)
+    bind wr = 12.0 + pgRand(i + 340.0, lvl) * 8.0
+    bind a = t * (0.42 + pgRand(i + 420.0, lvl) * 0.32) + i * 1.7
+    bind ox = bx + โคไซน์(a) * wr
+    bind oz = bz + ไซน์(a) * wr
+    ถ้า typ > 0.5 {
+        bind hx = px - ox;  bind hz = pz - oz
+        bind chase = 0.08 + (ไซน์(t*0.85 + i)*0.5+0.5) * 0.18
+        คืน [ox + hx*chase, oz + hz*chase]
+    }
+    คืน [ox, oz]
+}
+
+# ── ออกตาฮีดรอนเติม (ลำตัวมอนแหลม 3D) ────────────────────────────────────────
+ฟังก์ชัน วาดออคตา(cx,cy,cz, rx,ry,rz) {
+    bind ty=cy-ry;  bind by=cy+ry;  bind ey=cy
+    bind ax=cx+rx;  bind bx2=cx;     bind cx2=cx-rx;  bind dx2=cx
+    bind az=cz;     bind bz2=cz+rz;  bind cz2=cz;     bind dz2=cz-rz
+    วาดสามเหลี่ยม3มิติ(cx,ty,cz, ax,ey,az, bx2,ey,bz2)  วาดสามเหลี่ยม3มิติ(cx,ty,cz, bx2,ey,bz2, cx2,ey,cz2)
+    วาดสามเหลี่ยม3มิติ(cx,ty,cz, cx2,ey,cz2, dx2,ey,dz2) วาดสามเหลี่ยม3มิติ(cx,ty,cz, dx2,ey,dz2, ax,ey,az)
+    วาดสามเหลี่ยม3มิติ(cx,by,cz, bx2,ey,bz2, ax,ey,az)  วาดสามเหลี่ยม3มิติ(cx,by,cz, cx2,ey,cz2, bx2,ey,bz2)
+    วาดสามเหลี่ยม3มิติ(cx,by,cz, dx2,ey,dz2, cx2,ey,cz2) วาดสามเหลี่ยม3มิติ(cx,by,cz, ax,ey,az, dx2,ey,dz2)
+}
+
+# ไอคอนบัฟ stat (0-7) ที่ (x,y) ระนาบ x-y — สีต่างกัน 8 แบบ (ใช้ทั้งมอน + ดรอป + HUD ผู้เล่น)
+ฟังก์ชัน ไอคอนบัฟ(stat, x, y, z, s) {
+    bind h = stat * 0.785
+    สีดินสอ(floor((ไซน์(h)*0.5+0.5)*200+55), floor((ไซน์(h+2.094)*0.5+0.5)*200+55), floor((ไซน์(h+4.189)*0.5+0.5)*200+55))
+    วาดสามเหลี่ยม3มิติ(x,y-s,z, x+s,y,z, x,y+s,z)
+    วาดสามเหลี่ยม3มิติ(x,y-s,z, x,y+s,z, x-s,y,z)
+}
+
+# ── ท่อ (cylinder) ระหว่าง 2 จุด, รัศมี rad ──
+ฟังก์ชัน วาดท่อ(ax, ay, az, bx, by, bz, rad, r, g, b) {
+    bind dx = bx-ax;  bind dy = by-ay;  bind dz = bz-az
+    bind ux = 0.0-dz;  bind uz = dx
+    bind ul = รากที่สอง(ux*ux + uz*uz);  ถ้า ul < 0.001 { bind ux = 1.0;  bind uz = 0.0;  bind ul = 1.0 }
+    bind uix = ux/ul;  bind uiy = 0.0;  bind uiz = uz/ul
+    bind wx = dy*uiz - dz*uiy;  bind wy = dz*uix - dx*uiz;  bind wz = dx*uiy - dy*uix
+    bind wl = รากที่สอง(wx*wx + wy*wy + wz*wz);  ถ้า wl < 0.001 { bind wl = 1.0 }
+    bind wix = wx/wl;  bind wiy = wy/wl;  bind wiz = wz/wl
+    สีดินสอ(r, g, b)
+    bind sides = 4.0;  bind s = 0.0
+    ขณะที่ s < sides {
+        bind a0 = (s/sides)*6.2832;  bind a1 = ((s+1.0)/sides)*6.2832
+        bind c0 = โคไซน์(a0);  bind n0 = ไซน์(a0);  bind c1 = โคไซน์(a1);  bind n1 = ไซน์(a1)
+        bind o0x=(uix*c0+wix*n0)*rad;  bind o0y=(uiy*c0+wiy*n0)*rad;  bind o0z=(uiz*c0+wiz*n0)*rad
+        bind o1x=(uix*c1+wix*n1)*rad;  bind o1y=(uiy*c1+wiy*n1)*rad;  bind o1z=(uiz*c1+wiz*n1)*rad
+        วาดสามเหลี่ยม3มิติ(ax+o0x,ay+o0y,az+o0z, ax+o1x,ay+o1y,az+o1z, bx+o1x,by+o1y,bz+o1z)
+        วาดสามเหลี่ยม3มิติ(ax+o0x,ay+o0y,az+o0z, bx+o1x,by+o1y,bz+o1z, bx+o0x,by+o0y,bz+o0z)
+        bind s = s + 1.0
+    }
+}
+
+# ── แขนวงจร (circuit limb): ท่อตรงหักมุมฉาก + โหนดเรืองแสง (สังเคราะห์ ไม่ออร์แกนิก) ──
+ฟังก์ชัน วาดหนวด(bx, by, bz, ang, droop, len, t, phase, r, g, b) {
+    bind segs = 3.0;  bind sg = len/segs
+    bind px = bx;  bind py = by;  bind pz = bz;  bind k = 0.0
+    ขณะที่ k < segs {
+        bind f = (k+1.0)/segs
+        bind bend = (k - ปัดลง(k/2.0)*2.0) * 0.95 - 0.475      # หักสลับ ±  (เทรซวงจร)
+        bind nx = px + โคไซน์(ang + bend)*sg
+        bind nz = pz + ไซน์(ang + bend)*sg
+        bind ny = py + droop*sg
+        วาดท่อ(px, py, pz, nx, ny, nz, 0.40*(1.0 - f*0.4), floor(r*0.5), floor(g*0.5), floor(b*0.5))   # เทรซบาง หรี่
+        bind pls = ไซน์(t*6.0 + phase + k*1.7)*0.5+0.5                                                 # พัลส์ไฟฟ้า
+        โหมดผสม(1);  อนุภาคทรงกลม(nx, ny, nz, 0.35+pls*0.4, 4, t*5.0, floor(60+pls*120), 255, floor(150+pls*100))   # โหนดไซแอน-เขียว
+        flush_3d();  โหมดผสม(0)
+        bind px = nx;  bind py = ny;  bind pz = nz;  bind k = k + 1.0
+    }
+    โหมดผสม(1);  สีดินสอ(120, 255, 200);  อนุภาคทรงกลม(px, py, pz, 0.7, 4, t*5.0+phase, 120, 255, 200);  flush_3d();  โหมดผสม(0)   # พินคอนเนกเตอร์
+}
+
+# คริสตัลกินเนื้อ (ไวรัส/ยุง): เพชรเหลี่ยมเรืองแสง + หนาม + บัฟข้างใน + หนวด/หาง + งวงแหลม
+# มอนสเตอร์ 3D เติม: typ 0=ปีศาจแดง, 1=นักล่าม่วง; hpfrac=เลือด, lvl=เลเวล, lod=ระยะ
+ฟังก์ชัน วาดมอน(x, z, t, seed, typ, hpfrac, lvl, lod) {
+    bind by = (LVL_F - 6.0) + ไซน์(t*2.5 + seed) * 0.8
+    bind r1=215.0; bind g1=30.0; bind b1=65.0                # drifter = แดงเลือด
+    ถ้า typ > 0.5 { bind r1=150.0; bind g1=35.0; bind b1=235.0 }   # hunter = ม่วงไวรัส
+    bind spin = t*0.8 + seed
+    # ── ตัวคริสตัล (เพชรเหลี่ยม) ──
+    โหมดผสม(0)
+    สีดินสอ(floor(r1*0.55), floor(g1*0.55), floor(b1*0.55))
+    icosahedron(x, by, z, 3.6, 5.4, 3.6, 0.3, spin, 0.0, 2, 0, 0, 0)        # แกนเพชรยาว (facet)
+    # ── บัฟข้างใน (เรืองแสง) — โชว์พาวเวอร์ที่จะดรอป ──
+    bind bstat = floor(pgRand(seed+99.0, lvl) * 8.0)
+    โหมดผสม(1)
+    icosahedron(x, by, z, 1.6, 2.4, 1.6, 0.0-0.4, spin*1.4, 0.2, 0, 0, 0, 0)  # หัวใจเรือง
+    ไอคอนบัฟ(bstat, x, by, z-0.4, 1.4)
+    อนุภาคทรงกลม(x, by, z, 1.6, 7, t*3.0+seed, 255, 255, 200)
+    flush_3d();  โหมดผสม(0)
+    ถ้า lod < 0.5 {                                          # รายละเอียดเต็ม (ใกล้)
+        # หนามคริสตัล (ไวรัส) รอบตัว
+        สีดินสอ(floor(r1*0.85), floor(g1*0.6), floor(b1*0.85))
+        bind sp = 0
+        ขณะที่ sp < 4 {
+            bind sa = sp*1.0472 + spin
+            วาดออคตา(x+โคไซน์(sa)*3.2, by+ไซน์(t*3.0+sp)*0.6, z+ไซน์(sa)*3.2, 0.6, 2.4, 0.6)
+            bind sp = sp + 1
+        }
+        # หนวด/หาง (cylinder rig) ห้อยแกว่ง
+        bind tn = 0
+        ขณะที่ tn < 3 {
+            bind ta = tn*1.2566 + spin*0.4
+            วาดหนวด(x+โคไซน์(ta)*2.2, by+3.2, z+ไซน์(ta)*2.2, ta, 1.4, 6.5, t, seed+tn*2.0, floor(r1*0.7), floor(g1*0.5), floor(b1*0.7))
+            bind tn = tn + 1
+        }
+        # งวง/เหล็กไน (ยุง) แหลมลง + ตาเรือง
+        สีดินสอ(255, 235, 120);  วาดออคตา(x, by+6.5, z, 0.5, 3.2, 0.5)
+        โหมดผสม(1);  สีดินสอ(255, 235, 120)
+        อนุภาคทรงกลม(x-1.1, by-1.6, z-2.8, 0.5, 6, t*4.0, 255, 235, 120)
+        อนุภาคทรงกลม(x+1.1, by-1.6, z-2.8, 0.5, 6, t*4.0, 255, 235, 120)
+        flush_3d();  โหมดผสม(0)
+    }
+    # ── แถบเลือด เหนือหัว (วาดเสมอ) ──
+    bind hy = by - 9.0
+    สีดินสอ(40, 8, 8)
+    วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x+4.0,hy,z, x+4.0,hy-0.8,z)  วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x+4.0,hy-0.8,z, x-4.0,hy-0.8,z)
+    bind hw = 8.0 * hpfrac
+    สีดินสอ(40, 220, 90)
+    วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x-4.0+hw,hy,z, x-4.0+hw,hy-0.8,z)  วาดสามเหลี่ยม3มิติ(x-4.0,hy,z, x-4.0+hw,hy-0.8,z, x-4.0,hy-0.8,z)
+    ถ้า lod < 0.5 {                                          # pips เลเวล เฉพาะใกล้
+        สีดินสอ(255, 210, 80)
+        bind pp = 0
+        ขณะที่ pp < lvl { ถ้า pp < 8 {
+            bind pxp = x - 3.5 + pp*1.0
+            วาดสามเหลี่ยม3มิติ(pxp,hy-1.3,z, pxp+0.6,hy-1.3,z, pxp+0.3,hy-2.1,z)
+        }  bind pp = pp + 1 }
+    }
+}
