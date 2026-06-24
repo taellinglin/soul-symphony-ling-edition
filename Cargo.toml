@@ -12,7 +12,7 @@ build = "build.rs"
 # configs like options.cfg / net.cfg / saves.dat are not clobbered on rebuild).
 [package.metadata.assets]
 dirs = ["game", "font", "music"]
-files = ["options.cfg", "net.cfg"]
+files = ["options.cfg", "net.cfg", "progress.dat"]
 
 [[bin]]
 name = "soul-symphony-ling"

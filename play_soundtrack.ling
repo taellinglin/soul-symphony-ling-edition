@@ -1,0 +1,88 @@
+# ── play_soundtrack.ling — the YIN-YANG MK-1 plays a generative soundtrack ────
+# A slow chord progression that breathes between LIGHT (acoustic bowed strings,
+# Karplus-Strong physical model) and DARK (GM square/saw chiptune + crushed FM
+# stabs), the MORPH dial sweeping over ~30 s so the acoustic past and the digital
+# future trade dominance. GM "stuff" = classic square/saw waves (เสียงเอฟเฟกต์)
+# woven against the morph synth.
+#
+#   ling run play_soundtrack.ling          (needs an audio device to hear it)
+
+ใช้ "game/color"
+ใช้ "game/title"
+ใช้ "instruments/yinyang"
+
+bind main = do {
+    เปิดหน้าต่าง(560, 560)
+    ตั้งกล้องมอง(0.0, 0.0, 0.0 - 22.0, 0.0, 0.0, 0.0)
+    ตั้งระยะห่าง(2.8);  ตั้งแสงรอบข้าง(0.8)
+
+    bind base   = 110.0                                  # A2
+    bind penta  = [1.0, 1.125, 1.25, 1.5, 1.6667, 2.0, 2.25, 2.5]   # major-pentatonic ratios + octave
+    bind prog   = [0, 4, 3, 1]                           # chord-root progression (index into penta)
+    bind bps    = 2.3                                     # ~138 BPM
+    bind lastB  = 0.0 - 1.0
+    bind arpI   = 0.0
+    bind chordI = 0.0
+    bind run    = 1.0
+
+    ขณะที่ run > 0.5 {
+        bind t = เวลาปัจจุบัน()
+        bind morph = ไซน์(t*0.052)*0.5 + 0.5             # the MORPH dial: 0 light .. 1 dark (slow breath)
+        bind beat = ปัดลง(t * bps)
+
+        ถ้า beat > lastB {
+            bind lastB = beat
+            bind root = floor(list_get(prog, floor(chordI)))
+            bind rf = base * list_get(penta, root)
+
+            # ── BASS: light bowed string on the root (always present) ──
+            เล่นไหม(0.0, 0.0, 0.0, rf, 0.42)
+
+            # ── LIGHT chord pad (fades in as morph → light) ──
+            ถ้า morph < 0.6 {
+                เล่นไหม(0.0, 0.0, 0.0, rf*2.0, 0.30*(1.0-morph))
+                เล่นหยก(0.0, 0.0, 0.0, base*2.0*list_get(penta, (root+2)%6), 0.26*(1.0-morph))   # blown 5th
+            }
+
+            # ── DARK layer (fades in as morph → dark): GM square arp + crushed stab ──
+            ถ้า morph > 0.35 {
+                bind af = base*4.0*list_get(penta, floor(arpI)%8)
+                เสียงเอฟเฟกต์(0.0, 0.0, 0.0, 1.0, af, 0.22*morph, 0.12, "square")                # GM chiptune arp
+                ถ้า morph > 0.6 { สแตบมืด(0.0, 0.0, 0.0, af*0.5, 0.3*morph) }                    # corrupted FM stab
+            }
+
+            # ── KICK every beat — struck metal, morphs with the dial (pumping ↔ stutter) ──
+            โน้ตมอร์ฟ(0.0, 0.0, 0.0, 1.0, 55.0, 0.5, 0.14, 3.0, morph)
+            # snare-ish on the off-beats (GM noise)
+            ถ้า beat - ปัดลง(beat/2.0)*2.0 == 1.0 { เสียงเอฟเฟกต์(0.0, 0.0, 0.0, 1.0, 1800.0, 0.18, 0.08, "noise") }
+
+            bind arpI = arpI + 1.0;  ถ้า arpI >= 8.0 { bind arpI = 0.0 }
+            ถ้า beat - ปัดลง(beat/4.0)*4.0 == 0.0 { bind chordI = chordI + 1.0;  ถ้า chordI >= 4.0 { bind chordI = 0.0 } }
+        }
+
+        # ── visual: a morphing yin-yang disc — light arc vs dark arc, pulsing on beat ──
+        เติม(floor(6.0 + morph*26.0), 8, floor(26.0 - morph*16.0))
+        bind pulse = 1.0 - (t*bps - beat)                # 1 at beat → 0 (decay)
+        bind k = 0
+        ขณะที่ k < 48 {
+            bind a = (k/48.0)*6.2832;  bind a1 = ((k+1)/48.0)*6.2832
+            bind rr = 6.0 + pulse*0.8
+            # left half (light/warm), right half (dark/red) — split by morph tilt
+            ถ้า ไซน์(a + t*0.5) > (morph - 0.5)*1.6 { สีดินสอ(floor(120+morph*40), floor(200-morph*120), floor(150-morph*60)) }
+            มิฉะนั้น { สีดินสอ(floor(200+morph*55), floor(60-morph*30), floor(70-morph*40)) }
+            วาดสามเหลี่ยม3มิติ(0.0, 0.0, 0.0,  โคไซน์(a)*rr, ไซน์(a)*rr, 0.0,  โคไซน์(a1)*rr, ไซน์(a1)*rr, 0.0)
+            bind k = k + 1
+        }
+        โหมดผสม(1)
+        อนุภาคทรงกลม(0.0, 0.0, 0.0, 2.0 + pulse*3.0, 24, t*2.0, floor(180+morph*60), 180, floor(200-morph*80))
+        flush_3d();  โหมดผสม(0)
+        สีดินสอ(210, 220, 240);  วาดสตริง("YIN-YANG MK-1", 0.0, 0.0 - 8.4, 0.0, 0.6, 1)
+        ถ้า morph < 0.45 { สีดินสอ(150, 215, 180);  วาดสตริง("light  ~  acoustic", 0.0, 8.6, 0.0, 0.46, 1) }
+        มิฉะนั้น { ถ้า morph > 0.55 { สีดินสอ(230, 130, 130);  วาดสตริง("dark  ~  digital", 0.0, 8.6, 0.0, 0.46, 1) }
+        มิฉะนั้น { สีดินสอ(200, 200, 210);  วาดสตริง("balance", 0.0, 8.6, 0.0, 0.46, 1) } }
+        flush_3d()
+        แสดงผล()
+        ถ้า กดปุ่ม("escape") { bind run = 0.0 }
+    }
+    พิมพ์("soundtrack ended")
+}

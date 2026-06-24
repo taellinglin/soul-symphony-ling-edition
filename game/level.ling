@@ -138,16 +138,18 @@ bind คบY = 0.0 - 45.0
 # ฉาย3มิติ คืน sx = -99999 เมื่อจุดอยู่ที่/หลัง near plane → ถ้ามุมใดหลังกล้องให้ข้าม
 # กันอาการ "fan" (จุดยอดหลังกล้องโปรเจกต์พลิกข้ามจอ) ตอนกล้องอยู่ใกล้/ต่ำกับพื้น
 ฟังก์ชัน กระเบื้องหน้ากล้อง(x0, y, z0, x1, z1) {
-    ถ้า list_get(ฉาย3มิติ(x0, y, z0), 0) <= 0.0 - 99998.0 { คืน 0 }
-    ถ้า list_get(ฉาย3มิติ(x1, y, z0), 0) <= 0.0 - 99998.0 { คืน 0 }
-    ถ้า list_get(ฉาย3มิติ(x1, y, z1), 0) <= 0.0 - 99998.0 { คืน 0 }
-    ถ้า list_get(ฉาย3มิติ(x0, y, z1), 0) <= 0.0 - 99998.0 { คืน 0 }
+    # project the tile CENTRE only (1 projection vs 4 corners → 4× cheaper cull).
+    # Tiles straddling the near plane still draw and get engine-clipped; a flat
+    # floor makes the slight edge difference invisible. (Tutorial floor was the
+    # #1 frame cost: ~800 tiles/frame × 4 projections.)
+    bind cxm = (x0 + x1) * 0.5;  bind czm = (z0 + z1) * 0.5
+    ถ้า list_get(ฉาย3มิติ(cxm, y, czm), 0) <= 0.0 - 99998.0 { คืน 0 }
     คืน 1
 }
 
 ฟังก์ชัน วาดพื้น(cx, cz) {
     bind S = 18.0
-    bind n = 16
+    bind n = 15                                          # รัศมีกริด = 15×18 = 270 ≈ ระยะหมอก (เลยนั้นมองไม่เห็น)
     bind bx = ปัดลง(cx / S)
     bind bz = ปัดลง(cz / S)
     bind i = 0 - n
@@ -157,6 +159,9 @@ bind คบY = 0.0 - 45.0
             bind ti = bx + i;  bind tj = bz + j
             bind x0 = ti * S;  bind z0 = tj * S
             bind x1 = x0 + S;  bind z1 = z0 + S
+            # ── cull ระยะ (ถูก, ไม่เรียกฟังก์ชัน): ข้ามกระเบื้องเลยหมอก → ตัดมุมกริด ──
+            bind ddx = (x0 + 9.0) - cx;  bind ddz = (z0 + 9.0) - cz
+            ถ้า ddx*ddx + ddz*ddz < 73000.0 {                # ภายใน ~270 หน่วย
             ถ้า กระเบื้องหน้ากล้อง(x0, LVL_F, z0, x1, z1) == 1 {
                 bind par = ti + tj
                 bind par2 = par - ปัดลง(par / 2.0) * 2
@@ -164,7 +169,7 @@ bind คบY = 0.0 - 45.0
                 มิฉะนั้น { สีดินสอ(16, 52, 50) }
                 วาดสามเหลี่ยม3มิติ(x0, LVL_F, z0,  x1, LVL_F, z0,  x1, LVL_F, z1)
                 วาดสามเหลี่ยม3มิติ(x0, LVL_F, z0,  x1, LVL_F, z1,  x0, LVL_F, z1)
-            }
+            } }
             bind j = j + 1
         }
         bind i = i + 1

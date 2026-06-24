@@ -1,0 +1,53 @@
+# ── yinyang.ling — YIN-YANG MK-1 "Dualism Engine" patches ────────────────────
+# One voice spans the acoustic↔digital continuum via the MORPH dial:
+#   โน้ตมอร์ฟ(x,y,z,w, freq, amp, dur, material, morph)
+#     material : 0 bowed-string · 1 plucked · 2 blown · 3 struck-metal
+#     morph    : 0.0 LIGHT (Karplus-Strong physical model — organic)
+#                1.0 DARK  (FM + bit/sample-rate crush + tanh drive — digital)
+#   "Aftertouch tilt": morph is PER-NOTE, so a light chord + a dark arp can ring
+#   from the same patch at once — just give each note its own morph value.
+#
+#   ใช้ "../instruments/yinyang"
+#   เล่นไหม(0,0,0, 220.0, 0.6 * ปริมาณSFX)             # one soft bowed string
+#   เล่นยินหยาง(0,0,0, 330.0, 0.6, 3, 0.5, 0.7)        # struck metal, 70% dark
+
+# ── single materials at the LIGHT (acoustic) end ─────────────────────────────
+ฟังก์ชัน เล่นไหม(x, y, z, f, amp)   { โน้ตมอร์ฟ(x, y, z, 1.0, f, amp, 1.8, 0.0, 0.0);  คืน 0 }   # Bowed Silk (sustained string)
+ฟังก์ชัน เล่นไผ่(x, y, z, f, amp)   { โน้ตมอร์ฟ(x, y, z, 1.0, f, amp, 1.2, 1.0, 0.0);  คืน 0 }   # Plucked Bamboo (bright)
+ฟังก์ชัน เล่นหยก(x, y, z, f, amp)   { โน้ตมอร์ฟ(x, y, z, 1.0, f, amp, 1.6, 2.0, 0.0);  คืน 0 }   # Blown Jade (air column)
+ฟังก์ชัน เล่นสำริด(x, y, z, f, amp) { โน้ตมอร์ฟ(x, y, z, 1.0, f, amp, 3.2, 3.0, 0.0);  คืน 0 }   # Struck Bronze (long metal)
+
+# ── generic aliases (palette isn't culture-locked) ───────────────────────────
+ฟังก์ชัน เล่นสาย(x, y, z, f, amp)  { คืน เล่นไหม(x, y, z, f, amp) }     # string  (bowed)
+ฟังก์ชัน เล่นดีด(x, y, z, f, amp)  { คืน เล่นไผ่(x, y, z, f, amp) }     # pluck
+ฟังก์ชัน เล่นเป่า(x, y, z, f, amp) { คืน เล่นหยก(x, y, z, f, amp) }     # wind
+ฟังก์ชัน เล่นโลหะ(x, y, z, f, amp) { คืน เล่นสำริด(x, y, z, f, amp) }   # metal
+
+# ── the MORPH dial: one note, light↔dark by m (0..1), any material ───────────
+ฟังก์ชัน เล่นยินหยาง(x, y, z, f, amp, mat, dur, m) { โน้ตมอร์ฟ(x, y, z, 1.0, f, amp, dur, mat, m);  คืน 0 }
+
+# ── DARK end: a material pushed fully to digital corruption (FM/8-bit/crush) ──
+ฟังก์ชัน เล่นมืด(x, y, z, f, amp, mat) { โน้ตมอร์ฟ(x, y, z, 1.0, f, amp, 0.5, mat, 1.0);  คืน 0 }
+
+# ── LIGHT temple pad: soft stacked bowed strings + legacy shimmer layer ──────
+ฟังก์ชัน แพดสว่าง(x, y, z, f, amp) {
+    โน้ตมอร์ฟ(x, y, z, 1.0, f,      amp*0.90, 2.6, 0.0, 0.0)
+    โน้ตมอร์ฟ(x, y, z, 1.0, f*1.5,  amp*0.55, 2.3, 0.0, 0.0)         # fifth
+    โน้ตมอร์ฟ(x, y, z, 1.0, f*2.0,  amp*0.42, 2.0, 2.0, 0.0)         # octave (blown)
+    เสียงเอฟเฟกต์(x, y, z, 1.0, f*4.0, amp*0.12, 2.8, "sine")        # shimmer (legacy voice)
+    คืน 0
+}
+
+# ── DARK corrupted stab: crushed FM metal + detuned 8-bit ghost ──────────────
+ฟังก์ชัน สแตบมืด(x, y, z, f, amp) {
+    โน้ตมอร์ฟ(x, y, z, 1.0, f,        amp,      0.34, 3.0, 1.0)       # struck-metal, full dark
+    โน้ตมอร์ฟ(x, y, z, 1.0, f*1.006,  amp*0.6,  0.28, 1.0, 0.85)      # detuned ghost echo
+    คืน 0
+}
+
+# ── BALANCE: same pitch, both poles at once (the eternal tension) ────────────
+ฟังก์ชัน เล่นสมดุล(x, y, z, f, amp) {
+    โน้ตมอร์ฟ(x, y, z, 1.0, f, amp*0.7, 1.6, 0.0, 0.0)               # light half (bowed)
+    โน้ตมอร์ฟ(x, y, z, 1.0, f, amp*0.7, 0.9, 3.0, 1.0)               # dark half (crushed metal)
+    คืน 0
+}
