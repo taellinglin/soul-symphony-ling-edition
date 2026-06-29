@@ -1,0 +1,237 @@
+# render_optimized.ling — Optimized Rendering Utilities
+#
+# Uses new Ling rendering features:
+# - draw_quad_3d() for quads (replaces 2 triangles)
+# - Principled BSDF materials (set_material/reset_material)
+# - Toon post-processing (shadow_smooth, toon_outlines, toon_highlight)
+# - Shared edge deduplication (automatic)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUAD HELPERS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Draw a quad face (replaces 2 triangles)
+ฟังก์ชัน drawQuad(x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3) {
+    draw_quad_3d(x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3)
+    คืน 0
+}
+
+# Draw a box using 6 quads (replaces 12 triangles)
+ฟังก์ชัน drawBoxQuads(x0,y0,z0, x1,y1,z1) {
+    # Front face (z0)
+    draw_quad_3d(x0,y0,z0, x1,y0,z0, x1,y1,z0, x0,y1,z0)
+    # Back face (z1)
+    draw_quad_3d(x1,y0,z1, x0,y0,z1, x0,y1,z1, x1,y1,z1)
+    # Left face (x0)
+    draw_quad_3d(x0,y0,z1, x0,y0,z0, x0,y1,z0, x0,y1,z1)
+    # Right face (x1)
+    draw_quad_3d(x1,y0,z0, x1,y0,z1, x1,y1,z1, x1,y1,z0)
+    # Top face (y1)
+    draw_quad_3d(x0,y1,z0, x1,y1,z0, x1,y1,z1, x0,y1,z1)
+    # Bottom face (y0)
+    draw_quad_3d(x0,y0,z1, x1,y0,z1, x1,y0,z0, x0,y0,z0)
+    คืน 0
+}
+
+# Draw a wall quad (common in level geometry)
+ฟังก์ชัน drawWallQuad(x0,z0, x1,z1, y0,y1) {
+    draw_quad_3d(x0,y0,z0, x1,y0,z1, x1,y1,z1, x0,y1,z0)
+    คืน 0
+}
+
+# Draw a floor/ceiling quad
+ฟังก์ชัน drawFloorQuad(x0,z0, x1,z1, y) {
+    draw_quad_3d(x0,y,z0, x1,y,z0, x1,y,z1, x0,y,z1)
+    คืน 0
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MATERIAL PRESETS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Character skin material (subsurface scattering)
+ฟังก์ชัน setSkinMaterial(r, g, b) {
+    set_material("albedo_r", r)
+    set_material("albedo_g", g)
+    set_material("albedo_b", b)
+    set_material("roughness", 0.6)
+    set_material("subsurface", 0.4)  # Soft skin translucency
+    set_material("sheen", 0.2)       # Fabric-like highlight
+    คืน 0
+}
+
+# Metallic material (sword, armor)
+ฟังก์ชัน setMetalMaterial(r, g, b, roughness) {
+    set_material("albedo_r", r)
+    set_material("albedo_g", g)
+    set_material("albedo_b", b)
+    set_material("metallic", 0.9)
+    set_material("roughness", roughness)
+    set_material("specular", 0.8)    # Strong hotspot
+    คืน 0
+}
+
+# Glowing material (magic, UI elements)
+ฟังก์ชัน setEmissiveMaterial(r, g, b, intensity) {
+    set_material("albedo_r", r)
+    set_material("albedo_g", g)
+    set_material("albedo_b", b)
+    set_material("emission", intensity)
+    คืน 0
+}
+
+# Cloth material (capes, banners)
+ฟังก์ชัน setClothMaterial(r, g, b) {
+    set_material("albedo_r", r)
+    set_material("albedo_g", g)
+    set_material("albedo_b", b)
+    set_material("roughness", 0.8)
+    set_material("sheen", 0.5)       # Fabric sheen
+    set_material("anisotropy", 0.3)  # Thread direction
+    คืน 0
+}
+
+# Magical/iridescent material
+ฟังก์ชัน setIridescentMaterial(r, g, b) {
+    set_material("albedo_r", r)
+    set_material("albedo_g", g)
+    set_material("albedo_b", b)
+    set_material("iridescence", 0.7)
+    set_material("clearcoat", 0.4)   # Glossy layer
+    คืน 0
+}
+
+# Plastic/toy material
+ฟังก์ชัน setPlasticMaterial(r, g, b) {
+    set_material("albedo_r", r)
+    set_material("albedo_g", g)
+    set_material("albedo_b", b)
+    set_material("roughness", 0.3)
+    set_material("clearcoat", 0.6)
+    คืน 0
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TOON POST-PROCESSING CONTROL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Enable full toon rendering pipeline
+ฟังก์ชัน enableToonRendering() {
+    shadow_smooth(0.15)                    # Soft shadow edges (no staircase)
+    toon_outlines(1.5, 0, 0.05)           # Ink outlines: thickness, min_depth, AA
+    toon_highlight(0.25, 0xFFFFFF, 0.78)  # Anime shine: size, color, threshold
+    คืน 0
+}
+
+# Disable toon effects (for realistic rendering)
+ฟังก์ชัน disableToonRendering() {
+    shadow_smooth(0.0)
+    toon_outlines(0.0, 0, 0.0)
+    toon_highlight(0.0, 0x000000, 1.0)
+    คืน 0
+}
+
+# Custom toon settings
+ฟังก์ชัน setToonSettings(shadowSmooth, outlineThickness, highlightSize) {
+    shadow_smooth(shadowSmooth)
+    toon_outlines(outlineThickness, 0, 0.05)
+    toon_highlight(highlightSize, 0xFFFFFF, 0.78)
+    คืน 0
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPTIMIZED HEALTH BAR (using quads)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+ฟังก์ชัน drawHealthBarOptimized(x, y, z, current, max, width) {
+    bind height = 0.6
+    bind fillWidth = width * (current / max)
+
+    # Background (dark)
+    สีดินสอ(20, 20, 25)
+    draw_quad_3d(
+        x, y, z,
+        x + width, y, z,
+        x + width, y - height, z,
+        x, y - height, z
+    )
+
+    # Health fill (gradient effect via material)
+    ถ้า current > 0.0 {
+        bind healthPercent = current / max
+        bind r = floor(255.0 - (healthPercent * 150.0))
+        bind g = floor(120.0 + (healthPercent * 135.0))
+        bind b = 30
+
+        # Use emissive material for health bar glow
+        setEmissiveMaterial(r, g, b, 0.3)
+        draw_quad_3d(
+            x, y, z,
+            x + fillWidth, y, z,
+            x + fillWidth, y - height, z,
+            x, y - height, z
+        )
+        reset_material()
+    }
+
+    คืน 0
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPTIMIZED TILE/TERRAIN (using quads instead of triangle pairs)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+ฟังก์ชัน drawTerrainTileQuad(x, z, y, size) {
+    bind hs = size
+    # Single quad instead of 2 triangles
+    draw_quad_3d(
+        x - hs, y, z - hs,
+        x + hs, y, z - hs,
+        x + hs, y, z + hs,
+        x - hs, y, z + hs
+    )
+    คืน 0
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MATERIAL-ENHANCED MESH RENDERING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Render character with skin material
+ฟังก์ชัน renderCharacterWithMaterial(meshPath, x, y, z, yaw, skinR, skinG, skinB) {
+    setSkinMaterial(skinR, skinG, skinB)
+    # Mesh rendering would go here (mesh_draw if available)
+    # For now, just set the material for subsequent geometry
+    reset_material()
+    คืน 0
+}
+
+# Render weapon with metallic material
+ฟังก์ชัน renderWeaponWithMaterial(weaponType, x, y, z, yaw, metalR, metalG, metalB) {
+    setMetalMaterial(metalR, metalG, metalB, 0.2)  # Low roughness = shiny
+    # Weapon geometry here
+    reset_material()
+    คืน 0
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PERFORMANCE HELPERS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Draw multiple quads from coordinate list (batch optimization)
+ฟังก์ชัน drawQuadBatch(coords, count) {
+    # coords should be list of [x0,y0,z0, x1,y1,z1, ...]
+    # Each quad = 12 floats (4 vertices × 3 coords)
+    bind i = 0
+    ขณะที่ i < count {
+        bind idx = i * 12
+        draw_quad_3d(
+            coords[idx+0], coords[idx+1], coords[idx+2],
+            coords[idx+3], coords[idx+4], coords[idx+5],
+            coords[idx+6], coords[idx+7], coords[idx+8],
+            coords[idx+9], coords[idx+10], coords[idx+11]
+        )
+        bind i = i + 1
+    }
+    คืน 0
+}

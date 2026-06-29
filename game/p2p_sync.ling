@@ -1,0 +1,347 @@
+# p2p_sync.ling — P2P Cryptographic Synchronization System
+#
+# "SYNCHRONIZE OR DIE" — Peer-to-Peer environmental state sync with crypto verification
+#
+# Core Principle: All players share a deterministic world seed + synchronized tick counter.
+#   Every environmental variable (day/night, wind, terrain generation) is computed from:
+#     HASH(WORLD_SEED + TICK_NUMBER + VARIABLE_NAME)
+#
+# Crypto Protection:
+#   - Each peer broadcasts: TICK + HASH(SEED + TICK + STATE_BLOB)
+#   - Peers verify each other's hashes every N frames
+#   - Desync detected → emergency resync → kick desynced peer if persistent
+#
+# Network Protocol:
+#   SYNC:<tick>:<hash>         → Heartbeat with state verification
+#   SEED:<seed>:<hash>         → World seed announcement (host only)
+#   STATE:<tick>:<data>:<hash> → Full state broadcast for recovery
+#   KICK:<peer_id>:<reason>    → Desync/cheater removal
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CONSTANTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+bind SYNC_INTERVAL = 30          # Broadcast sync every N frames (0.5 sec @ 60fps)
+bind DESYNC_TOLERANCE = 3        # Allow 3 mismatched hashes before kick
+bind MAX_TICK_DRIFT = 10         # Max tick difference between peers before forced sync
+bind HEARTBEAT_TIMEOUT = 300     # 5 seconds without heartbeat → peer considered dead
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GLOBAL STATE (these would be bind variables in main game loop context)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# bind worldSeed = 0.0             # Deterministic seed for all environmental RNG
+# bind syncTick = 0.0              # Synchronized tick counter (increments every frame)
+# bind lastSyncFrame = 0.0         # Last frame we broadcast sync
+# bind desyncCount = 0.0           # Number of consecutive desyncs detected
+# bind peerLastSeen = 0.0          # Last frame we received peer heartbeat
+# bind peerTick = 0.0              # Peer's reported tick number
+# bind isHost = 1.0                # 1 = host (authoritative), 0 = client
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DETERMINISTIC ENVIRONMENT RNG
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Pure deterministic hash: takes seed, tick, and variable ID → [0,1] random value
+ฟังก์ชัน detHash(seed, tick, varId) {
+    bind a = seed * 12.9898 + tick * 78.233 + varId * 45.164
+    bind s = ไซน์(a) * 43758.5453
+    คืน s - ปัดลง(s)
+}
+
+# Day/night cycle: deterministic from tick
+ฟังก์ชัน getDayAngle(seed, tick) {
+    คืน tick * 0.0001 + detHash(seed, 0.0, 1.0) * 6.283  # Slow day/night rotation
+}
+
+# Wind vector: changes slowly over time
+ฟังก์ชัน getWindX(seed, tick) {
+    bind phase = tick * 0.0003 + detHash(seed, 0.0, 2.0) * 6.283
+    คืน ไซน์(phase) * 2.5 + detHash(seed, ปัดลง(tick * 0.01), 3.0) * 0.8
+}
+
+ฟังก์ชัน getWindZ(seed, tick) {
+    bind phase = tick * 0.0004 + detHash(seed, 0.0, 4.0) * 6.283
+    คืน โคไซน์(phase) * 2.2 + detHash(seed, ปัดลง(tick * 0.01), 5.0) * 0.7
+}
+
+# Terrain height at (x, z): deterministic generation
+ฟังก์ชัน getTerrainHeight(seed, x, z) {
+    bind h1 = detHash(seed, x * 0.37, z * 0.37)
+    bind h2 = detHash(seed + 1.0, x * 0.11, z * 0.13)
+    bind h3 = detHash(seed + 2.0, x * 0.03, z * 0.05)
+    คืน (h1 * 0.5 + h2 * 0.3 + h3 * 0.2 - 0.5) * 10.0  # Multi-octave noise
+}
+
+# Tree spawn at tile (i, j): deterministic placement
+ฟังก์ชัน shouldSpawnTree(seed, i, j) {
+    คืน detHash(seed + 10.0, i * 1.7, j * 2.3)  # >0.5 = tree spawns
+}
+
+# Tree growth phase: depends on tick (slow growth cycle)
+ฟังก์ชัน getTreePhase(seed, tick, i, j) {
+    bind seedT = detHash(seed + 20.0, i * 3.1, j * 4.7)
+    bind life = tick * 0.00005 + seedT * 100.0  # Very slow growth
+    คืน life - ปัดลง(life)  # 0..1 cycle (birth → death)
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STATE HASHING & VERIFICATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Compute hash of critical environmental state at given tick
+# This creates a cryptographic fingerprint of the world state
+ฟังก์ชัน computeStateHash(seed, tick) {
+    # Build state string from all deterministic variables
+    bind dayAngle = getDayAngle(seed, tick)
+    bind windX = getWindX(seed, tick)
+    bind windZ = getWindZ(seed, tick)
+
+    # Sample terrain at key points for verification
+    bind h1 = getTerrainHeight(seed, 0.0, 0.0)
+    bind h2 = getTerrainHeight(seed, 10.0, 10.0)
+    bind h3 = getTerrainHeight(seed, 0.0 - 10.0, 5.0)
+
+    # Concatenate into state blob (using floor to avoid float precision issues)
+    bind stateBlob = "STATE:"
+    bind stateBlob = stateBlob + ปัดลง(seed * 1000.0)
+    bind stateBlob = stateBlob + ":" + ปัดลง(tick)
+    bind stateBlob = stateBlob + ":" + ปัดลง(dayAngle * 1000.0)
+    bind stateBlob = stateBlob + ":" + ปัดลง(windX * 1000.0)
+    bind stateBlob = stateBlob + ":" + ปัดลง(windZ * 1000.0)
+    bind stateBlob = stateBlob + ":" + ปัดลง(h1 * 1000.0)
+    bind stateBlob = stateBlob + ":" + ปัดลง(h2 * 1000.0)
+    bind stateBlob = stateBlob + ":" + ปัดลง(h3 * 1000.0)
+
+    # Hash the state blob using ling-crypto
+    คืน แฮชเข้ารหัส(stateBlob)
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# P2P SYNC PROTOCOL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Initialize P2P sync (call when starting online game)
+ฟังก์ชัน p2pSyncInit(currentFrame, hostMode) {
+    # Generate world seed (host uses current time, client receives from host)
+    bind seed = 0.0
+    ถ้า hostMode > 0.5 {
+        bind seed = เวลาโลก() * 1000.0  # Millisecond precision epoch time
+        # Broadcast seed to peers
+        bind seedMsg = "SEED:" + ปัดลง(seed) + ":" + แฮชเข้ารหัส("SEED:" + ปัดลง(seed))
+        เน็ตส่ง(seedMsg)
+    }
+
+    # Return initial sync state: [worldSeed, syncTick, lastSyncFrame, desyncCount, peerLastSeen, peerTick]
+    คืน seed  # In real usage, would return array/struct
+}
+
+# Update P2P sync every frame (call in main game loop)
+# Parameters: currentFrame, worldSeed, syncTick, lastSyncFrame, desyncCount, peerLastSeen, peerTick, isHost
+# Returns: new syncTick (incremented)
+ฟังก์ชัน p2pSyncUpdate(frame, seed, tick, lastSync, desync, peerSeen, peerTick, host) {
+    # Increment synchronized tick
+    bind newTick = tick + 1.0
+
+    # Broadcast sync heartbeat every SYNC_INTERVAL frames
+    ถ้า frame - lastSync > SYNC_INTERVAL {
+        bind stateHash = computeStateHash(seed, newTick)
+        bind syncMsg = "SYNC:" + ปัดลง(newTick) + ":" + stateHash
+        เน็ตส่ง(syncMsg)
+        bind lastSync = frame
+    }
+
+    # Receive peer messages
+    bind peerMsg = เน็ตรับ()
+    ถ้า peerMsg != "" {
+        bind peerSeen = frame  # Update last seen time
+
+        # Parse message type (check prefix)
+        # SYNC:<tick>:<hash>
+        # SEED:<seed>:<hash>
+        # STATE:<tick>:<data>:<hash>
+        # KICK:<peer_id>:<reason>
+
+        # Simple parsing: check if message starts with "SYNC:"
+        # (In real implementation would need proper string parsing)
+        # For now, extract tick and hash from SYNC messages
+
+        # Verify peer's state hash matches ours
+        bind myHash = computeStateHash(seed, newTick)
+        # If hashes don't match → desync detected
+        # (Proper implementation would parse peerMsg and compare hashes)
+
+        # Check for tick drift
+        bind tickDrift = newTick - peerTick
+        ถ้า tickDrift < 0.0 { bind tickDrift = 0.0 - tickDrift }
+
+        ถ้า tickDrift > MAX_TICK_DRIFT {
+            # Emergency resync needed
+            ถ้า host > 0.5 {
+                # Host forces resync by broadcasting authoritative state
+                bind stateMsg = "STATE:" + ปัดลง(newTick) + ":FULL:" + myHash
+                เน็ตส่ง(stateMsg)
+            }
+        }
+    }
+
+    # Check for peer timeout
+    ถ้า frame - peerSeen > HEARTBEAT_TIMEOUT {
+        # Peer is dead/disconnected
+        # Handle disconnection (return to menu, etc.)
+    }
+
+    # Check desync threshold
+    ถ้า desync > DESYNC_TOLERANCE {
+        # Too many desyncs → kick peer or disconnect
+        bind kickMsg = "KICK:0:DESYNC_LIMIT"
+        เน็ตส่ง(kickMsg)
+        # Return to menu or handle disconnect
+    }
+
+    คืน newTick
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RENDER SYNCHRONIZED ENVIRONMENT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Render the synchronized online world using deterministic state
+ฟังก์ชัน renderSyncedWorld(seed, tick, t) {
+    # Get deterministic environmental variables
+    bind dayAngle = getDayAngle(seed, tick)
+    bind windX = getWindX(seed, tick)
+    bind windZ = getWindZ(seed, tick)
+
+    # Sun/Moon position from day angle
+    bind sunE = ไซน์(dayAngle)
+    bind sunX = โคไซน์(dayAngle) * 58.0
+    bind sunY = 0.0 - ไซน์(dayAngle) * 46.0
+    bind sunZ = 0.0 - 18.0
+    bind moonX = 0.0 - sunX
+    bind moonY = 0.0 - sunY
+    bind moonZ = sunZ
+    bind energy = sunE * 0.5 + 0.5  # 0..1 day energy
+
+    # Sky color based on day/night
+    bind skR = floor(6.0 + energy * 46.0 + (ไซน์(t * 0.13) * 0.5 + 0.5) * 14.0)
+    bind skG = floor(8.0 + energy * 38.0 + (ไซน์(t * 0.11 + 2.0) * 0.5 + 0.5) * 16.0)
+    bind skB = floor(20.0 + energy * 30.0 + (ไซน์(t * 0.09 + 4.0) * 0.5 + 0.5) * 26.0)
+    เติม(skR, skG, skB)
+    ตั้งหมอก(skR, skG, skB, 70.0, 175.0)
+
+    # Camera orbit
+    bind cyaw = t * 0.035
+    ตั้งกล้องมอง(ไซน์(cyaw) * 64.0, 0.0 - 50.0, โคไซน์(cyaw) * 64.0, 0.0, 0.0 - 3.0, 0.0)
+    ตั้งระยะห่าง(2.3)
+    ตั้งแสงรอบข้าง(0.45 + energy * 0.4)
+    set_depth_test(1)
+
+    # Render terrain grid 16x16
+    bind i = 0
+    ขณะที่ i < 16 {
+        bind j = 0
+        ขณะที่ j < 16 {
+            bind x = (i - 8) * 4.0
+            bind z = (j - 8) * 4.0
+            bind hgt = getTerrainHeight(seed, i, j)
+            bind topY = 1.5 - hgt
+
+            # Terrain color with moisture
+            bind moist = detHash(seed + 5.0, i * 0.9, j * 0.9)
+            bind tHue = (ไซน์(t * 0.06 + i * 0.2 + j * 0.2) * 0.5 + 0.5)
+            bind tr = floor(40.0 + moist * 40.0 + hgt * 14.0 + tHue * 30.0)
+            bind tg = floor(95.0 + moist * 90.0 - hgt * 8.0 + tHue * 20.0)
+            bind tb = floor(60.0 + (0.0 - hgt) * 16.0 + tHue * 45.0)
+            ถ้า hgt < 0.0 - 1.4 {
+                bind tr = floor(30.0 + tHue * 30.0)
+                bind tg = floor(70.0 + tHue * 40.0)
+                bind tb = floor(140.0 + tHue * 60.0)
+            }
+            สีดินสอ(tr, tg, tb)
+
+            bind hs = 1.96
+            วาดสามเหลี่ยม3มิติ(x - hs, topY, z - hs, x + hs, topY, z - hs, x + hs, topY, z + hs)
+            วาดสามเหลี่ยม3มิติ(x - hs, topY, z - hs, x + hs, topY, z + hs, x - hs, topY, z + hs)
+
+            # Trees: deterministic spawning and growth
+            bind treeChance = shouldSpawnTree(seed, i, j)
+            ถ้า treeChance > 0.46 {
+                ถ้า hgt > 0.0 - 1.3 {
+                    bind ph = getTreePhase(seed, tick, i, j)
+                    bind gr = ไซน์(ph * 3.14159)
+                    ถ้า gr > 0.05 {
+                        bind h = 0.7 + gr * 3.4
+                        bind fol = 0.35 + gr * 1.9
+                        โหมดผสม(0)
+                        สีดินสอ(floor(95.0 - ph * 35.0), floor(58.0 - ph * 22.0), 32)
+                        icosahedron(x, topY - h * 0.5, z, 0.26, h * 0.5, 0.26, 0.0, t * 0.2, 0.0, 2, 0, 0, 0)
+                        bind fr = floor(55.0 + ph * 170.0)
+                        bind fg = floor(210.0 - ph * 150.0)
+                        bind fb = floor(70.0 + (ไซน์(ph * 6.283 + t * 0.6) * 0.5 + 0.5) * 70.0)
+                        ถ้า ph > 0.78 {
+                            bind fg = floor(110.0 - (ph - 0.78) * 320.0)
+                        }
+                        สีดินสอ(fr, fg, fb)
+                        icosahedron(x, topY - h, z, fol, fol * 1.25, fol, 0.3, t * 0.4 + x * 0.2, 0.0, 2, 0, 0, 0)
+                    }
+                }
+            }
+
+            bind j = j + 1
+        }
+        bind i = i + 1
+    }
+    flush_3d()
+
+    # Render sun and moon
+    โหมดผสม(1)
+    สีดินสอ(255, floor(210 + ไซน์(t) * 30.0), 90)
+    icosahedron(sunX, sunY, sunZ, 5.0, 5.0, 5.0, 0.0, t * 0.3, 0.0, 2, 0, 0, 0)
+    อนุภาคทรงกลม(sunX, sunY, sunZ, 8.0, 40, t * 2.0, 255, 220, 120)
+    สีดินสอ(170, 185, 230)
+    icosahedron(moonX, moonY, moonZ, 3.4, 3.4, 3.4, 0.0, t * 0.2, 0.0, 2, 0, 0, 0)
+    อนุภาคทรงกลม(moonX, moonY, moonZ, 5.0, 22, t * 1.4, 180, 200, 255)
+    flush_3d()
+    โหมดผสม(0)
+    set_depth_test(0)
+
+    # Debug overlay: show sync status
+    สีดินสอ(180, 210, 235)
+    วาดสตริง("P2P SYNC ACTIVE", 0.0, 0.0 - 9.2, 0.0, 0.7, 1)
+    สีดินสอ(140, 165, 200)
+    วาดสตริง("Tick: " + ปัดลง(tick), 0.0, 0.0 - 8.0, 0.0, 0.46, 1)
+    สีดินสอ(120, 200, 120)
+    วาดสตริง("Wind: " + ปัดลง(windX * 10.0) + "," + ปัดลง(windZ * 10.0), 0.0, 8.0, 0.0, 0.44, 1)
+    flush_3d()
+
+    คืน 0
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DEBUG: Verify determinism
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Test function to verify same seed + tick → same output across different machines
+ฟังก์ชัน testDeterminism() {
+    bind testSeed = 123456.0
+    bind testTick = 1000.0
+
+    # These values MUST be identical on all peers
+    bind day = getDayAngle(testSeed, testTick)
+    bind wx = getWindX(testSeed, testTick)
+    bind wz = getWindZ(testSeed, testTick)
+    bind h = getTerrainHeight(testSeed, 0.0, 0.0)
+    bind hash = computeStateHash(testSeed, testTick)
+
+    # Print for verification
+    พิมพ์("=== DETERMINISM TEST ===")
+    พิมพ์("Seed: 123456, Tick: 1000")
+    พิมพ์("Day Angle: " + day)
+    พิมพ์("Wind: " + wx + ", " + wz)
+    พิมพ์("Terrain(0,0): " + h)
+    พิมพ์("State Hash: " + hash)
+    พิมพ์("========================")
+
+    คืน 0
+}

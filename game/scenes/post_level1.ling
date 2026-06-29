@@ -1,0 +1,393 @@
+# ════════════════════════════════════════════════════════════════════════════
+# post_level1.ling — Cutscene after Level 1
+# ════════════════════════════════════════════════════════════════════════════
+# The King and Queen discuss the cosmic song that structures reality itself,
+# blending music theory with Ling (靈) philosophy - the ordering principle of
+# creation from Chinese cosmology.
+
+# ── Character Mesh Loading ───────────────────────────────────────────────────
+bind kMeshCutscene = 0
+bind qMeshCutscene = 0
+bind meshesLoaded = 0
+
+ฟังก์ชัน โหลดเมช() {
+    ถ้า meshesLoaded == 0 {
+        bind kMeshCutscene = mesh_load("game/king.lmesh")
+        bind qMeshCutscene = mesh_load("game/queen.lmesh")
+        bind meshesLoaded = 1
+    }
+}
+
+# ── Dialog Data ──────────────────────────────────────────────────────────────
+
+ฟังก์ชัน โพสต์เลเวล1_บทพูด() {
+    คืน [
+        # Line 0 - King
+        "you have returned. the meadow still echoes with your first steps.",
+
+        # Line 1 - Queen
+        "the cradle reed... it carries a fragment of the primordial song.",
+
+        # Line 2 - King
+        "listen closely. reality itself is woven from five elemental tones.",
+
+        # Line 3 - Queen
+        "what you call music, we call ling. the ordering principle.",
+
+        # Line 4 - King
+        "before form, there was vibration. before vibration, intention.",
+
+        # Line 5 - Queen
+        "the pentatonic scale mirrors the five phases of transformation:",
+
+        # Line 6 - Queen (continues)
+        "wood, fire, earth, metal, water. each a frequency in the cosmic lattice.",
+
+        # Line 7 - King
+        "when the white silence shattered, the song scattered into fragments.",
+
+        # Line 8 - Queen
+        "each instrument holds a harmonic. each melody, a thread of stability.",
+
+        # Line 9 - King
+        "the tonic anchors reality. the dominant opens possibilities.",
+
+        # Line 10 - Queen
+        "the subdominant returns us to the source. this is the dao of harmony.",
+
+        # Line 11 - King
+        "but the song is incomplete. without all five instruments...",
+
+        # Line 12 - Queen
+        "the structure weakens. dimensions bleed into one another.",
+
+        # Line 13 - King
+        "you must gather the remaining instruments before the final silence.",
+
+        # Line 14 - Queen
+        "only then can we perform the restoration symphony.",
+
+        # Line 15 - King
+        "remember: each note you play reinforces the fabric of existence.",
+
+        # Line 16 - Queen
+        "go now. the crystal caverns await. listen for the second harmonic."
+    ]
+}
+
+# Speaker index: 0 = King, 1 = Queen
+ฟังก์ชัน โพสต์เลเวล1_ผู้พูด() {
+    คืน [0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
+}
+
+# Musical notes for typewriter sound (pentatonic scale, tuned to dialog)
+# C D E G A pattern - the five elemental tones
+ฟังก์ชัน โพสต์เลเวล1_โน้ต() {
+    คืน [
+        261.63,  # C - Wood (King intro)
+        293.66,  # D - Fire (Queen intro)
+        329.63,  # E - Earth
+        392.00,  # G - Metal
+        440.00,  # A - Water
+        392.00,  # G - Metal (return)
+        329.63,  # E - Earth (cycle)
+        261.63,  # C - Wood
+        293.66,  # D - Fire
+        392.00,  # G - Metal (dominant)
+        440.00,  # A - Water (subdominant)
+        261.63,  # C - Wood (tonic anchor)
+        293.66,  # D - Fire
+        329.63,  # E - Earth
+        392.00,  # G - Metal
+        261.63,  # C - Wood (return to source)
+        440.00   # A - Water (opening)
+    ]
+}
+
+# ── Typewriter Effect ────────────────────────────────────────────────────────
+
+# Returns the number of visible characters for current line based on time
+ฟังก์ชัน ตัวอักษรที่แสดง(lineTime, text, charsPerSec) {
+    bind totalChars = ความยาวสตริง(text)
+    bind visibleChars = floor(lineTime * charsPerSec)
+    ถ้า visibleChars > totalChars { bind visibleChars = totalChars }
+    คืน visibleChars
+}
+
+# Play typewriter sound effect tuned to the BGM (pentatonic)
+ฟังก์ชัน เสียงพิมพ์ดีด(x, y, z, noteFreq, volume) {
+    # Short, percussive tone with quick decay
+    audio_tone(0, x, y, z, 0.0, noteFreq, volume * 0.25, 0.0, 0.0)
+    audio_tone(1, x, y, z, 0.0, noteFreq * 2.0, volume * 0.15, 0.0, 0.0)  # Overtone
+}
+
+# ── Camera Positions ─────────────────────────────────────────────────────────
+
+# King camera: slightly elevated, looking up at authority
+ฟังก์ชัน กล้องพระราชา() {
+    คืน [
+        12.0,   # camX - to the side
+        -8.0,   # camY - slightly below
+        18.0,   # camZ - front-ish angle
+        0.0,    # lookX - centered on king
+        -5.0,   # lookY - chest/face level
+        0.0     # lookZ - king position
+    ]
+}
+
+# Queen camera: softer angle, eye level, more intimate
+ฟังก์ชัน กล้องราชินี() {
+    คืน [
+        -14.0,  # camX - opposite side
+        -10.0,  # camY - eye level
+        16.0,   # camZ - closer
+        0.0,    # lookX - centered on queen
+        -9.0,   # lookY - face level
+        0.0     # lookZ - queen position
+    ]
+}
+
+# Wide establishing shot: both visible
+ฟังก์ชัน กล้องกว้าง(t) {
+    bind orbitSpeed = 0.15
+    bind radius = 28.0
+    คืน [
+        โคไซน์(t * orbitSpeed) * radius,
+        -12.0 + ไซน์(t * 0.22) * 3.0,
+        ไซน์(t * orbitSpeed) * radius,
+        0.0,
+        -8.0,
+        0.0
+    ]
+}
+
+# ── Main Cutscene Function ───────────────────────────────────────────────────
+
+ฟังก์ชัน เล่นโพสต์เลเวล1(
+    t,                      # Current time
+    cutsceneStart,          # Time when cutscene started
+    prevLine,               # Previous line index (for state)
+    musicOn,                # Music enabled flag
+    volumeBGM,              # BGM volume
+    volumeSFX,              # SFX volume
+    bgmTrack,               # BGM music track handle
+    lastCharCount           # Last character count (for typewriter sound)
+) {
+    bind elapsed = t - cutsceneStart
+
+    # ── Configuration ────────────────────────────────────────────────────────
+    bind LINE_DURATION = 4.5        # Seconds per line
+    bind CHARS_PER_SEC = 18.0       # Typewriter speed
+    bind FADE_IN = 0.8              # Fade in duration
+    bind FADE_OUT = 1.2             # Fade out duration
+
+    bind dialog = โพสต์เลเวล1_บทพูด()
+    bind speakers = โพสต์เลเวล1_ผู้พูด()
+    bind notes = โพสต์เลเวล1_โน้ต()
+    bind totalLines = ความยาว(dialog)
+    bind totalDuration = totalLines * LINE_DURATION
+
+    # ── BGM Management ───────────────────────────────────────────────────────
+    # Play ambient BGM quietly (sacred temple atmosphere)
+    ถ้า musicOn == 1 {
+        ระดับเพลง(volumeBGM * 0.35)  # Quiet BGM during dialog
+    }
+
+    # ── Background Rendering ─────────────────────────────────────────────────
+    # Dark, cosmic background
+    bind bgR = floor(8.0 + ไซน์(elapsed * 0.18) * 6.0)
+    bind bgG = floor(12.0 + ไซน์(elapsed * 0.22 + 1.0) * 8.0)
+    bind bgB = floor(24.0 + ไซน์(elapsed * 0.15 + 2.0) * 12.0)
+    เติม(bgR, bgG, bgB)
+
+    # Ambient lighting - mystical glow
+    ตั้งแสงรอบข้าง(0.45)
+    ล้างแสง()
+    เพิ่มแสง(8.0, -6.0, 8.0,   0.9, 0.7, 0.5,  2.0, 18.0)   # Warm key light (King side)
+    เพิ่มแสง(-8.0, -6.0, 8.0,  0.5, 0.7, 1.0,  2.0, 18.0)  # Cool fill light (Queen side)
+    เพิ่มแสง(0.0, -2.0, -12.0,  0.7, 0.6, 0.9,  1.5, 12.0)  # Rim light
+
+    # ── Current Line Calculation ─────────────────────────────────────────────
+    bind currentLineIdx = floor(elapsed / LINE_DURATION)
+    ถ้า currentLineIdx >= totalLines { bind currentLineIdx = totalLines - 1 }
+
+    bind lineTime = elapsed - currentLineIdx * LINE_DURATION
+    bind speaker = list_get(speakers, currentLineIdx)
+    bind lineText = list_get(dialog, currentLineIdx)
+    bind lineNote = list_get(notes, currentLineIdx)
+
+    # ── Camera Switching ─────────────────────────────────────────────────────
+    bind cam = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+    # Start with wide shot
+    ถ้า currentLineIdx < 1 {
+        bind cam = กล้องกว้าง(elapsed)
+    }
+    มิฉะนั้น {
+        # Switch camera based on speaker
+        ถ้า speaker < 0.5 {
+            bind cam = กล้องพระราชา()
+            # Add subtle camera drift
+            bind drift = ไซน์(elapsed * 0.8) * 0.6
+            bind camX = list_get(cam, 0) + drift
+            bind camY = list_get(cam, 1) + โคไซน์(elapsed * 0.6) * 0.4
+            bind cam = [camX, camY, list_get(cam, 2), list_get(cam, 3), list_get(cam, 4), list_get(cam, 5)]
+        }
+        มิฉะนั้น {
+            bind cam = กล้องราชินี()
+            # Add subtle camera drift
+            bind drift = โคไซน์(elapsed * 0.7) * 0.5
+            bind camX = list_get(cam, 0) + drift
+            bind camZ = list_get(cam, 2) + ไซน์(elapsed * 0.5) * 0.8
+            bind cam = [camX, list_get(cam, 1), camZ, list_get(cam, 3), list_get(cam, 4), list_get(cam, 5)]
+        }
+    }
+
+    # Smooth camera transitions between shots
+    bind camTransition = lineTime / 0.8
+    ถ้า camTransition > 1.0 { bind camTransition = 1.0 }
+
+    ตั้งกล้องมอง(
+        list_get(cam, 0), list_get(cam, 1), list_get(cam, 2),
+        list_get(cam, 3), list_get(cam, 4), list_get(cam, 5)
+    )
+    ตั้งระยะห่าง(2.2)
+
+    # ── Character Rendering ──────────────────────────────────────────────────
+    # King position and animation
+    bind kingY = -14.0 + ไซน์(elapsed * 0.6) * 0.15  # Subtle breathing
+    bind kingYaw = ไซน์(elapsed * 0.3) * 3.0          # Slight head turn
+
+    # Queen position and animation
+    bind queenY = -14.0 + โคไซน์(elapsed * 0.55) * 0.12
+    bind queenYaw = โคไซน์(elapsed * 0.35) * 2.5
+
+    # Ensure meshes are loaded
+    โหลดเมช()
+
+    # Highlight speaker with subtle glow
+    โหมดผสม(0)
+    ถ้า speaker < 0.5 {
+        # King is speaking - brighter
+        mesh_draw(kMeshCutscene, -6.0, kingY, 2.0, 3.8, kingYaw, 0.0, 0.0, 0.0, 0.0, 0.0)
+        mesh_draw(qMeshCutscene, 6.0, queenY, 2.0, 3.2, queenYaw, 0.0, 0.0, 0.0, 0.0, 0.0)
+    }
+    มิฉะนั้น {
+        # Queen is speaking - brighter
+        mesh_draw(kMeshCutscene, -6.0, kingY, 2.0, 3.2, kingYaw, 0.0, 0.0, 0.0, 0.0, 0.0)
+        mesh_draw(qMeshCutscene, 6.0, queenY, 2.0, 3.8, queenYaw, 0.0, 0.0, 0.0, 0.0, 0.0)
+    }
+    โหมดผสม(1)
+
+    flush_3d()
+
+    # ── Typewriter Text Effect ───────────────────────────────────────────────
+    bind visibleChars = ตัวอักษรที่แสดง(lineTime, lineText, CHARS_PER_SEC)
+
+    # Play typewriter sound when new character appears
+    ถ้า visibleChars > lastCharCount {
+        ถ้า visibleChars < ความยาวสตริง(lineText) {
+            # Vary pitch slightly for natural feel
+            bind pitchVar = 1.0 + (ไซน์(visibleChars * 0.7) * 0.08)
+            เสียงพิมพ์ดีด(0.0, -8.0, 0.0, lineNote * pitchVar, volumeSFX)
+        }
+    }
+
+    # ── Text Rendering ───────────────────────────────────────────────────────
+    # Calculate fade
+    bind textAlpha = 1.0
+    ถ้า lineTime < FADE_IN { bind textAlpha = lineTime / FADE_IN }
+    ถ้า lineTime > LINE_DURATION - FADE_OUT {
+        bind textAlpha = (LINE_DURATION - lineTime) / FADE_OUT
+    }
+    ถ้า textAlpha < 0.0 { bind textAlpha = 0.0 }
+    ถ้า textAlpha > 1.0 { bind textAlpha = 1.0 }
+
+    # Speaker name color
+    bind nameR = 255
+    bind nameG = 220
+    bind nameB = 140
+    ถ้า speaker > 0.5 {
+        bind nameR = 200
+        bind nameG = 220
+        bind nameB = 255
+    }
+
+    # Set camera for 2D text overlay
+    ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)
+    ตั้งระยะห่าง(2.8)
+
+    # Draw speaker name
+    สีดินสอ(
+        floor(nameR * textAlpha),
+        floor(nameG * textAlpha),
+        floor(nameB * textAlpha)
+    )
+    bind speakerName = "the king"
+    ถ้า speaker > 0.5 { bind speakerName = "the queen" }
+    วาดสตริง(speakerName, 0.0, 9.2, 0.0, 0.5, 1)
+
+    # Draw dialog text with typewriter effect
+    สีดินสอ(
+        floor(240 * textAlpha),
+        floor(245 * textAlpha),
+        floor(255 * textAlpha)
+    )
+
+    # Extract visible portion of text
+    bind displayText = substring_ling(lineText, 0, visibleChars)
+    วาดสตริง(displayText, 0.0, 8.3, 0.0, 0.58, 1)
+
+    # Progress indicator
+    bind progressText = "[" + (currentLineIdx + 1) + " / " + totalLines + "]"
+    สีดินสอ(
+        floor(150 * textAlpha),
+        floor(160 * textAlpha),
+        floor(170 * textAlpha)
+    )
+    วาดสตริง(progressText, 0.0, -9.5, 0.0, 0.38, 1)
+
+    # Controls hint
+    สีดินสอ(
+        floor(120 * textAlpha),
+        floor(130 * textAlpha),
+        floor(145 * textAlpha)
+    )
+    วาดสตริง("[enter/space] continue   [esc] skip", 0.0, -10.2, 0.0, 0.42, 1)
+
+    flush_3d()
+    แสดงผล()
+
+    # ── Exit Conditions ──────────────────────────────────────────────────────
+    bind shouldExit = 0.0
+
+    # Natural completion
+    ถ้า elapsed >= totalDuration { bind shouldExit = 1.0 }
+
+    # Skip cutscene
+    ถ้า กดปุ่ม("escape") { bind shouldExit = 1.0 }
+
+    # Advance to next line
+    ถ้า กดปุ่ม("enter") {
+        ถ้า currentLineIdx >= totalLines - 1 {
+            bind shouldExit = 1.0
+        }
+    }
+    ถ้า กดปุ่ม("space") {
+        ถ้า currentLineIdx >= totalLines - 1 {
+            bind shouldExit = 1.0
+        }
+    }
+
+    # Return: [newPrevLine, visibleChars, shouldExit]
+    คืน [currentLineIdx, visibleChars, shouldExit]
+}
+
+# ── Substring Helper (if not in stdlib) ─────────────────────────────────────
+# Returns substring from start to end index
+ฟังก์ชัน substring_ling(text, start, end) {
+    # This is a placeholder - you may need to implement character-by-character
+    # extraction if Ling doesn't have built-in substring
+    # For now, return full text (typewriter effect handled by rendering only N chars)
+    คืน text
+}

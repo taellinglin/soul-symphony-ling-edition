@@ -1,0 +1,373 @@
+# ════════════════════════════════════════════════════════════════════════════
+# bonus_level.ling — F12 Bonus Rollercoaster Level (Physics/Rendering Benchmark)
+# ════════════════════════════════════════════════════════════════════════════
+# A compact, Sonic-style sinusoidal rollercoaster course designed for:
+# - Ball physics testing with aerodynamic curves
+# - Rendering benchmark (minimal geometry)
+# - Fun high-speed runs with obstacles
+
+# ── Course Parameters ────────────────────────────────────────────────────────
+bind COURSE_LENGTH = 200.0       # Total length of the course
+bind COURSE_WIDTH = 8.0          # Width of the track
+bind WAVE_AMP = 12.0             # Amplitude of sine wave (height variation)
+bind WAVE_FREQ = 0.08            # Frequency of sine wave (how wavy)
+bind LOOP_HEIGHT = 18.0          # Height of loop-de-loop
+bind LOOP_RADIUS = 8.0           # Radius of loop
+
+# ── Rollercoaster Height Function ───────────────────────────────────────────
+# Returns the height at a given X position along the track
+ฟังก์ชัน bonusTrackHeight(x) {
+    # Multi-wave composition for interesting terrain
+    bind base = ไซน์(x * WAVE_FREQ) * WAVE_AMP
+    bind detail = ไซน์(x * WAVE_FREQ * 2.3) * (WAVE_AMP * 0.3)
+    bind ramp = x * 0.15  # Gentle upward slope
+
+    # Add a loop-de-loop around x=100
+    bind loopX = 100.0
+    bind distToLoop = abs(x - loopX)
+    bind loopContrib = 0.0
+    ถ้า distToLoop < LOOP_RADIUS * 2.0 {
+        bind angle = (x - loopX + LOOP_RADIUS) / LOOP_RADIUS * 3.14159
+        bind loopContrib = (1.0 - โคไซน์(angle)) * LOOP_HEIGHT * 0.5
+    }
+
+    คืน base + detail + ramp + loopContrib + 5.0  # +5 base height
+}
+
+# ── Draw Track Segment ───────────────────────────────────────────────────────
+ฟังก์ชัน drawTrackSegment(x1, x2, color) {
+    bind y1 = bonusTrackHeight(x1)
+    bind y2 = bonusTrackHeight(x2)
+
+    # Draw track surface (quad)
+    bind hw = COURSE_WIDTH * 0.5  # half width
+
+    # Color based on position for variety
+    bind hue = (x1 / COURSE_LENGTH) * 0.7 + color
+    bind r = floor((ไซน์(hue * 6.28) * 0.5 + 0.5) * 180 + 60)
+    bind g = floor((ไซน์(hue * 6.28 + 2.09) * 0.5 + 0.5) * 180 + 60)
+    bind b = floor((ไซน์(hue * 6.28 + 4.19) * 0.5 + 0.5) * 180 + 60)
+
+    สีดินสอ(r, g, b)
+
+    # Draw track as quad strip
+    วาดสามเหลี่ยม3มิติ(
+        x1, 0.0 - y1, 0.0 - hw,
+        x2, 0.0 - y2, 0.0 - hw,
+        x1, 0.0 - y1, hw
+    )
+    วาดสามเหลี่ยม3มิติ(
+        x2, 0.0 - y2, 0.0 - hw,
+        x2, 0.0 - y2, hw,
+        x1, 0.0 - y1, hw
+    )
+
+    # Draw side rails
+    bind railH = 1.2
+    สีดินสอ(floor(r * 0.7), floor(g * 0.7), floor(b * 0.7))
+
+    # Left rail
+    วาดกล่อง3มิติ(x1, 0.0 - y1 - railH * 0.5, 0.0 - hw - 0.3,
+                   x2 - x1, railH, 0.3)
+    # Right rail
+    วาดกล่อง3มิติ(x1, 0.0 - y1 - railH * 0.5, hw,
+                   x2 - x1, railH, 0.3)
+}
+
+# ── Draw Obstacles ───────────────────────────────────────────────────────────
+ฟังก์ชัน drawObstacles(t) {
+    # Rings to jump through
+    bind ringPositions = [30.0, 60.0, 90.0, 120.0, 150.0, 180.0]
+    bind i = 0
+    ขณะที่ i < 6 {
+        bind rx = list_get(ringPositions, i)
+        bind ry = bonusTrackHeight(rx)
+        bind rot = t * 2.0 + i * 1.0
+
+        # Draw spinning ring
+        สีดินสอ(255, 215, 100)
+        bind segs = 16
+        bind ringRad = 4.5
+        bind j = 0
+        ขณะที่ j < segs {
+            bind a1 = (j / segs) * 6.28318 + rot
+            bind a2 = ((j + 1) / segs) * 6.28318 + rot
+            bind py1 = โคไซน์(a1) * ringRad
+            bind pz1 = ไซน์(a1) * ringRad
+            bind py2 = โคไซน์(a2) * ringRad
+            bind pz2 = ไซน์(a2) * ringRad
+
+            วาดเส้น3มิติ(rx, 0.0 - ry + py1, pz1,
+                         rx, 0.0 - ry + py2, pz2)
+            bind j = j + 1
+        }
+        bind i = i + 1
+    }
+
+    # Speed boost pads (glowing sections)
+    bind boostPos = [25.0, 75.0, 125.0, 175.0]
+    bind bi = 0
+    ขณะที่ bi < 4 {
+        bind bx = list_get(boostPos, bi)
+        bind by = bonusTrackHeight(bx)
+        bind pulse = (ไซน์(t * 8.0 + bi * 1.5) * 0.5 + 0.5)
+
+        สีดินสอ(floor(255 * pulse), floor(200 * pulse), 100)
+        วาดกล่อง3มิติ(bx - 1.5, 0.0 - by + 0.1, 0.0 - COURSE_WIDTH * 0.4,
+                       3.0, 0.15, COURSE_WIDTH * 0.8)
+        bind bi = bi + 1
+    }
+}
+
+# ── Draw Full Track ──────────────────────────────────────────────────────────
+ฟังก์ชัน drawBonusTrack(t, camX) {
+    # Only draw segments near camera for performance
+    bind startX = floor(camX - 40.0)
+    ถ้า startX < 0.0 { bind startX = 0.0 }
+    bind endX = floor(camX + 60.0)
+    ถ้า endX > COURSE_LENGTH { bind endX = COURSE_LENGTH }
+
+    bind segSize = 2.0  # Size of each track segment
+    bind x = startX
+
+    ขณะที่ x < endX {
+        bind nextX = x + segSize
+        ถ้า nextX > endX { bind nextX = endX }
+
+        # Alternate colors for visual interest
+        bind colorPhase = floor(x / 10.0) * 0.15
+        drawTrackSegment(x, nextX, colorPhase)
+
+        bind x = nextX
+    }
+
+    # Draw obstacles
+    drawObstacles(t)
+
+    # Finish line
+    ถ้า camX > COURSE_LENGTH - 50.0 {
+        bind fx = COURSE_LENGTH - 5.0
+        bind fy = bonusTrackHeight(fx)
+
+        # Checkered pattern
+        bind ci = 0
+        ขณะที่ ci < 8 {
+            bind stripe = floor(ci / 2.0) * 2.0 == ci
+            ถ้า stripe > 0.5 {
+                สีดินสอ(255, 255, 255)
+            }
+            มิฉะนั้น {
+                สีดินสอ(40, 40, 40)
+            }
+            bind sz = COURSE_WIDTH / 8.0
+            วาดกล่อง3มิติ(fx, 0.0 - fy + ci * 0.5, 0.0 - COURSE_WIDTH * 0.5,
+                           0.3, 0.5, COURSE_WIDTH)
+            bind ci = ci + 1
+        }
+    }
+}
+
+# ── Main Bonus Level Function ────────────────────────────────────────────────
+ฟังก์ชัน runBonusLevel(
+    t,
+    bonusStart,
+    cx, cy, cz,
+    vx, vy, vz,
+    R,
+    grounded,
+    charge,
+    squash,
+    musicOn,
+    volumeBGM,
+    liq
+) {
+    bind elapsed = t - bonusStart
+
+    # ── Physics Update ───────────────────────────────────────────────────────
+    bind dt = 0.016
+    bind gravity = 32.0
+
+    # Get track height at current position
+    bind trackY = bonusTrackHeight(cx)
+    bind groundLevel = 0.0 - trackY
+
+    # Check if on track (within width)
+    bind onTrack = abs(cz) < COURSE_WIDTH * 0.5
+
+    # Movement controls
+    bind accel = 0.0
+    ถ้า กดปุ่ม("up") { bind accel = 2.5 }
+    ถ้า กดปุ่ม("w") { bind accel = 2.5 }
+    ถ้า กดปุ่ม("down") { bind accel = -1.5 }
+    ถ้า กดปุ่ม("s") { bind accel = -1.5 }
+
+    # Lateral movement
+    bind lateral = 0.0
+    ถ้า กดปุ่ม("left") { bind lateral = -0.8 }
+    ถ้า กดปุ่ม("a") { bind lateral = -0.8 }
+    ถ้า กดปุ่ม("right") { bind lateral = 0.8 }
+    ถ้า กดปุ่ม("d") { bind lateral = 0.8 }
+
+    # Jump
+    bind jumpPressed = 0.0
+    ถ้า กดปุ่ม("space") { bind jumpPressed = 1.0 }
+    ถ้า กดปุ่ม("up") { bind jumpPressed = 1.0 }
+    ถ้า jumpPressed > 0.5 {
+        ถ้า grounded > 0.5 {
+            bind vy = -18.0
+            bind grounded = 0.0
+        }
+    }
+
+    # Apply acceleration
+    bind vx = vx + accel * dt * 60.0
+    bind vz = vz + lateral * dt * 60.0
+
+    # Friction
+    bind vx = vx * 0.992
+    bind vz = vz * 0.97
+
+    # Boost pads
+    bind boostPos = [25.0, 75.0, 125.0, 175.0]
+    bind bi = 0
+    ขณะที่ bi < 4 {
+        bind bx = list_get(boostPos, bi)
+        ถ้า abs(cx - bx) < 2.0 {
+            ถ้า grounded > 0.5 {
+                bind vx = vx + 15.0  # Speed boost!
+            }
+        }
+        bind bi = bi + 1
+    }
+
+    # Gravity
+    bind vy = vy + gravity * dt
+
+    # Update position
+    bind cx = cx + vx * dt
+    bind cy = cy + vy * dt
+    bind cz = cz + vz * dt
+
+    # Clamp lateral position to track
+    ถ้า abs(cz) > COURSE_WIDTH * 0.5 {
+        bind cz = (cz / abs(cz)) * COURSE_WIDTH * 0.5
+        bind vz = vz * -0.5  # Bounce off rails
+    }
+
+    # Ground collision
+    ถ้า cy >= groundLevel - R {
+        bind cy = groundLevel - R
+        bind vy = vy * -0.35  # Bounce
+        ถ้า abs(vy) < 2.0 {
+            bind vy = 0.0
+            bind grounded = 1.0
+        }
+
+        # Track slope affects horizontal velocity
+        bind nextTrackY = bonusTrackHeight(cx + 0.5)
+        bind slope = (nextTrackY - trackY) * 4.0
+        bind vx = vx - slope  # Roll down slopes
+    }
+    มิฉะนั้น {
+        bind grounded = 0.0
+    }
+
+    # Squash/stretch based on velocity
+    bind speed = sqrt(vx * vx + vy * vy + vz * vz)
+    bind squash = speed / 30.0
+    ถ้า squash > 0.4 { bind squash = 0.4 }
+
+    # ── Rendering ────────────────────────────────────────────────────────────
+    # Background
+    bind skyR = floor(20 + ไซน์(elapsed * 0.1) * 15)
+    bind skyG = floor(30 + ไซน์(elapsed * 0.15 + 1.0) * 20)
+    bind skyB = floor(60 + ไซน์(elapsed * 0.12 + 2.0) * 30)
+    เติม(skyR, skyG, skyB)
+
+    # Lighting
+    ตั้งแสงรอบข้าง(0.6)
+    ล้างแสง()
+    เพิ่มแสง(cx + 10.0, 0.0 - trackY - 15.0, 5.0, 1.0, 0.95, 0.85, 3.0, 35.0)
+    เพิ่มแสง(cx - 5.0, 0.0 - trackY - 10.0, -5.0, 0.85, 0.9, 1.0, 2.5, 28.0)
+
+    # Camera: smooth follow behind and above the ball
+    bind camX = cx - 12.0
+    bind camY = cy - 8.0
+    bind camZ = cz - 2.0
+    bind lookX = cx + vx * 0.3
+    bind lookY = cy
+    bind lookZ = cz
+
+    ตั้งกล้องมอง(camX, camY, camZ, lookX, lookY, lookZ)
+    ตั้งระยะห่าง(1.8)
+
+    # Draw track
+    drawBonusTrack(t, cx)
+
+    # Draw ball
+    bind ballHue = (cx / COURSE_LENGTH) * 0.8
+    bind br = floor((ไซน์(ballHue * 6.28) * 0.5 + 0.5) * 200 + 55)
+    bind bg = floor((ไซน์(ballHue * 6.28 + 2.09) * 0.5 + 0.5) * 200 + 55)
+    bind bb = floor((ไซน์(ballHue * 6.28 + 4.19) * 0.5 + 0.5) * 200 + 55)
+
+    สีดินสอ(br, bg, bb)
+    bind stretchY = 1.0 - squash * 0.7
+    bind stretchX = 1.0 + squash * 0.5
+    วาดทรงกลม(cx, cy, cz, R * stretchX, R * stretchY, R * stretchX)
+
+    # Draw liquid physics inside ball
+    liquid_step(liq, dt)
+    bind liqMix = liquid_mix(liq)
+    liquid_draw(liq, cx, cy + R * 0.15, cz, R * 1.8, R * 1.8 * stretchY, 0.0)
+
+    flush_3d()
+
+    # ── HUD ──────────────────────────────────────────────────────────────────
+    ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)
+    ตั้งระยะห่าง(2.8)
+    โหมดผสม(1)
+
+    # Title
+    สีดินสอ(255, 240, 100)
+    วาดสตริง("BONUS ROLLERCOASTER", 0.0, -9.5, 0.0, 0.65, 1)
+
+    # Progress
+    bind progress = (cx / COURSE_LENGTH) * 100.0
+    ถ้า progress > 100.0 { bind progress = 100.0 }
+    bind progressText = "progress: " + to_str(floor(progress)) + "%"
+    สีดินสอ(200, 220, 255)
+    วาดสตริง(progressText, 0.0, -8.5, 0.0, 0.55, 1)
+
+    # Speed
+    bind speedKmh = floor(speed * 3.6)
+    bind speedText = "speed: " + to_str(speedKmh) + " km/h"
+    สีดินสอ(255, 200, 150)
+    วาดสตริง(speedText, 0.0, 9.0, 0.0, 0.5, 1)
+
+    # Controls
+    สีดินสอ(150, 160, 180)
+    วาดสตริง("WASD/arrows: move   space: jump   F12: exit", 0.0, 9.8, 0.0, 0.42, 1)
+
+    # Finish message
+    ถ้า cx >= COURSE_LENGTH - 5.0 {
+        bind flashPulse = (ไซน์(t * 8.0) * 0.5 + 0.5)
+        สีดินสอ(floor(255 * flashPulse), floor(220 * flashPulse), floor(100 * flashPulse))
+        วาดสตริง("★ FINISH! ★", 0.0, 0.0, 0.0, 1.2, 1)
+
+        bind timeText = "time: " + to_str(floor(elapsed * 10.0) / 10.0) + "s"
+        สีดินสอ(200, 255, 200)
+        วาดสตริง(timeText, 0.0, 1.2, 0.0, 0.7, 1)
+    }
+
+    flush_3d()
+    โหมดผสม(0)
+    แสดงผล()
+
+    # ── Exit Conditions ──────────────────────────────────────────────────────
+    bind shouldExit = 0.0
+    ถ้า กดปุ่ม("f12") { bind shouldExit = 1.0 }
+    ถ้า กดปุ่ม("escape") { bind shouldExit = 1.0 }
+
+    # Return updated state: [cx, cy, cz, vx, vy, vz, grounded, squash, shouldExit]
+    คืน [cx, cy, cz, vx, vy, vz, grounded, squash, shouldExit]
+}

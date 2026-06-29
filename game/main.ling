@@ -18,6 +18,8 @@
 ใช้ "../game/queen_model"
 ใช้ "../game/companions"
 ใช้ "../game/scenes/chapter1"
+ใช้ "../game/scenes/post_level1"
+ใช้ "../game/bonus_level"
 ใช้ "../game/online_world"
 ใช้ "../font/Daemon"
 ใช้ "../font/English"
@@ -25,6 +27,7 @@
 use "color"
 use "audio"
 use "title"
+use "title_midi"
 use "play"
 use "level"
 
@@ -51,7 +54,9 @@ bind ST_HOSTPW = 16
 bind ST_JOINPW = 17
 bind ST_STAGESEL = 18
 bind ST_CH1 = 19
-bind ST_ONLINE = 20
+bind ST_POST_LVL1 = 20
+bind ST_ONLINE = 21
+bind ST_BONUS = 22
 
 bind เริ่ม = do {
     # ── โหมดหน้าต่างจาก CLI: --fullscreen (ค่าเริ่มต้น) · --windowed · --resolution WxH ──
@@ -112,6 +117,8 @@ bind เริ่ม = do {
     ถ้า ยาวเพลงเกม > 1.0 { bind เพลงเล่น = เพลงเกม;  bind ยาวเพลงเล่น = ยาวเพลงเกม }
     # ── ข้อมูลเพลง/ของเก็บ (ตั้งจริงต่อเลเวลใน รีเซ็ต จาก songs.ling) ──
     bind เพลงโหลดแล้ว = 0.0 - 1.0
+    # แคชแฮนเดิลเพลงต่อ songIdx — กันการ decode WAV ซ้ำตอนสลับเพลง/เปลี่ยนรอบ (~32ms hitch)
+    bind เพลงแคชId = [];  bind เพลงแคชH = [];  bind เพลงแคชLen = []
     bind sd0 = ข้อมูลเพลง_Antartica()
     bind bd0 = ข้อมูลเพลง_Battle()
     bind เก็บจำนวน  = list_get(sd0, 0)
@@ -128,20 +135,24 @@ bind เริ่ม = do {
     bind เฟดต่อสู้   = 0.0
 
     # ── โหลดตัวเลือก (options.cfg = "music;lang;sfxvol;bgmvol") ───────────────
-    bind cfg  = อ่านไฟล์("options.cfg")
-    bind cfgp = แยก(cfg, ";")
-    bind musicOn = floor(list_get(cfgp, 0))
-    bind ภาษา    = floor(list_get(cfgp, 1))
-    bind ปริมาณSFX = 0.8
-    bind ปริมาณBGM = 0.1
-    ถ้า ความยาว(cfgp) > 2 { bind ปริมาณSFX = list_get(cfgp, 2) * 1.0 }
-    ถ้า ความยาว(cfgp) > 3 { bind ปริมาณBGM = list_get(cfgp, 3) * 1.0 }
+    bind musicOn = 1.0;  bind ภาษา = 2.0;  bind ปริมาณSFX = 0.8;  bind ปริมาณBGM = 0.1  # Default to Thai
+    bind cfg = อ่านไฟล์("options.cfg")
+    ถ้า ความยาว(cfg) > 0 {
+        bind cfgp = แยก(cfg, ";")
+        ถ้า ความยาว(cfgp) > 0 { bind musicOn = floor(list_get(cfgp, 0) * 1.0) }
+        ถ้า ความยาว(cfgp) > 1 { bind ภาษา = floor(list_get(cfgp, 1) * 1.0) }
+        ถ้า ความยาว(cfgp) > 2 { bind ปริมาณSFX = list_get(cfgp, 2) * 1.0 }
+        ถ้า ความยาว(cfgp) > 3 { bind ปริมาณBGM = list_get(cfgp, 3) * 1.0 }
+    }
 
     # ── เครือข่าย (net.cfg = "ip;port"; ค่าเริ่ม 127.0.0.1:7777) ──────────────
+    bind netIP = "127.0.0.1";  bind netPort = 7777.0
     bind netCfg = อ่านไฟล์("net.cfg")
-    bind netP   = แยก(netCfg, ";")
-    bind netIP   = list_get(netP, 0)
-    bind netPort = floor(list_get(netP, 1) * 1.0)
+    ถ้า ความยาว(netCfg) > 0 {
+        bind netP = แยก(netCfg, ";")
+        ถ้า ความยาว(netP) > 0 { bind netIP = list_get(netP, 0) }
+        ถ้า ความยาว(netP) > 1 { bind netPort = floor(list_get(netP, 1) * 1.0) }
+    }
     bind discPort = netPort + 1   # พอร์ตค้นหาลอบบี้ LAN (UDP broadcast)
     bind netReady = 0
     bind srvSel = 0;  bind srvIPs = [];  bind srvInfos = []   # รายการเซิร์ฟเวอร์ที่เจอ
@@ -149,11 +160,14 @@ bind เริ่ม = do {
     bind directJoin = 0.0   # ต่อตรงด้วย IP จาก net.cfg (เล่นข้ามเน็ต/ระบุเอง)
 
     # ── โหลดช่องเซฟ (saves.dat = "slot0;slot1;slot2") ───────────────────────
-    bind sav  = อ่านไฟล์("saves.dat")
-    bind savp = แยก(sav, ";")
-    bind slot0Data = list_get(savp, 0)
-    bind slot1Data = list_get(savp, 1)
-    bind slot2Data = list_get(savp, 2)
+    bind slot0Data = "";  bind slot1Data = "";  bind slot2Data = ""
+    bind sav = อ่านไฟล์("saves.dat")
+    ถ้า ความยาว(sav) > 0 {
+        bind savp = แยก(sav, ";")
+        ถ้า ความยาว(savp) > 0 { bind slot0Data = list_get(savp, 0) }
+        ถ้า ความยาว(savp) > 1 { bind slot1Data = list_get(savp, 1) }
+        ถ้า ความยาว(savp) > 2 { bind slot2Data = list_get(savp, 2) }
+    }
     # ── ความคืบหน้าสตอรี่ (progress.dat = ด่านสูงสุดที่เล่นผ่าน) → ล็อกด่านที่ยังไม่ถึง ──
     bind ด่านปลดล็อก = 1.0                                    # ทิวทอเรียล(0) + ด่าน 1 เปิดเสมอ
     bind progDat = อ่านไฟล์("progress.dat")
@@ -275,6 +289,19 @@ bind เริ่ม = do {
     bind purified = 0
     bind บทหนึ่งเริ่ม = 0.0
     bind บทหนึ่งบรรทัดก่อน = 0.0 - 1.0
+    bind postLvl1Start = 0.0
+    bind postLvl1PrevLine = -1.0
+    bind postLvl1LastChar = 0
+    bind bonusStart = 0.0
+    bind bonusCX = 10.0
+    bind bonusCY = -5.0
+    bind bonusCZ = 0.0
+    bind bonusVX = 0.0
+    bind bonusVY = 0.0
+    bind bonusVZ = 0.0
+    bind bonusGrounded = 1.0
+    bind bonusSquash = 0.0
+    bind bonusLiq = 0
     bind ด่าน = 0
     bind คะแนน = 0
     bind เก็บแล้ว = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
@@ -328,8 +355,10 @@ bind เริ่ม = do {
     bind spDown = 0.0
     bind camX = 0.0;  bind camZ = 0.0 - 26.0
     bind camYaw = 0.0;  bind camPitch = 0.35
+    bind cx = startX;  bind cy = startY;  bind cz = startZ
+    bind vx = 0.0;  bind vy = 0.0;  bind vz = 0.0
     bind ดาบ = 0.0;  bind slashT = 0.0;  bind mbDown = 0.0
-    bind guarding = 0.0;  bind lockOn = 0.0;  bind mmDown = 0.0;  bind lockX = 0.0;  bind lockZ = 0.0
+    bind guarding = 0.0
     bind guardT = 0.0;  bind guardHeld = 0.0
     bind สกิล = 0.0;  bind สกิลเริ่ม = 0.0;  bind เป้าสกิล = 1.0
     bind มอนจำนวน = 0.0;  bind มอนเป็น = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1];  bind มอนAnim = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
@@ -337,9 +366,13 @@ bind เริ่ม = do {
     bind combo = 0.0;  bind arcFade = 0.0;  bind arcType = 0.0;  bind arcYaw = 0.0
     bind เลือกไอเทม = 1.0;  bind scrollAcc = 0.0;  bind slashNote = 0.0
     bind bombT = 0.0;  bind bombCool = 0.0
+    bind swordSegScale = [0.86, 1.00, 1.08, 0.94, 1.18, 1.12]   # อาวุธแต่ละแบบ: ระยะคมดาบไม่เท่ากัน (คอลลิชันจริง)
     bind hudPerf = 1.0;  bind framePrevT = 0.0 - 1.0;  bind frameMs = 16.7;  bind frameMsSmooth = 16.7;  bind perfPanic = 0.0;  bind midiClockOn = 0.0;  bind fftCalls = 256.0;  bind particlesOn = 1.0
+    bind flatShade = 0.0   # F11: ปิดแสง → แรเงาแบนสีล้วน (ทดสอบคอขวดแสง)
+    bind perfSimMs = 0.0;  bind perfRenMs = 0.0;  bind perfLightMs = 0.0;  bind perfCpuMs = 0.0
+    bind zLockOn = 0.0;  bind zLockValid = 0.0;  bind zLockX = 0.0;  bind zLockY = 0.0;  bind zLockZ = 0.0;  bind zTick = 0.0;  bind scenePrev = 0.0 - 1.0
 
-    ตั้งเสียงชื่อ() 
+    ตั้งเสียงชื่อ()
     ถ้า musicOn == 1 { ระดับเพลง(ปริมาณBGM) }
     มิฉะนั้น { ระดับเพลง(0.0) }
 
@@ -347,6 +380,7 @@ bind เริ่ม = do {
 
     ขณะที่ หน้าต่างเปิดอยู่() && ออกเกม == 0 {
         bind t = เวลาปัจจุบัน()
+        bind perfT0 = t
         ถ้า framePrevT > 0.0 {
             bind frameMs = (t - framePrevT) * 1000.0
             ถ้า frameMs < 1.0 { bind frameMs = 1.0 }
@@ -387,6 +421,27 @@ bind เริ่ม = do {
             ถ้า midiClockOn > 0.5 { ถ้า ยาวเพลงเมนู > 1.0 { ถ้า ตำแหน่งเพลง() >= ยาวเพลงเมนู - 0.5 { ค้นหาเพลง(0);  ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) } } } }
         }
         bind lastState = สถานะ
+        # ── Scene cleanup on transition: reset transient FX/state between menus/scenes ──
+        ถ้า สถานะ != scenePrev {
+            bind impactT = 0.0;  bind clashFX = 0.0;  bind critT = 0.0
+            bind popDmgT = 0.0;  bind popHurtT = 0.0;  bind popHealT = 0.0
+            bind chatActive = 0;  bind chatMsgT = 0.0;  bind chat2T = 0.0
+            bind zLockOn = 0.0;  bind zLockValid = 0.0
+            bind trailInit = 0.0;  bind trailHead = 0.0;  bind foeTrailHead = 0.0
+            bind kThead = 0.0;  bind qThead = 0.0
+            ถ้า สถานะ == ST_ARCADE { bind compInit = 0.0;  bind kAlive = 0.0;  bind qAlive = 0.0 }
+            # ── ล้างสถานะเรนเดอร์ที่ค้างจากฉากก่อน (กันรั่วข้ามฉาก ไม่ว่าฉากเก่าจบ draw ตรงไหน) ──
+            ล้างแสง()                                #  ไฟค้างไม่ส่องทะลุเข้าเมนู/ฉากถัดไป
+            โหมดผสม(0)                               #  เลิกโหมดบวกแสง (เคอร์เซอร์หมึก/HUD มักทิ้งไว้ที่ 1)
+            set_depth_test(0)                        #  ปิด z-buffer (title/online เปิดเอง — กันค้าง)
+            ตั้งหมอก(0, 0, 0, 0.0, 0.0)              #  หมอกปิด (กันหมอกน้ำเงินไตเติล/หมอกเกมเพลย์รั่ว)
+            set_alpha(1.0)                            #  อัลฟาเต็ม (กันค่าโปร่งใสค้างจากเซอร์เฟส)
+            # ── เงียบเสียงโทนต่อเนื่องทั้งหมด (ฮัมลูก slot 0-3 / โดรน) — ฉากใหม่ตั้งใหม่เอง ──
+            bind clrT = 0
+            ขณะที่ clrT < 16 { เสียงโทน(clrT, 0,0,0, 1.0, 200.0, 0.0, 0.0, 0.0);  bind clrT = clrT + 1 }
+            หยุดเอฟเฟกต์ทั้งหมด()                     #  ตัดหางเสียงเอฟเฟกต์ one-shot ที่ค้าง (ฟัน/มอน/ระเบิด)
+        }
+        bind scenePrev = สถานะ
         # ── เลื่อนเคอร์เซอร์ (ลูกศร/ดีแพด) → กาเมลันจูนตามโน้ต Main_Menu.mid ──
         ถ้า inMenu > 0.5 {
             bind navHit = 0.0
@@ -474,6 +529,12 @@ bind เริ่ม = do {
         }
         ถ้า กดปุ่ม("h") { bind debugHit = 1.0 - debugHit }   # H: สลับดีบักฮิตบ็อกซ์
         ถ้า กดปุ่ม("f10") { bind hudPerf = 1.0 - hudPerf }   # F10: สลับ HUD perf
+        ถ้า กดปุ่ม("f11") {                                   # F11: ปิดแสง → แรเงาแบนสีล้วน (วัดคอขวดแสง)
+            bind flatShade = 1.0 - flatShade
+            set_flat_shade(flatShade)
+            ถ้า flatShade > 0.5 { พิมพ์เหลือง("  ▤ flat shading: ON (ปิดแสง — perf test)") }
+            มิฉะนั้น { พิมพ์ฟ้า("  ▤ flat shading: OFF (แสงปกติ)") }
+        }
         ถ้า กดปุ่ม("f9") {
             bind midiClockOn = 1.0 - midiClockOn
             ถ้า midiClockOn > 0.5 { พิมพ์ฟ้า("  ♫ midi clock: ON") }
@@ -483,6 +544,39 @@ bind เริ่ม = do {
             bind particlesOn = 1.0 - particlesOn
             ถ้า particlesOn > 0.5 { พิมพ์ฟ้า("  ✨ particles: ON") }
             มิฉะนั้น { พิมพ์เหลือง("  ✨ particles: OFF (test)") }
+        }
+        bind dumpGraph = 0.0
+        ถ้า กดปุ่ม("f7") { bind dumpGraph = 1.0 }
+        ถ้า กดปุ่ม("g") { bind dumpGraph = 1.0 }
+        ถ้า dumpGraph > 0.5 {
+            bind sg = "scene graph snapshot\n"
+            bind sg = sg + "state=" + to_str(สถานะ) + " mode=" + to_str(gameMode) + " level=" + to_str(ด่าน) + " score=" + to_str(คะแนน) + "\n"
+            bind sg = sg + "camera=" + to_str(camX) + "," + to_str(cy - 9.0 - camPitch * 22.0) + "," + to_str(camZ) + " yaw=" + to_str(camYaw) + " pitch=" + to_str(camPitch) + "\n"
+            bind sg = sg + "player=" + to_str(cx) + "," + to_str(cy) + "," + to_str(cz) + " vel=" + to_str(vx) + "," + to_str(vy) + "," + to_str(vz) + "\n"
+            ถ้า อาร์เคดโหมด > 0.5 {
+                bind sg = sg + "companions=disabled(arcade)\n"
+            }
+            มิฉะนั้น {
+                bind sg = sg + "companion_king=" + to_str(kx) + "," + to_str(ky) + "," + to_str(kz) + " hp=" + to_str(kHP) + " alive=" + to_str(kAlive) + "\n"
+                bind sg = sg + "companion_queen=" + to_str(qx) + "," + to_str(qy) + "," + to_str(qz) + " hp=" + to_str(qHP) + " alive=" + to_str(qAlive) + "\n"
+            }
+            bind sg = sg + "boss=" + to_str(BOSS_Y) + " active=" + to_str(บอสโหมด) + " arcade=" + to_str(อาร์เคดโหมด) + "\n"
+            bind sg = sg + "monsters:\n"
+            bind sgi = 0
+            bind sgc = 0
+            ขณะที่ sgi < มอนจำนวน {
+                ถ้า list_get(มอนเป็น, sgi) > 0 {
+                    bind sgc = sgc + 1
+                    ถ้า sgc <= 24 {
+                        bind sg = sg + "  m" + to_str(sgi) + "=" + to_str(list_get(มอนX, sgi)) + "," + to_str(list_get(มอนZ, sgi)) + " hp=" + to_str(list_get(มอนHP, sgi)) + "," + to_str(list_get(มอนHPmaxArr, sgi)) + "\n"
+                    }
+                }
+                bind sgi = sgi + 1
+            }
+            เขียนไฟล์("scene_graph.txt", sg)
+            เขียนไฟล์("game/scene_graph.txt", sg)
+            เขียนไฟล์("recordings/scene_graph.txt", sg)
+            พิมพ์ฟ้า("  🗺 scene graph dumped (scene_graph.txt, game/scene_graph.txt, recordings/scene_graph.txt)")
         }
         ถ้า กดปุ่ม("l") {
             bind แสงต่ำ = 1.0 - แสงต่ำ
@@ -550,45 +644,38 @@ bind เริ่ม = do {
 
         # ── TITLE ─────────────────────────────────────────────────────────────
         ถ้า สถานะ == ST_TITLE {
-            bind ระยะ = 16.0
-            bind cpx  = ไซน์(กรอบ * 0.0025) * ระยะ
-            bind cpz  = 0.0 - โคไซน์(กรอบ * 0.0025) * ระยะ
-            ตั้งกล้องมอง(cpx, 9.0, cpz, 0.0, 0.0, 0.0)
-            ตั้งระยะห่าง(2.8)
-            ถ้า midiClockOn > 0.5 {
-                ถ้า ความยาวเพลงหลัก > 1.0 {
-                    ถ้า ตำแหน่งเพลง() >= ความยาวเพลงหลัก - 0.5 {
-                        ค้นหาเพลง(0)
-                        ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) }
-                        bind ดัชนีโน้ต = 0
-                    }
-                }
+            # New MIDI-driven wave letter title screen
+            bind ดัชนีโน้ต = runMIDITitle(
+                t,
+                กรอบ,
+                midiClockOn,
+                musicOn,
+                ดัชนีโน้ต,
+                โน้ตเวลา,
+                โน้ตจำนวน,
+                ตำแหน่งเพลง(),
+                ความยาวเพลงหลัก,
+                เพลงหลัก,
+                ปริมาณBGM,
+                ภาษา
+            )
+
+            # Input handling
+            ถ้า กดปุ่ม("space") { พรีโหลด(0.4);  หยุดเพลง();  bind สถานะ = ST_MENU;  bind sel = 0;  bind menuIdleT = 0.0;  ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) } }
+            ถ้า นำ("enter", gNavA) { พรีโหลด(0.4);  หยุดเพลง();  bind สถานะ = ST_MENU;  bind sel = 0;  bind menuIdleT = 0.0;  ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) } }
+
+            # F12 bonus level trigger
+            ถ้า กดปุ่ม("f12") {
+                หยุดเพลง()
+                bind สถานะ = ST_BONUS
+                bind bonusStart = เวลาปัจจุบัน()
+                bind bonusCX = 10.0;  bind bonusCY = -5.0;  bind bonusCZ = 0.0
+                bind bonusVX = 0.0;  bind bonusVY = 0.0;  bind bonusVZ = 0.0
+                bind bonusGrounded = 1.0;  bind bonusSquash = 0.0
+                bind bonusLiq = liquid_new(16.0, 16.0)
+                liquid_rainbow(bonusLiq, 1.0)
+                พิมพ์เหลือง("  ★ entering bonus rollercoaster!")
             }
-            # ── เบิร์สต์ลูกบาศก์ 6 ทิศ ตรงจังหวะ MIDI ของ Soul Symphony ──
-            ถ้า midiClockOn > 0.5 {
-                bind tpos = ตำแหน่งเพลง()
-                ถ้า tpos < 0.05 { bind ดัชนีโน้ต = 0 }
-                bind สแกน = 1
-                ขณะที่ สแกน == 1 {
-                    ถ้า ดัชนีโน้ต >= โน้ตจำนวน { bind สแกน = 0 }
-                    มิฉะนั้น {
-                        ถ้า list_get(โน้ตเวลา, ดัชนีโน้ต) <= tpos { bind เบิร์สต์ = 1.0;  bind ดัชนีโน้ต = ดัชนีโน้ต + 1 }
-                        มิฉะนั้น { bind สแกน = 0 }
-                    }
-                }
-            }
-            ถ้า เบิร์สต์ > 0.0 { bind เบิร์สต์ = เบิร์สต์ - 0.05 }
-            วาดฉากชื่อเรื่อง(กรอบ, เบิร์สต์)
-            # ── ชื่อเรื่องใหญ่ "Soul Symphony 2" บนเลเยอร์ UI (ภาษาที่เลือก) — กล้องตรงหน้า = นิ่งบนจอ ──
-            ตั้งกล้องมอง(0.0, 0.0, 0.0-22.0, 0.0, 0.0, 0.0);  ตั้งระยะห่าง(2.8)
-            โหมดผสม(1)
-            bind tth = กรอบ * 0.03
-            สีดินสอ(floor((ไซน์(tth)*0.5+0.5)*110+140), floor((ไซน์(tth+2.094)*0.5+0.5)*110+140), floor((ไซน์(tth+4.189)*0.5+0.5)*110+140))
-            วาดSS2ไดนามิก(ภาษา, 0.0, 0.0-8.5, 18.0, t)
-            flush_3d();  โหมดผสม(0)
-            แสดงผล()
-            ถ้า กดปุ่ม("space") { พรีโหลด(0.4);  bind สถานะ = ST_MENU;  bind sel = 0 }
-            ถ้า นำ("enter", gNavA) { พรีโหลด(0.4);  bind สถานะ = ST_MENU;  bind sel = 0 }
         }
 
         # ── MENU ──────────────────────────────────────────────────────────────
@@ -616,15 +703,27 @@ bind เริ่ม = do {
                 จอยสั่น(0.0, 0.25, 45)   # จอย: เลือกเมนู
                 ถ้า sel == 0 { bind สถานะ = ST_LOAD;  bind sel = 0 }
                 ถ้า sel == 1 { bind ด่าน = 0;  bind สกิลเริ่ม = 0.0;  bind สถานะ = ST_CINE;  bind cineStart = เวลาปัจจุบัน();  bind prevLine = 0.0 - 1.0;  bind flashAmt = 0.0;  bind purified = 0;  ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) } }
-                ถ้า sel == 2 { bind สถานะ = ST_ARCADE;  bind sel = 0;  text_clear() }
+                ถ้า sel == 2 { bind สถานะ = ST_ARCADE;  bind sel = 0 }
                 ถ้า sel == 3 { bind สถานะ = ST_LEVELSLCT;  bind selTarget = ด่านปลดล็อก - 1.0;  ถ้า selTarget < 0.0 { bind selTarget = 0.0 };  ถ้า selTarget > 11.0 { bind selTarget = 11.0 } }   # เปิดมาที่ด่านปัจจุบัน
                 ถ้า sel == 4 { bind สถานะ = ST_ONLINE;  bind sel = 0 }   # โลกที่งอกตามเวลาจริง
-                ถ้า sel == 5 { bind สถานะ = ST_MP;    bind sel = 0 }
+                ถ้า sel == 5 { bind สถานะ = ST_MP;  bind sel = 0 }
                 ถ้า sel == 6 { bind optReturn = ST_MENU;  bind สถานะ = ST_OPT;  bind sel = 0 }
                 ถ้า sel == 7 { bind langReturn = ST_MENU;  bind สถานะ = ST_LANG;  bind sel = ภาษา }
-                ถ้า sel == 8 { bind สถานะ = ST_TITLE;  bind sel = 0 }   # "exit" → กลับหน้าจอไตเติล (ปิดหน้าต่างเพื่อออกจริง)
+                ถ้า sel == 8 { bind สถานะ = ST_TITLE;  bind sel = 0;  ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) } }   # "exit" → กลับหน้าจอไตเติล
             }
-            ถ้า นำ("escape", gNavB) { bind สถานะ = ST_TITLE }
+            ถ้า นำ("escape", gNavB) { bind สถานะ = ST_TITLE;  ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) } }
+            # F12 bonus level trigger
+            ถ้า กดปุ่ม("f12") {
+                หยุดเพลง()
+                bind สถานะ = ST_BONUS
+                bind bonusStart = เวลาปัจจุบัน()
+                bind bonusCX = 10.0;  bind bonusCY = -5.0;  bind bonusCZ = 0.0
+                bind bonusVX = 0.0;  bind bonusVY = 0.0;  bind bonusVZ = 0.0
+                bind bonusGrounded = 1.0;  bind bonusSquash = 0.0
+                bind bonusLiq = liquid_new(16.0, 16.0)
+                liquid_rainbow(bonusLiq, 1.0)
+                พิมพ์เหลือง("  ★ entering bonus rollercoaster!")
+            }
         }
 
         # ── ARCADE: ปรับแต่งลูก (3 สี/สแตมป์/แบนด์/ชื่อ) → สู้กอนต์เลต ──
@@ -690,7 +789,7 @@ bind เริ่ม = do {
             แสดงผล()
 
             ถ้า นำ("enter", gNavA) { bind สถานะ = ST_STAGESEL;  bind stageSel = 0.0 }   # → เลือกสเตจ + ความยาก
-            ถ้า นำ("escape", gNavB) { bind สถานะ = ST_MENU;  bind sel = 2 }
+            ถ้า นำ("escape", gNavB) { bind สถานะ = ST_MENU;  bind sel = 2;  ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) } }
         }
 
         # ── STAGE SELECT: เลือกสเตจ (สี) + เส้นโค้งความยาก AI + พรีวิวกล้องแพน ──
@@ -737,6 +836,7 @@ bind เริ่ม = do {
                 bind gameMode = 0;  bind รีเซ็ต = 1;  bind paused = 0
                 หยุดเพลง()
                 bind สถานะ = ST_PLAY
+                ถ้า musicOn == 1 { เล่นเพลง(เพลงต่อสู้);  ระดับเพลง(ปริมาณBGM) }
             }
             ถ้า นำ("escape", gNavB) { bind สถานะ = ST_ARCADE }
         }
@@ -785,9 +885,10 @@ bind เริ่ม = do {
                     bind hsNames = list_get(hres, 0);  bind hsScores = list_get(hres, 1)
                     บันทึกไฮสกอร์(hsNames, hsScores);  bind hsInserted = 1.0
                 }
+                หยุดเพลง()
                 bind ผลพิมพ์ = 0.0;  bind สถานะ = ST_HISCORE
             }
-            ถ้า นำ("escape", gNavB) { bind อาร์เคดโหมด = 0;  bind ผลพิมพ์ = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
+            ถ้า นำ("escape", gNavB) { bind อาร์เคดโหมด = 0;  bind ผลพิมพ์ = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2;  ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) } }
         }
 
         # ── HIGH SCORES (หลัง game over + ไอเดิลเมนู) ──
@@ -800,10 +901,10 @@ bind เริ่ม = do {
             วาดไฮสกอร์(hsNames, hsScores, t)
             โหมดผสม(1);  สีดินสอ(150, 160, 200);  วาดสตริง("press enter", 0.0, 7.4, 0.0, 0.5, 1);  flush_3d();  โหมดผสม(0)
             แสดงผล()
-            ถ้า นำ("enter", gNavA)  { bind อาร์เคดโหมด = 0;  bind hsInserted = 0.0;  bind menuIdleT = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
-            ถ้า นำ("escape", gNavB) { bind อาร์เคดโหมด = 0;  bind hsInserted = 0.0;  bind menuIdleT = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
-            ถ้า นำ("up", gNavU)     { bind menuIdleT = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
-            ถ้า นำ("down", gNavD)   { bind menuIdleT = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2 }
+            ถ้า นำ("enter", gNavA)  { bind อาร์เคดโหมด = 0;  bind hsInserted = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2;  ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) } }
+            ถ้า นำ("escape", gNavB) { bind อาร์เคดโหมด = 0;  bind hsInserted = 0.0;  bind สถานะ = ST_MENU;  bind sel = 2;  ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) } }
+            ถ้า นำ("up", gNavU)     { bind สถานะ = ST_MENU;  bind sel = 2;  ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) } }
+            ถ้า นำ("down", gNavD)   { bind สถานะ = ST_MENU;  bind sel = 2;  ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) } }
         }
 
         # ── LEVEL SELECT ────────────────────────────────────────────────────────
@@ -1270,6 +1371,7 @@ bind เริ่ม = do {
                 # ปิดเสียงนกหวีดทั้ง 8 ช่อง (ไม่ให้ค้างเข้าเกม)
                 bind ms = 0
                 ขณะที่ ms < 8 { เสียงโทน(8+ms, 0,0,0, 1.0, 220.0, 0.0, 0.0, 0.0);  bind ms = ms + 1 }
+                bind อาร์เคดโหมด = 0
                 bind gameMode = 0;  bind รีเซ็ต = 1;  bind paused = 0
                 bind startX = 0.0;  bind startY = 0.0-2.0;  bind startZ = 0.0
                 หยุดเพลง()
@@ -1280,6 +1382,7 @@ bind เริ่ม = do {
         # ── CHAPTER 1 CUTSCENE: ต่อจากอินโทร → ภารกิจหาเครื่องดนตรีกล่อมโลก ──
         ถ้า สถานะ == ST_CH1 {
             bind ด่าน = 1
+            bind อาร์เคดโหมด = 0
             bind gameMode = 0;  bind รีเซ็ต = 1;  bind paused = 0
             bind startX = 128.0;  bind startY = 0.0-2.0;  bind startZ = 128.0
             bind ภารกิจข้อความ = "quest: recover the cradle reed"
@@ -1289,9 +1392,77 @@ bind เริ่ม = do {
             bind สถานะ = ST_PLAY
         }
 
+        ถ้า สถานะ == ST_POST_LVL1 {
+            # Post-Level-1 Cutscene: King and Queen discuss cosmic song
+            bind result = เล่นโพสต์เลเวล1(
+                t,
+                postLvl1Start,
+                postLvl1PrevLine,
+                musicOn,
+                ปริมาณBGM,
+                ปริมาณSFX,
+                เพลงหลัก,
+                postLvl1LastChar
+            )
+
+            bind postLvl1PrevLine = list_get(result, 0)
+            bind postLvl1LastChar = list_get(result, 1)
+            bind shouldExit = list_get(result, 2)
+
+            ถ้า shouldExit > 0.5 {
+                # Cutscene finished - continue to level 2
+                bind startX = 0.0
+                bind startY = -2.0
+                bind startZ = 180.0
+                bind รีเซ็ต = 1
+                bind สถานะ = ST_PLAY
+                พิมพ์เขียว("  ★ continuing to level 2...")
+                ถ้า musicOn == 1 { ระดับเพลง(ปริมาณBGM) }  # Restore full BGM volume
+            }
+        }
+
+        ถ้า สถานะ == ST_BONUS {
+            # Bonus Rollercoaster Level: High-speed physics benchmark
+            bind bonusResult = runBonusLevel(
+                t,
+                bonusStart,
+                bonusCX, bonusCY, bonusCZ,
+                bonusVX, bonusVY, bonusVZ,
+                R,
+                bonusGrounded,
+                charge,
+                bonusSquash,
+                musicOn,
+                ปริมาณBGM,
+                bonusLiq
+            )
+
+            # Update state from result
+            bind bonusCX = list_get(bonusResult, 0)
+            bind bonusCY = list_get(bonusResult, 1)
+            bind bonusCZ = list_get(bonusResult, 2)
+            bind bonusVX = list_get(bonusResult, 3)
+            bind bonusVY = list_get(bonusResult, 4)
+            bind bonusVZ = list_get(bonusResult, 5)
+            bind bonusGrounded = list_get(bonusResult, 6)
+            bind bonusSquash = list_get(bonusResult, 7)
+            bind shouldExit = list_get(bonusResult, 8)
+
+            ถ้า shouldExit > 0.5 {
+                # Return to menu
+                หยุดเพลง()
+                bind สถานะ = ST_MENU
+                bind sel = 0
+                bind menuIdleT = 0.0
+                ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) }
+                พิมพ์ฟ้า("  ★ exited bonus level")
+            }
+        }
+
         # ── PLAY ──────────────────────────────────────────────────────────────
         ถ้า สถานะ == ST_PLAY {
             ถ้า รีเซ็ต == 1 {
+                ถ้า บอสโหมด > 0.5 { bind อาร์เคดโหมด = 0 }
                 # พรีโหลดเฉพาะตอนเปลี่ยนเลเวลจริง (ไม่ใช่ตอนเกิดใหม่)
                 ถ้า ด่าน != เลเวลก่อน { พรีโหลด(0.5);  bind เลเวลก่อน = ด่าน }
                 bind liq = liquid_new(16.0, 16.0)
@@ -1320,7 +1491,7 @@ bind เริ่ม = do {
                 bind สกิล = สกิลเริ่ม
                 bind ดาบ = 0.0;  ถ้า สกิล >= 1.0 { bind ดาบ = 1.0 }
                 bind slashT = 0.0;  bind mbDown = 0.0
-                bind guarding = 0.0;  bind lockOn = 0.0;  bind mmDown = 0.0;  bind guardT = 0.0;  bind guardHeld = 0.0
+                bind guarding = 0.0;  bind guardT = 0.0;  bind guardHeld = 0.0
                 bind combo = 0.0;  bind arcFade = 0.0;  bind arcType = 0.0;  bind arcYaw = 0.0
                 bind เลือกไอเทม = 1.0;  bind scrollAcc = 0.0;  bind slashNote = 0.0
                 bind bombT = 0.0;  bind bombCool = 0.0
@@ -1332,6 +1503,7 @@ bind เริ่ม = do {
                 # มอนสเตอร์: เลเวล 1 (ฮับ) = 4 ตัว; proc = ตามเลเวล
                 bind มอนจำนวน = 4.0;  ถ้า ด่าน > 0.5 { bind มอนจำนวน = จำนวนมอน(ด่าน) }
                 ถ้า vsโหมด == 1 { bind มอนจำนวน = 0.0 }   # VS = PvP ล้วน ไม่มีมอน
+                ถ้า บอสโหมด > 0.5 { bind มอนจำนวน = 0.0 }   # บอส: ศัตรูคือบอส ไม่มีมอนคริสตัล (กันคำนวณ/ลอยค้าง)
                 ถ้า อาร์เคดโหมด > 0.5 {                     # อาร์เคด: สร้างศัตรูรอบนี้ (สเตตัสตามรอบ)
                     bind มอนจำนวน = 0.0
                     bind fd = สร้างศัตรู(รอบ)
@@ -1440,12 +1612,25 @@ bind เริ่ม = do {
                 bind โหมดต่อสู้ = 0.0;  bind ฮีทต่อสู้ = 0.0;  bind เฟดต่อสู้ = 0.0
                 ถ้า musicOn == 1 {
                     หยุดเพลง()
-                    ถ้า songIdx == เพลงโหลดแล้ว { เล่นเพลง(เพลงเล่น) }
+                    # หาแคช: เคย decode songIdx นี้แล้วใช้แฮนเดิลเดิม (ไม่อ่าน WAV ซ้ำ → ไม่มี hitch)
+                    bind ci = 0;  bind hitแคช = 0.0 - 1.0
+                    ขณะที่ ci < ความยาว(เพลงแคชId) {
+                        ถ้า list_get(เพลงแคชId, ci) == songIdx { bind hitแคช = ci }
+                        bind ci = ci + 1
+                    }
+                    ถ้า hitแคช >= 0.0 {
+                        bind เพลงเล่น = list_get(เพลงแคชH, hitแคช)
+                        bind ยาวเพลงเล่น = list_get(เพลงแคชLen, hitแคช)
+                    }
                     มิฉะนั้น {
                         bind เพลงเล่น = โหลดเพลง(wavPath)
-                        bind เพลงโหลดแล้ว = songIdx
-                        เล่นเพลง(เพลงเล่น)
+                        bind ยาวเพลงเล่น = ความยาวเพลง(เพลงเล่น)
+                        bind เพลงแคชId  = list_push(เพลงแคชId, songIdx)
+                        bind เพลงแคชH   = list_push(เพลงแคชH, เพลงเล่น)
+                        bind เพลงแคชLen = list_push(เพลงแคชLen, ยาวเพลงเล่น)
                     }
+                    bind เพลงโหลดแล้ว = songIdx
+                    เล่นเพลง(เพลงเล่น)
                 }
             }
 
@@ -1594,6 +1779,7 @@ bind เริ่ม = do {
                     ถ้า เลือกไอเทม == 1.0 { ถ้า สกิล >= 1.0 { ถ้า slashCD <= 0.0 {
                         bind sCmbMax = 2.5
                         bind sstA = list_get(ดาบสเตตัส, floor(swordType));  bind slashCD = list_get(sstA,0);  bind sCmbMax = list_get(sstA,3) - 0.5   # ดาบเท่ 6 แบบ — ทั้งสตอรี่+อาร์เคด
+                        ถ้า อาร์เคดโหมด > 0.5 { bind slashCD = slashCD * 0.5 }   # อาร์เคด: คูลดาวน์ฟันครึ่งเดียว → ฟันถี่ขึ้น ~2 เท่า
                         bind slashT = 0.16;  bind slashHit = 0.0
                         bind slashDir = slashDir + 1.0;  ถ้า slashDir > 7.5 { bind slashDir = 0.0 }   # วนทิศฟัน
                         bind combo = combo + 1.0;  ถ้า combo > sCmbMax { bind combo = 0.0 }
@@ -1723,46 +1909,57 @@ bind เริ่ม = do {
                 ถ้า sc < 0.0-0.5 { bind เลือกไอเทม = เลือกไอเทม - 1.0 }
                 ถ้า เลือกไอเทม > สกิล { bind เลือกไอเทม = 1.0 }
                 ถ้า เลือกไอเทม < 1.0 { bind เลือกไอเทม = สกิล }
-                # ── Shift = boost + Z-target: เร่งความเร็วลูกและล็อกกล้องตามทิศกลิ้ง ──
+                # ── Shift = boost: เร่งความเร็วลูก ──
                 bind shiftHeld = 0.0
                 ถ้า กดค้าง("lshift") { bind shiftHeld = 1.0 }
                 ถ้า กดค้าง("rshift") { bind shiftHeld = 1.0 }
-                ถ้า shiftHeld > 0.5 {
-                    bind hh2 = รากที่สอง(vx*vx + vz*vz)
-                    ถ้า hh2 > 0.06 {
-                        bind ty = atan2(vx, vz)
-                        bind dyaw = ty - camYaw
-                        ขณะที่ dyaw > 3.14159 { bind dyaw = dyaw - 6.28318 }
-                        ขณะที่ dyaw < 0.0-3.14159 { bind dyaw = dyaw + 6.28318 }
-                        bind camYaw = camYaw + dyaw * 0.15
-                    }
+                # ── Z-target (simple): กด Z สลับล็อกเป้า + วงแหวนเหนือเป้า ──
+                ถ้า กดปุ่ม("z") {
+                    bind zLockOn = 1.0 - zLockOn;  bind zLockValid = 0.0
+                    ถ้า zLockOn > 0.5 { พิมพ์ฟ้า("  ◎ z-target: ON") }
+                    มิฉะนั้น { พิมพ์เหลือง("  ◎ z-target: OFF") }
                 }
-                # ── ล็อกออน (Z-target): คลิกกลางสลับเปิด/ปิด; หันกล้องเข้าหาเป้าใกล้สุด ──
-                bind mmNow = 0.0
-                ถ้า เมาส์กลาง() { bind mmNow = 1.0 }
-                ถ้า mmNow > 0.5 { ถ้า mmDown < 0.5 { bind lockOn = 1.0 - lockOn } }
-                bind mmDown = mmNow
-                ถ้า lockOn > 0.5 {
-                    bind ltgt = 0.0;  bind lbest = 1000000.0
-                    bind lk = 0
-                    ขณะที่ lk < มอนจำนวน {
-                        ถ้า list_get(มอนเป็น, lk) > 0 {
-                            bind lmx = list_get(มอนX, lk);  bind lmz = list_get(มอนZ, lk)
-                            bind ld2 = (cx-lmx)*(cx-lmx) + (cz-lmz)*(cz-lmz)
-                            ถ้า ld2 < lbest { bind lbest = ld2;  bind lockX = lmx;  bind lockZ = lmz;  bind ltgt = 1.0 }
+                ถ้า zLockOn > 0.5 {
+                    bind zTick = 1.0 - zTick
+                    ถ้า zTick > 0.5 {
+                        bind tHit = 0.0;  bind tBest = 999999.0
+                        bind tx = 0.0;  bind tz = 0.0;  bind ty = GROUND
+                        ถ้า บอสโหมด > 0.5 {
+                            bind tx = 0.0;  bind tz = 0.0;  bind ty = BOSS_Y;  bind tHit = 1.0
+                            bind tBest = cx*cx + cz*cz
                         }
-                        bind lk = lk + 1
+                        มิฉะนั้น {
+                            ถ้า อาร์เคดโหมด > 0.5 {
+                                ถ้า foeHP > 0.0 {
+                                    bind tx = foeX;  bind tz = foeZ;  bind ty = foeY
+                                    bind tBest = (cx-foeX)*(cx-foeX) + (cz-foeZ)*(cz-foeZ);  bind tHit = 1.0
+                                }
+                            }
+                            มิฉะนั้น {
+                                bind lk = 0
+                                ขณะที่ lk < มอนจำนวน {
+                                    ถ้า list_get(มอนเป็น, lk) > 0 {
+                                        bind lmx = list_get(มอนX, lk);  bind lmz = list_get(มอนZ, lk)
+                                        bind ld2 = (cx-lmx)*(cx-lmx) + (cz-lmz)*(cz-lmz)
+                                        ถ้า ld2 < tBest { bind tBest = ld2;  bind tx = lmx;  bind tz = lmz;  bind tHit = 1.0 }
+                                    }
+                                    bind lk = lk + 1
+                                }
+                                ถ้า tHit > 0.5 { ถ้า ด่าน > 0.5 { bind ty = latticeHeight(tx, tz, ด่าน, ฉากทางออก) } }
+                            }
+                        }
+                        ถ้า tHit > 0.5 { ถ้า tBest < 22500.0 {
+                            bind zLockX = tx;  bind zLockY = ty;  bind zLockZ = tz;  bind zLockValid = 1.0
+                        } มิฉะนั้น { bind zLockValid = 0.0;  bind zLockOn = 0.0 } }
+                        มิฉะนั้น { bind zLockValid = 0.0;  bind zLockOn = 0.0 }
                     }
-                    ถ้า อาร์เคดโหมด > 0.5 { bind lockX = foeX;  bind lockZ = foeZ;  bind ltgt = 1.0;  bind lbest = (cx-foeX)*(cx-foeX) + (cz-foeZ)*(cz-foeZ) }
-                    ถ้า lbest > 14400.0 { bind ltgt = 0.0 }    # เกิน 120 หน่วย = หลุดล็อก
-                    ถ้า ltgt > 0.5 {
-                        bind tyl = atan2(lockX - cx, lockZ - cz)
+                    ถ้า zLockValid > 0.5 {
+                        bind tyl = atan2(zLockX - cx, zLockZ - cz)
                         bind dyl = tyl - camYaw
                         ขณะที่ dyl > 3.14159 { bind dyl = dyl - 6.28318 }
                         ขณะที่ dyl < 0.0-3.14159 { bind dyl = dyl + 6.28318 }
-                        bind camYaw = camYaw + dyl * 0.25
+                        bind camYaw = camYaw + dyl * 0.22
                     }
-                    มิฉะนั้น { bind lockOn = 0.0 }
                 }
                 bind fx = ไซน์(camYaw);  bind fz = โคไซน์(camYaw)
                 bind rgx = fz;  bind rgz = 0.0 - fx
@@ -1785,6 +1982,7 @@ bind เริ่ม = do {
                     bind vx = vx + (mvx/ml) * moveAcc
                     bind vz = vz + (mvz/ml) * moveAcc
                 }
+                ถ้า อาร์เคดโหมด > 0.5 { bind compInit = 0.0;  bind kAlive = 0.0;  bind qAlive = 0.0 }
 
                 # ── เบรก (Alt ซ้าย/ขวา) — หน่วงความเร็วแนวนอนนุ่ม ๆ ──
                 ถ้า กดค้าง("lalt") { bind vx = vx * 0.86;  bind vz = vz * 0.86 }
@@ -1965,6 +2163,23 @@ bind เริ่ม = do {
                 }
             } }
 
+            # ── ดาบชนแบบคอลลิชันจริง: สร้างเส้นคมดาบ (segment) ต่อเฟรม ──
+            bind swordSegOn = 0.0
+            bind sx0 = 0.0;  bind sz0 = 0.0;  bind sx1 = 0.0;  bind sz1 = 0.0
+            bind sdx = 0.0;  bind sdz = 0.0;  bind sl2 = 1.0;  bind segRad = 1.9
+            ถ้า slashT > 0.0 {
+                bind sstSeg = list_get(ดาบสเตตัส, floor(swordType))
+                bind segMul = list_get(swordSegScale, floor(swordType))
+                bind segLen = list_get(sstSeg,2) * 0.55 * segMul;  ถ้า segLen > 12.0 { bind segLen = 12.0 }
+                bind segRad = 1.55 + segMul * 0.45
+                bind segReach = R*0.85 + segLen
+                bind sx0 = cx + ไซน์(arcYaw) * (R*0.85);  bind sz0 = cz + โคไซน์(arcYaw) * (R*0.85)
+                bind sx1 = cx + ไซน์(arcYaw) * segReach;   bind sz1 = cz + โคไซน์(arcYaw) * segReach
+                bind sdx = sx1 - sx0;  bind sdz = sz1 - sz0;  bind sl2 = sdx*sdx + sdz*sdz
+                ถ้า sl2 < 0.0001 { bind sl2 = 0.0001 }
+                bind swordSegOn = 1.0
+            }
+
             # ── ต่อสู้มอนสเตอร์: ฟันโดน = ตาย+แต้ม; แตะตัว = กระเด็น ──
             ถ้า doUpdate == 1 { ถ้า มอนจำนวน > 0.5 {
                 bind mj = 0
@@ -1972,7 +2187,16 @@ bind เริ่ม = do {
                     ถ้า list_get(มอนเป็น, mj) > 0 {
                         bind mmx = list_get(มอนX, mj);  bind mmz = list_get(มอนZ, mj)
                         bind md = รากที่สอง((cx-mmx)*(cx-mmx) + (cz-mmz)*(cz-mmz))
-                        ถ้า slashT > 0.0 { ถ้า md < 16.0 {
+                        bind swordHitMon = 0.0
+                        ถ้า swordSegOn > 0.5 {
+                            bind su = ((mmx-sx0)*sdx + (mmz-sz0)*sdz) / sl2
+                            ถ้า su < 0.0 { bind su = 0.0 }
+                            ถ้า su > 1.0 { bind su = 1.0 }
+                            bind sqx = sx0 + sdx*su;  bind sqz = sz0 + sdz*su
+                            bind srr = R + segRad
+                            ถ้า (mmx-sqx)*(mmx-sqx) + (mmz-sqz)*(mmz-sqz) < srr*srr { bind swordHitMon = 1.0 }
+                        }
+                        ถ้า swordHitMon > 0.5 {
                             bind dmg = 2.0 + list_get(ผู้เล่นสเตตัส, 7) * 0.4   # PWR
                             bind มอนHP = ตั้งรายการ(มอนHP, mj, list_get(มอนHP, mj) - dmg)  bind ฮีทต่อสู้ = 1.0
                             ถ้า list_get(มอนHP, mj) <= 0.0 {
@@ -1989,7 +2213,7 @@ bind เริ่ม = do {
                                 เสียงเอฟเฟกต์(0,0,0, 1.0, 240.0, 0.5, 0.3, "saw")
                                 พิมพ์แดง("  ☠ มอนตาย! ดรอปบัฟ +" + to_str(list_get(st, sti)))
                             }
-                        } }
+                        }
                         มิฉะนั้น { ถ้า md < R + 6.0 { ถ้า md > 0.1 {   # touch-to-beat: แตะ = ป๊อปคริสตัล + ดรอปบัฟ + กัดเล็ก ๆ
                             bind มอนเป็น = ตั้งรายการ(มอนเป็น, mj, 0);  bind คะแนน = คะแนน + 5
                             bind st2 = สเตตัสมอน(mj, ด่าน);  bind sti2 = mj - ปัดลง(mj/8.0)*8.0
@@ -2072,7 +2296,20 @@ bind เริ่ม = do {
                     เสียงเอฟเฟกต์(foeX, foeY, foeZ, 1.0, ffreq*3.2, 0.2*ปริมาณSFX, 0.11, "noise")
                 } } } }
                 # ── ฟันโดนผู้เล่น: ดาเมจ + เสียง guard/hit ที่จุดปะทะกลางดาบ ──
-                ถ้า foeSlashT > 0.16 { ถ้า fdist < R + 9.0 { ถ้า บาดเจ็บ <= 0.0 {
+                bind foeSwordHit = 0.0
+                ถ้า foeSlashT > 0.16 {
+                    bind fs0x = foeX + fnx*(R*0.8);  bind fs0z = foeZ + fnz*(R*0.8)
+                    bind fs1x = foeX + fnx*(R*0.8 + 8.4);  bind fs1z = foeZ + fnz*(R*0.8 + 8.4)
+                    bind fdxs = fs1x - fs0x;  bind fdzs = fs1z - fs0z;  bind fl2s = fdxs*fdxs + fdzs*fdzs
+                    ถ้า fl2s < 0.0001 { bind fl2s = 0.0001 }
+                    bind fu = ((cx-fs0x)*fdxs + (cz-fs0z)*fdzs) / fl2s
+                    ถ้า fu < 0.0 { bind fu = 0.0 }
+                    ถ้า fu > 1.0 { bind fu = 1.0 }
+                    bind fqx = fs0x + fdxs*fu;  bind fqz = fs0z + fdzs*fu
+                    bind frr = R + 2.2
+                    ถ้า (cx-fqx)*(cx-fqx) + (cz-fqz)*(cz-fqz) < frr*frr { bind foeSwordHit = 1.0 }
+                }
+                ถ้า foeSwordHit > 0.5 { ถ้า บาดเจ็บ <= 0.0 {
                     bind hmx = (cx+foeX)*0.5;  bind hmy = (cy+foeY)*0.5;  bind hmz = (cz+foeZ)*0.5
                     bind dmgPl = foeAtk * (1.0 - guarding*0.85)
                     bind ชีวิต = ชีวิต - dmgPl
@@ -2083,8 +2320,15 @@ bind เริ่ม = do {
                     ถ้า สุ่ม() < forceF*0.5 { bind kbF = forceF*(0.5 + forceF*0.22);  bind vx = vx + fnx*kbF;  bind vz = vz + fnz*kbF }
                     ถ้า guarding > 0.5 { เสียงเอฟเฟกต์(hmx, hmy, hmz, 1.0, 205.0, 0.6*ปริมาณSFX, 0.16, "square");  เสียงเอฟเฟกต์(hmx, hmy, hmz, 1.0, 90.0, 0.3*ปริมาณSFX, 0.13, "noise") }
                     มิฉะนั้น { เสียงเอฟเฟกต์(hmx, hmy, hmz, 1.0, 115.0, 0.62*ปริมาณSFX, 0.22, "saw");  เสียงเอฟเฟกต์(hmx, hmy, hmz, 1.0, 250.0, 0.34*ปริมาณSFX, 0.14, "noise");  bind callT = 1.6;  bind callMsg = ดึงคำตี() }
-                } } }
-                ถ้า slashT > 0.0 { ถ้า slashHit < 0.5 { bind sstF = list_get(ดาบสเตตัส, swordType);  bind slen = list_get(sstF,2)*0.4;  ถ้า slen > 7.0 { bind slen = 7.0 };  bind ahx = cx + ไซน์(arcYaw)*slen;  bind ahz = cz + โคไซน์(arcYaw)*slen;  bind hbr = slen + R;  ถ้า (foeX-ahx)*(foeX-ahx) + (foeZ-ahz)*(foeZ-ahz) < hbr*hbr { ถ้า R > 0.0 {
+                } }
+                ถ้า swordSegOn > 0.5 { ถ้า slashHit < 0.5 {
+                    bind sstF = list_get(ดาบสเตตัส, swordType)
+                    bind su2 = ((foeX-sx0)*sdx + (foeZ-sz0)*sdz) / sl2
+                    ถ้า su2 < 0.0 { bind su2 = 0.0 }
+                    ถ้า su2 > 1.0 { bind su2 = 1.0 }
+                    bind sqx2 = sx0 + sdx*su2;  bind sqz2 = sz0 + sdz*su2
+                    bind hbr2 = R + segRad + 0.2
+                    ถ้า (foeX-sqx2)*(foeX-sqx2) + (foeZ-sqz2)*(foeZ-sqz2) < hbr2*hbr2 { ถ้า R > 0.0 {
                     bind slashHit = 1.0
                     bind dmgFoe = (1.6 + list_get(ผู้เล่นสเตตัส,7)*0.25) * list_get(sstF,1) * (1.0 - foeRes) - foeDef*0.15
                     ถ้า dmgFoe < 0.3 { bind dmgFoe = 0.3 }
@@ -2233,6 +2477,7 @@ bind เริ่ม = do {
                 ถ้า uncol == 0 {
                     # เก็บอักษรครบ → เข้าสู่บอส (ในสนามอารีนา) ก่อนเลื่อนด่าน
                     bind สกิลเริ่ม = สกิล
+                    bind อาร์เคดโหมด = 0
                     bind บอสโหมด = 1
                     bind บอสสเฟียร์ = [3,3,3,3,3,3]
                     bind บอสเลือด = 6.0
@@ -2290,10 +2535,29 @@ bind เริ่ม = do {
                         }
                         มิฉะนั้น {
                             bind ด่าน = ด่าน + 1
-                            bind startX = 0.0;  bind startY = 0.0-2.0;  bind startZ = 180.0
-                            bind รีเซ็ต = 1
-                            ถ้า ด่าน > ด่านปลดล็อก { bind ด่านปลดล็อก = ด่าน;  เขียนไฟล์("progress.dat", to_str(ด่านปลดล็อก));  พิมพ์ฟ้า("  💾 ออโต้เซฟ: ปลดล็อกด่าน " + to_str(ด่าน)) }   # ออโต้เซฟความคืบหน้า
-                            พิมพ์เขียว("  ★ ปราบบอส! ไปเลเวล " + to_str(ด่าน + 1.0))
+
+                            # Check if we just completed level 1 -> trigger cutscene
+                            ถ้า ด่าน == 2.0 {
+                                bind สถานะ = ST_POST_LVL1
+                                bind postLvl1Start = เวลาปัจจุบัน()
+                                bind postLvl1PrevLine = -1.0
+                                bind postLvl1LastChar = 0
+                                พิมพ์ม่วง("  ✦ level 1 complete - the royal audience awaits")
+                                # Keep BGM playing quietly for cutscene
+                                ถ้า musicOn == 1 { ระดับเพลง(ปริมาณBGM * 0.35) }
+                            }
+                            มิฉะนั้น {
+                                # Normal level progression
+                                bind startX = 0.0;  bind startY = 0.0-2.0;  bind startZ = 180.0
+                                bind รีเซ็ต = 1
+                                พิมพ์เขียว("  ★ ปราบบอส! ไปเลเวล " + to_str(ด่าน + 1.0))
+                            }
+
+                            ถ้า ด่าน > ด่านปลดล็อก {
+                                bind ด่านปลดล็อก = ด่าน
+                                เขียนไฟล์("progress.dat", to_str(ด่านปลดล็อก))
+                                พิมพ์ฟ้า("  💾 ออโต้เซฟ: ปลดล็อกด่าน " + to_str(ด่าน))
+                            }
                         }
                     }
                 }
@@ -2373,6 +2637,8 @@ bind เริ่ม = do {
                 เสียงโทน(3,0,0,0,1.0,200.0,0.0,0.0,0.0)
             }
 
+            bind perfT1 = เวลาปัจจุบัน();  bind perfSimMs = (perfT1 - perfT0) * 1000.0
+
             # ── กล้องโคจร: yaw (เมาส์/AD) + pitch (เมาส์ เงย/ก้ม) ──
             bind fwx = ไซน์(camYaw);  bind fwz = โคไซน์(camYaw)
             bind cdist = 26.0 - camPitch * 6.0
@@ -2410,6 +2676,7 @@ bind เริ่ม = do {
             # โหมดแสงต่ำ: อัปเดตไฟครึ่งเรต + ใช้ไฟหลักดวงเดียว (ถูกกว่า dynamic lights ทั้งฉากมาก)
             bind lightDo = 1.0
             ถ้า lowL > 0.5 { bind tickแสงไฟ = 1.0 - tickแสงไฟ;  bind lightDo = tickแสงไฟ }
+            bind perfTL0 = เวลาปัจจุบัน()
             ถ้า lightDo > 0.5 {
                 ถ้า lowL > 0.5 {
                     ล้างแสง()
@@ -2423,6 +2690,7 @@ bind เริ่ม = do {
                     เพิ่มแสง(cx, cy, cz, 0.72, 0.86, 1.0, 2.0, 40.0)
                 }
             }
+            bind perfLightMs = (เวลาปัจจุบัน() - perfTL0) * 1000.0
             โหมดผสม(1)
 
             # ── บอสโหมด: สนามอารีนา + บอส (jack) ──
@@ -2544,7 +2812,7 @@ bind เริ่ม = do {
             } }
 
             # ── มอนสเตอร์: วาดตัวที่ยังไม่ตาย (3D เติม + เลือด/เลเวล) ──
-            ถ้า บอสโหมด < 0.5 { ถ้า มอนจำนวน > 0.5 {
+            ถ้า บอสโหมด < 0.5 { ถ้า อาร์เคดโหมด < 0.5 { ถ้า มอนจำนวน > 0.5 {   # มอนคริสตัล = สตอรี่/ฮับเท่านั้น (ไม่ใช่อารีนาอาร์เคด/บอส)
                 bind mlvl = floor(ด่าน) + 1
                 ถ้า มอนเสียงCD > 0.0 { bind มอนเสียงCD = มอนเสียงCD - 0.016 }   # ลดคูลดาวน์เสียงมอน 1×/เฟรม
                 bind mi = 0
@@ -2569,7 +2837,7 @@ bind เริ่ม = do {
                     bind mi = mi + 1
                 }
                 flush_3d()
-            } }
+            } } }
             # ── ดรอปบัฟ: ไอคอนหมุนลอย ──
             ถ้า บอสโหมด < 0.5 {
                 bind dq = 0
@@ -2796,13 +3064,27 @@ bind เริ่ม = do {
                 }
                 flush_3d();  โหมดผสม(0)
             }
-            # ── ล็อกออน: เรติเคิลหมุนเหนือเป้า ──
-            ถ้า lockOn > 0.5 {
-                โหมดผสม(1);  สีดินสอ(255, 90, 90)
-                ลายจักร(lockX, cy - 4.0, lockZ, 1,0,0, 0,0,1, 3.0, 12, t*4.0, 1.5)
+            # ── เคอร์เซอร์ล็อกเป้า (Z-target): เรติเคิล 4 ลิ่มหมุน + วงแหวนพัลส์ (ฟ้า/ทอง) ──
+            ถ้า zLockOn > 0.5 { ถ้า zLockValid > 0.5 {
+                โหมดผสม(1)
+                bind zr  = 3.0 + ไซน์(t*6.0)*0.35              # รัศมีพัลส์
+                bind za  = t * 2.2                             # มุมหมุนเรติเคิล
+                bind zy  = zLockY - 3.6
+                สีดินสอ(110, 230, 255);  วงแหวนเติม(zLockX, zy, zLockZ, zr+0.5, zr, 24, 110, 230, 255)   # วงแหวนบางจริง สีฟ้าเรือง
+                สีดินสอ(255, 235, 120)                          # 4 ลิ่มมุมชี้เข้าหาเป้า (หมุน)
+                bind zk = 0
+                ขณะที่ zk < 4 {
+                    bind aa = za + zk * 1.5708
+                    bind ca = โคไซน์(aa);  bind sa = ไซน์(aa)
+                    bind tipR = zr + 1.9;  bind baseR = zr + 0.55;  bind half = 0.62
+                    bind bx0 = zLockX + ca*tipR - sa*half;  bind bz0 = zLockZ + sa*tipR + ca*half
+                    bind bx1 = zLockX + ca*tipR + sa*half;  bind bz1 = zLockZ + sa*tipR - ca*half
+                    bind tx2 = zLockX + ca*baseR;            bind tz2 = zLockZ + sa*baseR
+                    วาดสามเหลี่ยม3มิติ(bx0, zy, bz0,  bx1, zy, bz1,  tx2, zy, tz2)
+                    bind zk = zk + 1
+                }
                 flush_3d();  โหมดผสม(0)
-            }
-
+            } }
             # ── ฟองแชตเหนือหัวผู้เล่น (โลก) ──
             ถ้า chatMsgT > 0.0 {
                 โหมดผสม(1);  สีดินสอ(230, 235, 255)
@@ -2858,9 +3140,13 @@ bind เริ่ม = do {
                 # ริบบิ้นโค้งจากลูก ตามทิศเล็ง (arcYaw) เอียงตามทิศฟัน (slashDir) — โค้ง+โต+จาง
                 วาดริบบิ้นสแลช(cx, cy + 0.5, cz, arcYaw, slashDir*0.7854, prog, vslen, rbR, rbG, rbB, fxSat, fxSpin)
                 วาดดาบเหวี่ยง(cx, cy + 0.5, cz, arcYaw, slashDir*0.7854, prog, vslen, list_get(ssv,4), list_get(ssv,5), list_get(ssv,6))
-                ถ้า debugHit > 0.5 {   # ดีบักฮิตบ็อกซ์ (กด H) — ตรงกับการตรวจดาเมจจริง บนดาบหนา
-                    bind dbgLen = list_get(ssv,2)*0.4;  ถ้า dbgLen > 7.0 { bind dbgLen = 7.0 }
-                    วาดฮิตบ็อกซ์(cx + ไซน์(arcYaw)*dbgLen, cy + 0.5, cz + โคไซน์(arcYaw)*dbgLen, dbgLen + R)
+                ถ้า debugHit > 0.5 {   # ดีบักตรงกับคอลลิชันจริง: เส้น segment + รัศมีปลายทั้งสอง
+                    ถ้า swordSegOn > 0.5 {
+                        สีดินสอ(255, 160, 100)
+                        วาดเส้น3มิติ(sx0, cy + 0.5, sz0, sx1, cy + 0.5, sz1)
+                        วาดฮิตบ็อกซ์(sx0, cy + 0.5, sz0, R + segRad)
+                        วาดฮิตบ็อกซ์(sx1, cy + 0.5, sz1, R + segRad)
+                    }
                 }
                 flush_3d()
             }
@@ -2997,10 +3283,15 @@ bind เริ่ม = do {
                 }
                 โหมดผสม(0)
             }
-            # ── Perf HUD (เบา): frame ms/FPS + lighting mode (F10 ซ่อน/แสดง) ──
+            # ── Perf HUD (เบา): frame ms/FPS + section timings (F10 ซ่อน/แสดง) ──
+            bind perfRenMs = (เวลาปัจจุบัน() - perfT1) * 1000.0
+            bind perfCpuMs = (เวลาปัจจุบัน() - perfT0) * 1000.0
             ถ้า hudPerf > 0.5 {
                 bind fps10 = floor((1000.0 / (frameMsSmooth + 0.001)) * 10.0) / 10.0
                 bind ms10 = floor(frameMsSmooth * 10.0) / 10.0
+                bind sim10 = floor(perfSimMs * 10.0) / 10.0
+                bind ren10 = floor(perfRenMs * 10.0) / 10.0
+                bind lit10 = floor(perfLightMs * 10.0) / 10.0
                 bind lmode = "LOW";  ถ้า แสงต่ำ < 0.5 { bind lmode = "HIGH" }
                 bind ptxt = "perf " + to_str(ms10) + "ms  " + to_str(fps10) + "fps  light:" + lmode
                 bind lrate = "FULL";  ถ้า แสงต่ำ > 0.5 { bind lrate = "HALF" }
@@ -3010,6 +3301,12 @@ bind เริ่ม = do {
                 bind ptxt4 = "midi clock:" + mclk + " (F9)"
                 bind pfx = "ON";  ถ้า particlesOn < 0.5 { bind pfx = "OFF" }
                 bind ptxt5 = "particles:" + pfx + " (F8)"
+                bind ptxt6 = "sim:" + to_str(sim10) + "ms  render:" + to_str(ren10) + "ms  light:" + to_str(lit10) + "ms"
+                bind bound = "MIXED"
+                ถ้า perfSimMs > perfRenMs * 0.9 { bind bound = "CPU(sim)" }
+                มิฉะนั้น { ถ้า perfRenMs > perfSimMs * 1.25 { bind bound = "DRAW/GPU" } }
+                ถ้า perfLightMs > 4.0 { bind bound = bound + " +LIGHT" }
+                bind ptxt7 = "bound:" + bound + "  cpu_frame:" + to_str(floor(perfCpuMs*10.0)/10.0) + "ms"
                 ถ้า frameMsSmooth > 22.0 { สีดินสอ(255, 120, 120) }
                 มิฉะนั้น { ถ้า frameMsSmooth > 16.8 { สีดินสอ(255, 210, 120) }  มิฉะนั้น { สีดินสอ(140, 235, 160) } }
                 วาดสตริง(ptxt, 8.5, 0.0-9.45, 0.0, 0.40, 1)
@@ -3021,6 +3318,10 @@ bind เริ่ม = do {
                 วาดสตริง(ptxt4, 8.5, 0.0-8.12, 0.0, 0.33, 1)
                 สีดินสอ(150, 186, 226)
                 วาดสตริง(ptxt5, 8.5, 0.0-7.74, 0.0, 0.33, 1)
+                สีดินสอ(156, 198, 235)
+                วาดสตริง(ptxt6, 8.5, 0.0-7.36, 0.0, 0.33, 1)
+                สีดินสอ(165, 210, 244)
+                วาดสตริง(ptxt7, 8.5, 0.0-6.98, 0.0, 0.33, 1)
             }
             flush_3d()
 
@@ -3036,7 +3337,7 @@ bind เริ่ม = do {
                 ถ้า นำ("enter", gNavA) {
                     ถ้า sel == 0 { bind paused = 0 }
                     ถ้า sel == 1 { bind optReturn = ST_PLAY;  bind สถานะ = ST_OPT;  bind sel = 0 }
-                    ถ้า sel == 2 { bind สถานะ = ST_MENU;  bind paused = 0;  bind sel = 0;  ถ้า musicOn == 1 { เล่นเพลง(เพลงหลัก) } }
+                    ถ้า sel == 2 { bind สถานะ = ST_MENU;  bind paused = 0;  bind sel = 0;  ถ้า musicOn == 1 { เล่นเพลง(เพลงเมนู) } }
                     ถ้า sel == 3 { bind ออกเกม = 1 }
                 }
             }

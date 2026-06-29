@@ -1,0 +1,143 @@
+# ════════════════════════════════════════════════════════════════════════════
+# cube_play.ling — ผู้เล่น (ลูกหมึก) + 2 สหาย (ราชา/ราชินี) ในลูกบาศก์ เล่นได้
+#   รัน:  ling run cube_play.ling          (จากรากโปรเจกต์ soul-symphony-ling)
+#   คุม:  W/A/S/D เดิน · ←/→ หมุนกล้อง · Esc ออก
+#   สหายทั้งสองจะเดิน/วิ่งตามผู้เล่นไปรอบ ๆ ห้อง (AI เดียวกับโหมดสตอรี่)
+#   โลกนี้ up = -Y (ค่าบวก Y = ลง)  ·  meshes ไม่รับแสง → ไม่ต้องตั้งไฟ
+# ════════════════════════════════════════════════════════════════════════════
+ใช้ "game/companions"        # วาดสหาย, สหายคิด (เมช + ลูกของเหลว + วงจรเดิน)
+
+# ── กล้องมองเป้า (look-at): วางกล้องที่ cp มองไปยัง t ──
+ฟังก์ชัน กล้องมอง2(cpx, cpy, cpz, tx, ty, tz) {
+    bind ldx = tx - cpx;  bind ldy = ty - cpy;  bind ldz = tz - cpz
+    bind ll  = รากที่สอง(ldx*ldx + ldy*ldy + ldz*ldz) + 0.0001
+    bind ry  = atan2(ldx / ll, ldz / ll)
+    bind rx  = asin(จำกัด(ldy / ll, 0.0-0.98, 0.98))
+    ตั้งกล้อง(โคไซน์(ry), ไซน์(ry), โคไซน์(rx), ไซน์(rx))
+    ตั้งตำแหน่งกล้อง(cpx, cpy, cpz)
+}
+
+# ── โครงลวดลูกบาศก์ (12 ขอบ) ที่ศูนย์กลาง (cx,cy,cz) ครึ่งกว้าง a ──
+ฟังก์ชัน กรอบลูกบาศก์(cx, cy, cz, a) {
+    วาดเส้น3มิติ(cx-a,cy-a,cz-a, cx+a,cy-a,cz-a)   วาดเส้น3มิติ(cx+a,cy-a,cz-a, cx+a,cy-a,cz+a)
+    วาดเส้น3มิติ(cx+a,cy-a,cz+a, cx-a,cy-a,cz+a)   วาดเส้น3มิติ(cx-a,cy-a,cz+a, cx-a,cy-a,cz-a)
+    วาดเส้น3มิติ(cx-a,cy+a,cz-a, cx+a,cy+a,cz-a)   วาดเส้น3มิติ(cx+a,cy+a,cz-a, cx+a,cy+a,cz+a)
+    วาดเส้น3มิติ(cx+a,cy+a,cz+a, cx-a,cy+a,cz+a)   วาดเส้น3มิติ(cx-a,cy+a,cz+a, cx-a,cy+a,cz-a)
+    วาดเส้น3มิติ(cx-a,cy-a,cz-a, cx-a,cy+a,cz-a)   วาดเส้น3มิติ(cx+a,cy-a,cz-a, cx+a,cy+a,cz-a)
+    วาดเส้น3มิติ(cx+a,cy-a,cz+a, cx+a,cy+a,cz+a)   วาดเส้น3มิติ(cx-a,cy-a,cz+a, cx-a,cy+a,cz+a)
+}
+
+# ── จำกัดให้อยู่ในห้อง: คืนค่าที่หนีบไว้ในช่วง [-lim, lim] ──
+ฟังก์ชัน หนีบ(v, lim) {
+    bind r = v
+    ถ้า r >  lim { bind r = lim }
+    ถ้า r < 0.0-lim { bind r = 0.0-lim }
+    คืน r
+}
+
+bind เริ่ม = do {
+    เปิดหน้าต่าง(1280, 720)
+    audio_volume(0.5)
+    พิมพ์("  ลูกบาศก์: W/A/S/D เดิน · ←/→ หมุนกล้อง · Esc ออก")
+
+    # ── โหลดเมชสหาย + ลูกของเหลว (สีเดียวกับโหมดสตอรี่) ──
+    bind kMesh = mesh_load("game/king.lmesh")
+    bind qMesh = mesh_load("game/queen.lmesh")
+    bind kLiq = liquid_new(16.0, 16.0);  สีของเหลว(kLiq, 95, 175, 255, 10, 12, 26)    # ราชา: ฟ้า
+    bind qLiq = liquid_new(16.0, 16.0);  สีของเหลว(qLiq, 255, 90, 100, 24, 8, 12)     # ราชินี: แดง
+    bind pLiq = liquid_new(16.0, 16.0);  สีของเหลว(pLiq, 130, 235, 255, 14, 14, 30)   # ผู้เล่น: ฟ้าน้ำแข็ง
+
+    bind ROOM = 42.0                    # ครึ่งกว้างห้อง
+    bind R    = 2.4                     # รัศมีลูกผู้เล่น/สหาย
+    bind lim  = ROOM - R
+
+    # ── สถานะผู้เล่น (up = -Y → พื้นที่ y=0) ──
+    bind px = 0.0;  bind pz = 0.0;  bind py = 0.0
+    bind pvx = 0.0; bind pvz = 0.0;  bind phase = 0.0;  bind yaw = 0.0
+    # ── สถานะสหาย ──
+    bind kx = 0.0-10.0; bind kz = 0.0-10.0; bind kvx = 0.0; bind kvz = 0.0; bind kph = 0.0; bind kyaw = 0.0; bind kanim = 0.0
+    bind qx = 10.0;     bind qz = 0.0-10.0; bind qvx = 0.0; bind qvz = 0.0; bind qph = 0.0; bind qyaw = 0.0; bind qanim = 0.0
+
+    bind camYaw = 0.0;  bind t = 0.0;  bind กรอบ = 0.0;  bind ออก = 0.0
+
+    ขณะที่ หน้าต่างเปิดอยู่() && ออก < 0.5 {
+        bind t = t + 0.016;  bind กรอบ = กรอบ + 1.0
+        ถ้า กดปุ่ม("escape") { bind ออก = 1.0 }
+
+        # ── อินพุต: WASD (สัมพันธ์กล้อง) · ←/→ หมุนกล้อง ──
+        ถ้า กดค้าง("left")  { bind camYaw = camYaw - 0.035 }
+        ถ้า กดค้าง("right") { bind camYaw = camYaw + 0.035 }
+        bind ax = 0.0;  bind az = 0.0
+        ถ้า กดค้าง("w") { bind az = az + 1.0 }
+        ถ้า กดค้าง("s") { bind az = az - 1.0 }
+        ถ้า กดค้าง("d") { bind ax = ax + 1.0 }
+        ถ้า กดค้าง("a") { bind ax = ax - 1.0 }
+        bind fwx = ไซน์(camYaw);   bind fwz = โคไซน์(camYaw)        # ทิศหน้า (ตามกล้อง)
+        bind rgx = โคไซน์(camYaw); bind rgz = 0.0 - ไซน์(camYaw)    # ทิศขวา
+        bind wx = fwx*az + rgx*ax;  bind wz = fwz*az + rgz*ax
+        bind wl = รากที่สอง(wx*wx + wz*wz)
+        ถ้า wl > 0.001 {
+            bind pvx = pvx + (wx/wl)*0.055;  bind pvz = pvz + (wz/wl)*0.055
+            bind yaw = atan2(wx, wz)
+        }
+        bind pvx = pvx * 0.90;  bind pvz = pvz * 0.90             # โมเมนตัม/เบรก
+        bind px = px + pvx;  bind pz = pz + pvz
+        # ชนผนัง
+        ถ้า px >  lim { bind px = lim;  bind pvx = 0.0 }
+        ถ้า px < 0.0-lim { bind px = 0.0-lim;  bind pvx = 0.0 }
+        ถ้า pz >  lim { bind pz = lim;  bind pvz = 0.0 }
+        ถ้า pz < 0.0-lim { bind pz = 0.0-lim;  bind pvz = 0.0 }
+        bind psp = รากที่สอง(pvx*pvx + pvz*pvz)
+        bind phase = phase + psp*0.6 + 0.02
+
+        # ── สหาย AI (ตามผู้เล่น) ──
+        bind kr = สหายคิด(kx, kz, kvx, kvz, px, pz, 0.0, 0.0, 0.0, 1.0, สุ่ม())
+        bind kvx = list_get(kr,0);  bind kvz = list_get(kr,1);  bind kanim = list_get(kr,2)
+        bind kx = หนีบ(kx + kvx, lim);  bind kz = หนีบ(kz + kvz, lim)
+        bind ksp = รากที่สอง(kvx*kvx + kvz*kvz);  bind kph = kph + ksp*0.6 + 0.02
+        ถ้า ksp > 0.01 { bind kyaw = atan2(kvx, kvz) }
+
+        bind qr = สหายคิด(qx, qz, qvx, qvz, px, pz, 0.0, 0.0, 0.0, 1.0, สุ่ม())
+        bind qvx = list_get(qr,0);  bind qvz = list_get(qr,1);  bind qanim = list_get(qr,2)
+        bind qx = หนีบ(qx + qvx, lim);  bind qz = หนีบ(qz + qvz, lim)
+        bind qsp = รากที่สอง(qvx*qvx + qvz*qvz);  bind qph = qph + qsp*0.6 + 0.02
+        ถ้า qsp > 0.01 { bind qyaw = atan2(qvx, qvz) }
+
+        # ── กล้อง: ตามผู้เล่นจากด้านหลัง-บน (up=-Y → กล้องอยู่ y ติดลบ) ──
+        bind camD = 30.0
+        bind cxp = px - ไซน์(camYaw)*camD
+        bind czp = pz - โคไซน์(camYaw)*camD
+        กล้องมอง2(cxp, 0.0-19.0, czp, px, 0.0-2.0, pz)
+
+        # ── เรนเดอร์ ──
+        เติม(7, 8, 15)
+        ล้างแสง()
+        liquid_step(pLiq, 0.016);  liquid_step(kLiq, 0.016);  liquid_step(qLiq, 0.016)
+
+        # ผนังลูกบาศก์ (โครงลวด) — ศูนย์ที่ (0,-ROOM,0) → พื้น y=0 เป็นหน้าล่าง
+        โหมดผสม(0);  สีดินสอ(70, 105, 190)
+        กรอบลูกบาศก์(0.0, 0.0-ROOM, 0.0, ROOM)
+        flush_3d()
+        # พื้น: ตารางเส้น
+        สีดินสอ(28, 40, 70)
+        bind gi = 0.0 - ROOM
+        ขณะที่ gi <= ROOM {
+            วาดเส้น3มิติ(gi, 0.0, 0.0-ROOM,  gi, 0.0, ROOM)
+            วาดเส้น3มิติ(0.0-ROOM, 0.0, gi,  ROOM, 0.0, gi)
+            bind gi = gi + 7.0
+        }
+        flush_3d()
+
+        # ── สหาย 2 ตัว (เมช native + ลูกของเหลว) — slashP = -1 (ไม่ฟัน) ──
+        วาดสหาย(kMesh, kLiq, R, kx, 0.0, kz, kvx, kvz, kph, kyaw, kanim, t, 255, 90, 90, 0.0-1.0)
+        วาดสหาย(qMesh, qLiq, R, qx, 0.0, qz, qvx, qvz, qph, qyaw, qanim, t, 90, 140, 255, 0.0-1.0)
+
+        # ── ผู้เล่น: ลูกของเหลวเรืองแสง ──
+        โหมดผสม(1)
+        liquid_draw_surface(pLiq, 1.0, px, 0.0-R, pz, R, R)
+        flush_3d();  โหมดผสม(0)
+
+        แสดงผล()
+    }
+    พิมพ์("  ออกจากลูกบาศก์ — บาย")
+}

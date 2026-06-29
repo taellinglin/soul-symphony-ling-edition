@@ -1,0 +1,111 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Integration Instructions for Post-Level-1 Cutscene
+# ════════════════════════════════════════════════════════════════════════════
+
+## Step 1: Add State Constant
+Add this near line 50 in main.ling (after ST_JOINLIST):
+
+bind ST_POST_LVL1 = 20
+
+## Step 2: Add Module Import
+Add this near the top with other imports (around line 17-20):
+
+ใช้ "../game/scenes/post_level1"
+
+## Step 3: Add State Variables
+Add these variables in the initialization section (around line 200-260):
+
+bind postLvl1Start = 0.0      # Time when post-level-1 cutscene started
+bind postLvl1PrevLine = -1.0  # Previous line index
+bind postLvl1LastChar = 0     # Last character count for typewriter
+
+## Step 4: Replace Level Transition Logic
+Find the level transition code (around line 2444-2450) that looks like:
+
+        มิฉะนั้น {
+            bind ด่าน = ด่าน + 1
+            bind startX = 0.0;  bind startY = 0.0-2.0;  bind startZ = 180.0
+            bind รีเซ็ต = 1
+            ถ้า ด่าน > ด่านปลดล็อก { bind ด่านปลดล็อก = ด่าน;  เขียนไฟล์("progress.dat", to_str(ด่านปลดล็อก));  พิมพ์ฟ้า("  💾 ออโต้เซฟ: ปลดล็อกด่าน " + to_str(ด่าน)) }
+            พิมพ์เขียว("  ★ ปราบบอส! ไปเลเวล " + to_str(ด่าน + 1.0))
+        }
+
+Replace it with:
+
+        มิฉะนั้น {
+            bind ด่าน = ด่าน + 1
+
+            # Check if we just completed level 1 -> trigger cutscene
+            ถ้า ด่าน == 2.0 {
+                bind สถานะ = ST_POST_LVL1
+                bind postLvl1Start = เวลาปัจจุบัน()
+                bind postLvl1PrevLine = -1.0
+                bind postLvl1LastChar = 0
+                พิมพ์ม่วง("  ✦ level 1 complete - the royal audience awaits")
+                # Keep BGM playing quietly for cutscene
+                ถ้า musicOn == 1 { ระดับเพลง(ปริมาณBGM * 0.35) }
+            }
+            มิฉะนั้น {
+                # Normal level progression
+                bind startX = 0.0;  bind startY = 0.0-2.0;  bind startZ = 180.0
+                bind รีเซ็ต = 1
+                พิมพ์เขียว("  ★ ปราบบอส! ไปเลเวล " + to_str(ด่าน + 1.0))
+            }
+
+            ถ้า ด่าน > ด่านปลดล็อก {
+                bind ด่านปลดล็อก = ด่าน
+                เขียนไฟล์("progress.dat", to_str(ด่านปลดล็อก))
+                พิมพ์ฟ้า("  💾 ออโต้เซฟ: ปลดล็อกด่าน " + to_str(ด่าน))
+            }
+        }
+
+## Step 5: Add Cutscene State Handler
+Add this in the main state machine (after ST_CH1 handler, around line 1300):
+
+        ถ้า สถานะ == ST_POST_LVL1 {
+            # Post-Level-1 Cutscene: King and Queen discuss cosmic song
+            bind result = เล่นโพสต์เลเวล1(
+                t,
+                postLvl1Start,
+                postLvl1PrevLine,
+                musicOn,
+                ปริมาณBGM,
+                ปริมาณSFX,
+                เพลงหลัก,
+                postLvl1LastChar
+            )
+
+            bind postLvl1PrevLine = list_get(result, 0)
+            bind postLvl1LastChar = list_get(result, 1)
+            bind shouldExit = list_get(result, 2)
+
+            ถ้า shouldExit > 0.5 {
+                # Cutscene finished - continue to level 2
+                bind startX = 0.0
+                bind startY = -2.0
+                bind startZ = 180.0
+                bind รีเซ็ต = 1
+                bind สถานะ = ST_PLAY
+                พิมพ์เขียว("  ★ continuing to level 2...")
+                ถ้า musicOn == 1 { ระดับเพลง(ปริมาณBGM) }  # Restore full BGM volume
+            }
+        }
+
+## Optional Step 6: Add BGM Track (if you have music)
+If you have a music file for the cutscene, add it to the music loading section and use it:
+
+# In the music loading section:
+bind เพลงพระราชา = music_load("music/royal_theme.wav")  # Or whatever file you have
+
+# Then in the cutscene call, replace เพลงหลัก with เพลงพระราชา
+
+## Testing
+After integration:
+1. Build the game
+2. Start a new game
+3. Complete level 1 (defeat the boss)
+4. The cutscene should automatically play
+5. Press Enter/Space to skip or wait for completion
+6. Level 2 should start after cutscene
+
+═══════════════════════════════════════════════════════════════════════════════

@@ -8,7 +8,7 @@ name = "app"
 path = "src/main.rs"
 
 [dependencies]
-ling-lang = { path = "J:/soul-symphony-ling" }
+ling-lang = { path = "C:\Users\User\Programs\ling" }
 
 [profile.release]
 lto = "fat"

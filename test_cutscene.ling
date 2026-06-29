@@ -1,0 +1,52 @@
+# Quick test for post-level-1 cutscene
+ใช้ "game/scenes/post_level1"
+
+bind เริ่ม = do {
+    เปิดหน้าต่าง(1280, 720)
+    audio_volume(0.6)
+
+    bind musicOn = 1
+    bind volumeBGM = 0.6
+    bind volumeSFX = 0.5
+    bind bgmTrack = โหลดเพลง("music/Soul Symphony_Colors_Mix_Master.wav")
+
+    bind cutsceneStart = เวลาปัจจุบัน()
+    bind prevLine = -1.0
+    bind lastChar = 0
+
+    bind running = 1
+
+    # Start BGM quietly
+    ถ้า musicOn == 1 {
+        เล่นเพลง(bgmTrack)
+        ระดับเพลง(volumeBGM * 0.35)
+    }
+
+    ขณะที่ running > 0.5 {
+        bind t = เวลาปัจจุบัน()
+
+        bind result = เล่นโพสต์เลเวล1(
+            t,
+            cutsceneStart,
+            prevLine,
+            musicOn,
+            volumeBGM,
+            volumeSFX,
+            bgmTrack,
+            lastChar
+        )
+
+        bind prevLine = list_get(result, 0)
+        bind lastChar = list_get(result, 1)
+        bind shouldExit = list_get(result, 2)
+
+        ถ้า shouldExit > 0.5 {
+            bind running = 0
+            พิมพ์เขียว("Cutscene finished!")
+        }
+    }
+
+    หยุดเพลง()
+    พิมพ์ฟ้า("Test complete - press any key to exit")
+    รอกดปุ่ม()
+}

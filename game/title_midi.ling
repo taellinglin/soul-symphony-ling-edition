@@ -1,0 +1,163 @@
+# ════════════════════════════════════════════════════════════════════════════
+# title_midi.ling — MIDI-Driven Wave Title Screen (Marionette Style)
+# ════════════════════════════════════════════════════════════════════════════
+# Features:
+# - "SOUL SYMPHONY 2" displayed as waving letters at top of screen
+# - Each letter moves in slow wave motion (up/down)
+# - Letters bank/rotate subtly like marionettes on strings
+# - Multi-language support (changes with language setting)
+# - 2D liquid ink background (no mixing)
+# - MIDI-synced color pulses
+
+ใช้ "../font/English3D"
+
+# ── Title Text Data (per language) ───────────────────────────────────────────
+# Indices: a=0..z=25, -1=space, 28=number "2"
+bind titleEN = [18,14,20,11,-1,18,24,12,15,7,14,13,24,-1,28]  # SOUL SYMPHONY 2
+bind titleLength = 15
+
+# ── Wave Motion Parameters ───────────────────────────────────────────────────
+bind WAVE_SPEED = 0.4          # How fast the wave travels
+bind WAVE_HEIGHT = 2.5         # Vertical amplitude of wave
+bind WAVE_LENGTH = 3.0         # Distance between wave peaks
+bind LETTER_SPACING = 2.8      # Horizontal space between letters
+bind BASE_Y = -8.0             # Base Y position (top of screen)
+bind BASE_Z = -35.0            # Z depth
+bind BANK_AMOUNT = 15.0        # Rotation banking angle (degrees)
+
+# ── Liquid Background ────────────────────────────────────────────────────────
+bind inkBG = 0
+bind bgInit = 0
+bind currentPulse = 0.0
+
+ฟังก์ชัน initBackground() {
+    ถ้า bgInit == 0 {
+        bind inkBG = liquid_new(96.0, 96.0)
+        สีของเหลว(inkBG, 220, 60, 120, 40, 100, 220)
+        bind bgInit = 1
+    }
+}
+
+ฟังก์ชัน drawBackground(t) {
+    liquid_step(inkBG, 0.016)
+    bind splatInterval = 0.4
+    bind splatPhase = t - floor(t / splatInterval) * splatInterval
+    ถ้า splatPhase < 0.05 {
+        bind sx = (ไซน์(t * 0.6) * 0.5 + 0.5) * 88.0 + 4.0
+        bind sy = (โคไซน์(t * 0.4) * 0.5 + 0.5) * 88.0 + 4.0
+        bind kind = floor(t / splatInterval) - floor(floor(t / splatInterval) / 2.0) * 2.0
+        liquid_splat(inkBG, sx, sy, kind, 0.85, 1.8)
+    }
+    liquid_draw_surface(inkBG, 0.0, 0.0, 2.0, -95.0, 65.0, 50.0)
+}
+
+ฟังก์ชัน drawWavingTitle(t, lang, pulse) {
+    bind titleText = titleEN
+    bind totalWidth = (titleLength - 1) * LETTER_SPACING
+    bind startX = 0.0 - totalWidth * 0.5
+    bind i = 0
+    ขณะที่ i < titleLength {
+        bind charIdx = list_get(titleText, i)
+        ถ้า charIdx >= 0 {
+            bind lx = startX + i * LETTER_SPACING
+            bind wavePhase = (i * WAVE_LENGTH) + (t * WAVE_SPEED)
+            bind waveOffset = ไซน์(wavePhase) * WAVE_HEIGHT
+            bind ly = BASE_Y + waveOffset
+            bind lz = BASE_Z
+            bind waveDerivative = โคไซน์(wavePhase)
+            bind pitch = waveDerivative * BANK_AMOUNT * 0.01745
+            bind roll = ไซน์(wavePhase + 1.5708) * BANK_AMOUNT * 0.5 * 0.01745
+            bind yaw = ไซน์(t * 0.3 + i * 0.5) * 5.0 * 0.01745
+            bind colorPhase = (i * 0.15) + (pulse * 0.3)
+            bind r = floor((ไซน์(colorPhase * 6.28) * 0.5 + 0.5) * 150 + 100)
+            bind g = floor((ไซน์(colorPhase * 6.28 + 2.09) * 0.5 + 0.5) * 150 + 100)
+            bind b = floor((ไซน์(colorPhase * 6.28 + 4.19) * 0.5 + 0.5) * 150 + 100)
+            bind boost = 1.0 + pulse * 0.5
+            bind r = floor(r * boost)
+            bind g = floor(g * boost)
+            bind b = floor(b * boost)
+            ถ้า r > 255 { bind r = 255 }
+            ถ้า g > 255 { bind g = 255 }
+            ถ้า b > 255 { bind b = 255 }
+            สีดินสอ(r, g, b)
+            bind scale = 1.8 + (ไซน์(wavePhase * 0.5) * 0.15)
+
+            # Convert rotation angles to rotation matrix vectors
+            bind totalRot = yaw + pitch + roll
+            bind cosR = โคไซน์(totalRot)
+            bind sinR = ไซน์(totalRot)
+
+            # Right vector (rotated X axis)
+            bind rx = cosR
+            bind ry = sinR * 0.3  # Slight tilt
+            bind rz = 0.0
+
+            # Up vector (rotated Y axis)
+            bind ux = 0.0 - sinR * 0.3
+            bind uy = cosR
+            bind uz = 0.0
+
+            วาดอักขระEnglish3D(charIdx, lx, ly, lz, rx, ry, rz, ux, uy, uz, scale)
+        }
+        bind i = i + 1
+    }
+}
+
+ฟังก์ชัน runMIDITitle(t, frame, midiClockOn, musicOn, noteIndex, noteTimes, noteCount, musicPosition, musicLength, mainTrack, volumeBGM, language) {
+    initBackground()
+    bind skyR = floor(8 + ไซน์(t * 0.06) * 6)
+    bind skyG = floor(12 + ไซน์(t * 0.09 + 1.0) * 8)
+    bind skyB = floor(28 + ไซน์(t * 0.07 + 2.0) * 12)
+    เติม(skyR, skyG, skyB)
+    bind radius = 18.0
+    bind camX = ไซน์(frame * 0.002) * radius
+    bind camZ = 0.0 - โคไซน์(frame * 0.002) * radius
+    bind camY = 5.0 + ไซน์(frame * 0.0015) * 3.0
+    ตั้งกล้องมอง(camX, camY, camZ, 0.0, -6.0, 0.0)
+    ตั้งระยะห่าง(2.8)
+    ตั้งแสงรอบข้าง(0.45)
+    ล้างแสง()
+    เพิ่มแสง(12.0, -5.0, 8.0, 1.0, 0.9, 0.8, 2.8, 32.0)
+    เพิ่มแสง(-8.0, -8.0, -10.0, 0.8, 0.85, 1.0, 2.2, 26.0)
+    ถ้า midiClockOn > 0.5 {
+        ถ้า musicLength > 1.0 {
+            ถ้า musicPosition >= musicLength - 0.5 {
+                ค้นหาเพลง(0)
+                ถ้า musicOn == 1 { เล่นเพลง(mainTrack) }
+                bind noteIndex = 0
+            }
+        }
+        bind tpos = musicPosition
+        ถ้า tpos < 0.05 { bind noteIndex = 0 }
+        bind scanning = 1
+        ขณะที่ scanning == 1 {
+            ถ้า noteIndex >= noteCount {
+                bind scanning = 0
+            }
+            มิฉะนั้น {
+                bind noteTime = list_get(noteTimes, noteIndex)
+                ถ้า noteTime <= tpos {
+                    bind currentPulse = 1.0
+                    bind noteIndex = noteIndex + 1
+                }
+                มิฉะนั้น {
+                    bind scanning = 0
+                }
+            }
+        }
+    }
+    bind currentPulse = currentPulse * 0.85
+    drawBackground(t)
+    drawWavingTitle(t, language, currentPulse)
+    flush_3d()
+    ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)
+    ตั้งระยะห่าง(2.8)
+    โหมดผสม(1)
+    bind hintPulse = (ไซน์(t * 3.0) * 0.5 + 0.5)
+    สีดินสอ(floor(180 * hintPulse + 75), floor(200 * hintPulse + 55), floor(240 * hintPulse + 15))
+    วาดสตริง("press enter to start", 0.0, 8.8, 0.0, 0.58, 1)
+    flush_3d()
+    โหมดผสม(0)
+    แสดงผล()
+    คืน noteIndex
+}

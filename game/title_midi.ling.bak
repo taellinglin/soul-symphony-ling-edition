@@ -1,0 +1,306 @@
+# ════════════════════════════════════════════════════════════════════════════
+# title_midi.ling — MIDI-Driven Letter Title Screen (DDR-style)
+# ════════════════════════════════════════════════════════════════════════════
+# Features:
+# - Letters spawn based on MIDI notes instead of cubes
+# - 2D billboarded liquid ink background (no color mixing)
+# - Letters scroll towards camera
+# - DDR-style scaling/fading when letters reach center
+# - Note properties (pitch, velocity, channel) determine color, offset, scale
+
+ใช้ "../font/English3D"
+
+# ── Letter Pool Configuration ────────────────────────────────────────────────
+bind MAX_LETTERS = 60               # Maximum active letters
+bind SPAWN_DISTANCE = -80.0         # How far back letters spawn
+bind TARGET_Z = 0.0                 # Where letters should reach (center)
+bind FADE_START_Z = -10.0           # When to start fading
+bind SCALE_UP_START = -5.0          # When to start scaling up
+bind letterInit = 0
+
+# Letter state arrays (initialized with 60 zeros - will be set properly in init)
+bind letterActive = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+bind letterChar = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+bind letterX = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+bind letterY = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+bind letterZ = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+bind letterVZ = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+bind letterScale = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+bind letterHue = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+bind letterAlpha = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+bind letterBirthTime = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+
+# ── Liquid Background (No Mixing) ────────────────────────────────────────────
+bind inkBG = 0
+
+ฟังก์ชัน initMIDITitle() {
+    ถ้า letterInit == 0 {
+        # Create 2D liquid background (96x96 for performance)
+        bind inkBG = liquid_new(96.0, 96.0)
+        # Set colors but DISABLE mixing by setting immiscible fluids
+        สีของเหลว(inkBG, 220, 60, 80, 40, 100, 220)
+
+        bind letterInit = 1
+    }
+}
+
+# ── Spawn Letter from MIDI Note ──────────────────────────────────────────────
+ฟังก์ชัน spawnLetter(note, velocity, t) {
+    # Find inactive letter slot
+    bind idx = -1
+    bind i = 0
+    ขณะที่ i < MAX_LETTERS {
+        ถ้า list_get(letterActive, i) < 0.5 {
+            bind idx = i
+            bind i = MAX_LETTERS  # Break
+        }
+        bind i = i + 1
+    }
+
+    ถ้า idx < 0 { คืน 0 }  # No free slots
+
+    # Choose letter based on note pitch (0-11 semitones mapped to a-z)
+    bind semitone = note - floor(note / 12.0) * 12.0
+    bind charIdx = floor(semitone * 2.16)  # Map 0-11 to 0-25
+    ถ้า charIdx > 25 { bind charIdx = 25 }
+
+    # Position based on note pitch
+    bind octave = floor(note / 12.0)
+    bind xOffset = (semitone - 6.0) * 3.5  # -21 to +21 range
+    bind yOffset = (octave - 5.0) * 2.0    # Octave affects height
+
+    # Velocity affects speed and hue
+    bind speed = 15.0 + velocity * 20.0
+    bind hue = velocity * 0.7
+
+    # Update letter slot
+    bind letterActive = list_set(letterActive, idx, 1.0)
+    bind letterChar = list_set(letterChar, idx, floor(charIdx))
+    bind letterX = list_set(letterX, idx, xOffset)
+    bind letterY = list_set(letterY, idx, yOffset)
+    bind letterZ = list_set(letterZ, idx, SPAWN_DISTANCE)
+    bind letterVZ = list_set(letterVZ, idx, speed)
+    bind letterScale = list_set(letterScale, idx, 1.0)
+    bind letterHue = list_set(letterHue, idx, hue)
+    bind letterAlpha = list_set(letterAlpha, idx, 1.0)
+    bind letterBirthTime = list_set(letterBirthTime, idx, t)
+
+    คืน 1
+}
+
+# ── Update Letters ───────────────────────────────────────────────────────────
+ฟังก์ชัน updateLetters(dt, t) {
+    bind i = 0
+    ขณะที่ i < MAX_LETTERS {
+        ถ้า list_get(letterActive, i) > 0.5 {
+            bind lz = list_get(letterZ, i)
+            bind vz = list_get(letterVZ, i)
+
+            # Move letter towards camera
+            bind lz = lz + vz * dt
+            bind letterZ = list_set(letterZ, i, lz)
+
+            # DDR-style scaling when approaching center
+            bind scale = list_get(letterScale, i)
+            ถ้า lz > SCALE_UP_START {
+                # Scale up rapidly as it approaches
+                bind progress = (lz - SCALE_UP_START) / (TARGET_Z - SCALE_UP_START)
+                ถ้า progress > 1.0 { bind progress = 1.0 }
+                bind scale = 1.0 + progress * 2.5  # Scale from 1.0 to 3.5
+                bind letterScale = list_set(letterScale, i, scale)
+            }
+
+            # Fade when approaching and after passing center
+            bind alpha = list_get(letterAlpha, i)
+            ถ้า lz > FADE_START_Z {
+                bind fadeProgress = (lz - FADE_START_Z) / (TARGET_Z - FADE_START_Z + 5.0)
+                ถ้า fadeProgress < 0.0 { bind fadeProgress = 0.0 }
+                ถ้า fadeProgress > 1.0 { bind fadeProgress = 1.0 }
+                bind alpha = 1.0 - fadeProgress
+                bind letterAlpha = list_set(letterAlpha, i, alpha)
+            }
+
+            # Deactivate if past camera or fully faded
+            ถ้า lz > TARGET_Z + 10.0 {
+                bind letterActive = list_set(letterActive, i, 0.0)
+            }
+            ถ้า alpha < 0.05 {
+                bind letterActive = list_set(letterActive, i, 0.0)
+            }
+        }
+        bind i = i + 1
+    }
+}
+
+# ── Draw Letters ─────────────────────────────────────────────────────────────
+ฟังก์ชัน drawLetters() {
+    bind i = 0
+    ขณะที่ i < MAX_LETTERS {
+        ถ้า list_get(letterActive, i) > 0.5 {
+            bind lx = list_get(letterX, i)
+            bind ly = list_get(letterY, i)
+            bind lz = list_get(letterZ, i)
+            bind scale = list_get(letterScale, i)
+            bind hue = list_get(letterHue, i)
+            bind alpha = list_get(letterAlpha, i)
+            bind char = list_get(letterChar, i)
+
+            # Convert hue to RGB
+            bind r = floor((ไซน์(hue * 6.28) * 0.5 + 0.5) * 200 + 55)
+            bind g = floor((ไซน์(hue * 6.28 + 2.09) * 0.5 + 0.5) * 200 + 55)
+            bind b = floor((ไซน์(hue * 6.28 + 4.19) * 0.5 + 0.5) * 200 + 55)
+
+            # Apply alpha
+            bind r = floor(r * alpha)
+            bind g = floor(g * alpha)
+            bind b = floor(b * alpha)
+
+            สีดินสอ(r, g, b)
+
+            # Draw 3D letter
+            วาดตัวอักษรอังกฤษ3D(char, lx, ly, lz, scale * 2.0, 0.0)
+        }
+        bind i = i + 1
+    }
+}
+
+# ── Draw 2D Billboarded Liquid Background ────────────────────────────────────
+ฟังก์ชัน drawLiquidBackground(t) {
+    # Step liquid simulation
+    liquid_step(inkBG, 0.016)
+
+    # Add periodic splats for animation (less aggressive, more zen)
+    bind splatInterval = 0.3
+    bind splatPhase = t - floor(t / splatInterval) * splatInterval
+    ถ้า splatPhase < 0.05 {
+        bind sx = (ไซน์(t * 0.7) * 0.5 + 0.5) * 90.0 + 3.0
+        bind sy = (โคไซน์(t * 0.5) * 0.5 + 0.5) * 90.0 + 3.0
+        # Alternate between the two colors (no mixing)
+        bind kind = floor(t / splatInterval) - floor(floor(t / splatInterval) / 2.0) * 2.0
+        liquid_splat(inkBG, sx, sy, kind, 0.9, 2.0)
+    }
+
+    # Draw as large background plane (far behind letters)
+    # The liquid will be drawn as a flat surface at z=-95
+    # kind = 0 means draw both fluids (they won't mix visually)
+    liquid_draw_surface(inkBG, 0.0, 0.0, 2.0, -95.0, 65.0, 50.0)
+}
+
+# ── Main Title MIDI Function ─────────────────────────────────────────────────
+ฟังก์ชัน runMIDITitle(
+    t,
+    กรอบ,
+    midiClockOn,
+    musicOn,
+    noteIndex,
+    noteTimes,
+    noteCount,
+    musicPosition,
+    musicLength,
+    mainTrack,
+    volumeBGM
+) {
+    # Initialize if needed
+    initMIDITitle()
+
+    # ── Background ───────────────────────────────────────────────────────────
+    bind skyR = floor(12 + ไซน์(t * 0.08) * 8)
+    bind skyG = floor(18 + ไซน์(t * 0.11 + 1.0) * 10)
+    bind skyB = floor(35 + ไซน์(t * 0.09 + 2.0) * 15)
+    เติม(skyR, skyG, skyB)
+
+    # ── Camera Setup ─────────────────────────────────────────────────────────
+    # Slow orbit around center
+    bind radius = 16.0
+    bind camX = ไซน์(กรอบ * 0.0025) * radius
+    bind camZ = 0.0 - โคไซน์(กรอบ * 0.0025) * radius
+    ตั้งกล้องมอง(camX, 9.0, camZ, 0.0, 0.0, 0.0)
+    ตั้งระยะห่าง(2.8)
+
+    # ── Lighting ─────────────────────────────────────────────────────────────
+    ตั้งแสงรอบข้าง(0.5)
+    ล้างแสง()
+    เพิ่มแสง(15.0, -5.0, 10.0, 1.0, 0.9, 0.8, 2.5, 30.0)
+    เพิ่มแสง(-10.0, -5.0, -10.0, 0.8, 0.85, 1.0, 2.0, 25.0)
+
+    # ── MIDI Note Spawning ───────────────────────────────────────────────────
+    ถ้า midiClockOn > 0.5 {
+        # Check for music loop
+        ถ้า musicLength > 1.0 {
+            ถ้า musicPosition >= musicLength - 0.5 {
+                ค้นหาเพลง(0)
+                ถ้า musicOn == 1 { เล่นเพลง(mainTrack) }
+                bind noteIndex = 0
+            }
+        }
+
+        # Scan for notes to spawn
+        bind tpos = musicPosition
+        ถ้า tpos < 0.05 { bind noteIndex = 0 }
+
+        bind scanning = 1
+        ขณะที่ scanning == 1 {
+            ถ้า noteIndex >= noteCount {
+                bind scanning = 0
+            }
+            มิฉะนั้น {
+                bind noteTime = list_get(noteTimes, noteIndex)
+                ถ้า noteTime <= tpos {
+                    # Spawn letter for this note
+                    # Use noteIndex as note number (0-127 MIDI range)
+                    bind midiNote = noteIndex - floor(noteIndex / 127.0) * 127.0
+                    bind velocity = 0.5 + (noteIndex - floor(noteIndex / 50.0) * 50.0) / 100.0
+                    spawnLetter(midiNote, velocity, t)
+
+                    bind noteIndex = noteIndex + 1
+                }
+                มิฉะนั้น {
+                    bind scanning = 0
+                }
+            }
+        }
+    }
+
+    # ── Update & Draw ────────────────────────────────────────────────────────
+    updateLetters(0.016, t)
+
+    # Draw billboarded liquid background
+    drawLiquidBackground(t)
+
+    # Draw letters
+    drawLetters()
+
+    flush_3d()
+
+    # ── UI Overlay ───────────────────────────────────────────────────────────
+    # Switch to 2D camera for title text
+    ตั้งกล้องมอง(0.0, 0.0, -22.0, 0.0, 0.0, 0.0)
+    ตั้งระยะห่าง(2.8)
+    โหมดผสม(1)
+
+    # Animated title
+    bind titleHue = กรอบ * 0.03
+    สีดินสอ(
+        floor((ไซน์(titleHue) * 0.5 + 0.5) * 110 + 140),
+        floor((ไซน์(titleHue + 2.094) * 0.5 + 0.5) * 110 + 140),
+        floor((ไซน์(titleHue + 4.189) * 0.5 + 0.5) * 110 + 140)
+    )
+    # Note: Using external function from title.ling
+    วาดSS2ไดนามิก(0, 0.0, -8.5, 18.0, t)
+
+    # "Press Enter" hint
+    bind pulse = (ไซน์(t * 3.0) * 0.5 + 0.5)
+    สีดินสอ(
+        floor(200 * pulse + 55),
+        floor(220 * pulse + 35),
+        floor(255 * pulse + 0)
+    )
+    วาดสตริง("press enter to start", 0.0, 8.5, 0.0, 0.55, 1)
+
+    flush_3d()
+    โหมดผสม(0)
+    แสดงผล()
+
+    # ── Return new noteIndex ─────────────────────────────────────────────────
+    คืน noteIndex
+}

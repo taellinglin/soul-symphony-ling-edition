@@ -17,8 +17,12 @@ use std::fs;
 use std::fmt::Write as _;
 use std::path::Path;
 
-const PX: f32 = 56.0; // raster height
 const THRESH: u8 = 100; // coverage cutoff
+// Raster height — lower = fewer rectangles/triangles per glyph (cheaper to draw,
+// blockier at huge sizes; imperceptible at HUD sizes). Override with GLYPH_PX.
+fn raster_px() -> f32 {
+    std::env::var("GLYPH_PX").ok().and_then(|v| v.parse().ok()).unwrap_or(56.0)
+}
 
 fn fmt_coef(c: f32) -> String {
     // ling negative-literal-safe: wrap negatives as (0.0 - x)
@@ -70,6 +74,7 @@ fn main() {
         eprintln!("usage: glyphgen <font.otf> <FontName> <out_root_dir>");
         std::process::exit(2);
     }
+    let px = raster_px();
     let font_path = &args[1];
     let font_name = &args[2];
     let out_root = &args[3];
@@ -90,7 +95,7 @@ fn main() {
     let mut present: Vec<(usize, &'static str)> = Vec::new();
 
     for (idx, &(ch, name)) in CHARSET.iter().enumerate() {
-        let (metrics, bitmap) = font.rasterize(ch, PX);
+        let (metrics, bitmap) = font.rasterize(ch, px);
         let w = metrics.width;
         let h = metrics.height;
 
@@ -163,8 +168,8 @@ fn main() {
         // ── normalisation: centre glyph bbox at local origin, height ≈ h/PX ──
         let xmin = metrics.xmin as f32;
         let ymin = metrics.ymin as f32;
-        let cx = (xmin + w as f32 * 0.5) / PX;
-        let cy = (ymin + h as f32 * 0.5) / PX;
+        let cx = (xmin + w as f32 * 0.5) / px;
+        let cy = (ymin + h as f32 * 0.5) / px;
 
         let mut body = String::new();
         writeln!(
@@ -180,10 +185,10 @@ fn main() {
         .unwrap();
 
         for r in &rects {
-            let lx_l = (xmin + r.x0 as f32) / PX - cx;
-            let lx_r = (xmin + r.x1 as f32) / PX - cx;
-            let ly_t = (ymin + (h - r.y0) as f32) / PX - cy; // top row -> larger y
-            let ly_b = (ymin + (h - r.y1) as f32) / PX - cy;
+            let lx_l = (xmin + r.x0 as f32) / px - cx;
+            let lx_r = (xmin + r.x1 as f32) / px - cx;
+            let ly_t = (ymin + (h - r.y0) as f32) / px - cy; // top row -> larger y
+            let ly_b = (ymin + (h - r.y1) as f32) / px - cy;
 
             let (tlx, tly, tlz) = corner(lx_l, ly_t);
             let (trx, tryy, trz) = corner(lx_r, ly_t);
