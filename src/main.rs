@@ -60,7 +60,8 @@ fn main() {
 
     // คำสั่ง `use "../font/..."` ในไฟล์เกมเขียนแบบสัมพัทธ์กับ game/
     // จึงส่ง game/ เป็น source_dir เพื่อให้ import ฟอนต์/เพลงชี้ถูกที่
-    if let Err(e) = ling::run_file(&source, Some(game_dir)) {
+    // รันผ่าน Cranelift JIT (ไม่ใช้ตัวแปลภาษา) เพื่อความเร็วระดับ native
+    if let Err(e) = ling::run_jit(&source, Some(game_dir), Some("main.ling")) {
         eprintln!("[soul-symphony-ling] ข้อผิดพลาด: {e}");
         std::process::exit(1);
     }

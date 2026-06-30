@@ -81,8 +81,8 @@ bind เริ่ม = do {
     bind โหมดจอ = "เต็มจอไร้ขอบ";  ถ้า wantFull < 0.5 { bind โหมดจอ = "หน้าต่าง" }
     พิมพ์ฟ้า("   จอ " + to_str(จอกว้าง) + "x" + to_str(จอสูง) + " @ " + to_str(จอFPS) + "Hz (" + โหมดจอ + ")")
 
-    bind kMesh = mesh_load("game/king.lmesh")             # โมเดล native-res (เรนเดอร์ในเอนจิน)
-    bind qMesh = mesh_load("game/queen.lmesh")
+    bind kMesh = อบสหาย(0)    # LOD ราชา อบเป็นดิสเพลย์ลิสต์ (เล่นซ้ำเนทีฟ)
+    bind qMesh = อบสหาย(1)    # LOD ราชินี
     bind เพลงหลัก       = โหลดเพลง("music/Soul Symphony_Colors_Mix_Master.wav")
     bind ความยาวเพลงหลัก = ความยาวเพลง(เพลงหลัก)
     bind เพลงเกม        = โหลดเพลง("music/Antartica.wav")
@@ -1293,7 +1293,7 @@ bind เริ่ม = do {
         ถ้า สถานะ == ST_PLAY {
             ถ้า รีเซ็ต == 1 {
                 # พรีโหลดเฉพาะตอนเปลี่ยนเลเวลจริง (ไม่ใช่ตอนเกิดใหม่)
-                ถ้า ด่าน != เลเวลก่อน { พรีโหลด(0.5);  bind เลเวลก่อน = ด่าน }
+                ถ้า ด่าน != เลเวลก่อน { พรีโหลด(0.5);  เมชแคชล้าง();  bind เลเวลก่อน = ด่าน }
                 bind liq = liquid_new(16.0, 16.0)
                 liquid_rainbow(liq, 1.0)
                 bind liqAcc = 0.0;  bind liqMix = 0.0

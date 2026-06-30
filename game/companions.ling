@@ -1,10 +1,21 @@
+ใช้ "../game/king_lod"
+ใช้ "../game/queen_lod"
+
 # companions.ling — สหาย AI ราชา/ราชินี ในโหมดสตอรี่
 # ราชา = ลูกหมึกน้ำเงินโปร่งใส, ราชินี = ลูกหมึกแดงโปร่งใส; เดินอยู่ "ในลูก"
 # ท่าทาง (anim): 0 idle · 1 walk · 2 run · 3 jump · 4 attack · 5 guard
 # โมเดลจาก ../game/king_model + ../game/queen_model (แปลงด้วย tools/glb2ling.py)
 
-# ── วาดสหาย: โมเดล (เมช) ในลูกของเหลวจริง + ท่าทาง + แกว่งแขน/หัว ──
-#   id 0=ราชา 1=ราชินี · liqH=แฮนเดิลของเหลว (สีตั้งไว้ใน handle: ราชา น้ำเงิน+ทอง · ราชินี แดง+ทอง)
+# อบ LOD ราชา/ราชินี (1161/1300 ๆ ไตร · มีสีต่อไตร) เป็นดิสเพลย์ลิสต์ครั้งเดียว
+ฟังก์ชัน อบสหาย(which) {
+    เริ่มอบเมช()
+    ถ้า which == 0 { วาดKingLod(0.0,0.0,0.0, 1.0, 0.0, 0.0) }
+    มิฉะนั้น { วาดQueenLod(0.0,0.0,0.0, 1.0, 0.0, 0.0) }
+    คืน จบอบเมช()
+}
+
+# ── วาดสหาย: โมเดล LOD อบ ในลูกของเหลวจริง + ท่าทาง ──
+#   meshId = แฮนเดิลเมชอบ (_สหายเมชKing/_สหายเมชQueen)
 #   (cx,cy,cz)=ฐานเท้า · phase=เฟสก้าว · yaw=ทิศ · anim=ท่า ; โลกนี้ up = -Y
 ฟังก์ชัน วาดสหาย(meshId, liqH, ballR, cx, cy, cz, vx, vz, phase, yaw, anim, t, swR, swG, swB, slashP) {
     bind sc = ballR * 1.7                                               # ขนาด = ลูกผู้เล่น (โมเดลเบกสูง 1 → สูง ~1.7*R พอดีในลูก)
@@ -25,9 +36,11 @@
     ถ้า anim == 5.0 { bind fwd = 0.0-0.16;  bind bob = 0.05*sc;  bind arm = 0.0-0.2;  bind leg = 0.0;  bind lean = 0.0-0.1 }               # การ์ด
     bind fx = ไซน์(yaw)*fwd*sc;  bind fz = โคไซน์(yaw)*fwd*sc
     bind mx = cx + fx;  bind mz = cz + fz;  bind my = cy + bob
-    # ── โมเดล native res ในเอนจิน (ไม่รับแสง, เร็ว) + วงจรเดิน/วิ่ง/กระโดด ──
+    # ── โมเดล LOD อบเป็นดิสเพลย์ลิสต์ (เล่นซ้ำเนทีฟ — เร็วกว่าเมชเต็ม ~54x) ──
+    #   meshId = แฮนเดิลเมชอบ (king/queen LOD); yaw หมุนรอบ Y
     โหมดผสม(0)
-    mesh_draw(meshId, mx, my, mz, sc, yaw, sway, arm, lean, leg, tuck)
+    bind cs = โคไซน์(yaw);  bind sn = ไซน์(yaw)
+    วาดอบเมชสี(meshId, mx, my, mz, cs, 0.0, 0.0-sn, 0.0, 1.0, 0.0, sc)
     flush_3d()
     # ── ดาบฟัน (ราชา=แดง · ราชินี=น้ำเงิน) เมื่อโจมตี ──
     ถ้า slashP > 0.0-0.5 {
