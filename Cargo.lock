@@ -1725,7 +1725,7 @@ dependencies = [
 
 [[package]]
 name = "ling-audio"
-version = "2030.0.3"
+version = "2030.0.4"
 dependencies = [
  "cpal",
  "half",
@@ -1900,7 +1900,7 @@ dependencies = [
 
 [[package]]
 name = "ling-physics"
-version = "2030.1.8"
+version = "2030.1.9"
 dependencies = [
  "glam",
  "gltf",
